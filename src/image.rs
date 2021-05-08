@@ -4,9 +4,9 @@ use {
 };
 
 pub(crate) struct Color {
-    pub(crate) r: u16,
-    pub(crate) g: u16,
-    pub(crate) b: u16,
+    pub(crate) r: u8,
+    pub(crate) g: u8,
+    pub(crate) b: u8,
 }
 
 pub(crate) struct Image {
@@ -75,8 +75,7 @@ impl Image {
             None => bail!("expected maximum value of color, but found none"),
         };
 
-        let mut byte_buffer = None;
-        let is_double_byte = max_color_value > 255;
+        assert!(max_color_value <= 255);
 
         let mut image_data = Vec::with_capacity(height as _);
         let mut r = None;
@@ -84,17 +83,6 @@ impl Image {
         let mut b = None;
 
         while let Some((_, Ok(byte))) = bytes_iter.next() {
-            let mut byte = byte as u16;
-
-            if is_double_byte {
-                if byte_buffer.is_none() {
-                    byte_buffer = Some(byte);
-                    continue;
-                }
-
-                byte = byte_buffer.unwrap() << 8 & byte;
-            }
-
             match (r, g, b) {
                 (None, None, None) => r = Some(byte),
                 (Some(_), None, None) => g = Some(byte),
