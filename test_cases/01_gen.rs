@@ -27,7 +27,7 @@ fn main() -> io::Result<()> {
             } else {
                 0
             };
-            img.write(&[color, color, color])?;
+            img.write_all(&[color, color, color])?;
         }
     }
     let mut img = File::create("01_a.txt")?;
