@@ -1,13 +1,8 @@
 use {
+    crate::basis::Color,
     anyhow::{bail, Result},
     std::io::Read,
 };
-
-pub(crate) struct Color {
-    pub(crate) r: u8,
-    pub(crate) g: u8,
-    pub(crate) b: u8,
-}
 
 pub(crate) struct Image {
     pub(crate) width: u16,

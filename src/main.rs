@@ -1,3 +1,4 @@
+mod basis;
 mod image;
 
 fn main() {
