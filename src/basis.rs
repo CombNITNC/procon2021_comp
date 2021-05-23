@@ -10,7 +10,12 @@ pub(crate) struct Color {
 
 impl std::fmt::Debug for Color {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:x}", self.r << 16 | self.g << 8 | self.b)
+        f.debug_tuple("Color")
+            .field(&format_args!(
+                "#{:06x}",
+                (self.r as u32) << 16 | (self.g as u32) << 8 | self.b as u32
+            ))
+            .finish()
     }
 }
 
