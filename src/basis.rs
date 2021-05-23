@@ -84,6 +84,26 @@ pub(crate) enum Dir {
     West,
 }
 
+impl Dir {
+    /// `Dir` の値を `rot` だけ回転させた向きの値にする.
+    fn rotate(self, rot: Rot) -> Self {
+        fn r90(dir: Dir) -> Dir {
+            match dir {
+                Dir::North => Dir::East,
+                Dir::East => Dir::South,
+                Dir::South => Dir::West,
+                Dir::West => Dir::North,
+            }
+        }
+        match rot {
+            Rot::R0 => self,
+            Rot::R90 => r90(self),
+            Rot::R180 => r90(r90(self)),
+            Rot::R270 => r90(r90(r90(self))),
+        }
+    }
+}
+
 /// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と縁四辺 `edges` を表す.
 #[derive(Debug)]
 pub(crate) struct Fragment {
