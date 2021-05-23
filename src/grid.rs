@@ -37,7 +37,7 @@ impl Grid {
         Self { width, height }
     }
 
-    pub(crate) fn wrapping_pos(&self, x: u8, y: u8) -> Pos {
+    pub(crate) fn clamping_pos(&self, x: u8, y: u8) -> Pos {
         Pos::new(x.clamp(0, self.width - 1), y.clamp(0, self.height - 1))
     }
 
