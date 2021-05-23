@@ -38,6 +38,10 @@ impl Pos {
     pub(crate) fn y(&self) -> u8 {
         self.0 & 0xf
     }
+
+    pub(crate) fn is_valid(&self, width: u8, height: u8) -> bool {
+        self.x() <= width && self.y() <= height
+    }
 }
 
 /// `Movement` はある断片画像を動かして入れ替える向きを表す.
