@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::grid::Pos;
+
 /// `Color` は 24 ビットの RGB カラーを表す.
 #[derive(Clone)]
 pub(crate) struct Color {
@@ -16,36 +18,6 @@ impl std::fmt::Debug for Color {
                 (self.r as u32) << 16 | (self.g as u32) << 8 | self.b as u32
             ))
             .finish()
-    }
-}
-
-/// `Pos` は画像における座標を表す.
-///
-/// フィールドの `u8` の上位 4 ビットに X 座標, 下位 4 ビットに Y 座標を格納する.
-#[derive(Clone, Copy)]
-pub(crate) struct Pos(u8);
-
-impl std::fmt::Debug for Pos {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {})", self.x(), self.y())
-    }
-}
-
-impl Pos {
-    pub(crate) fn new(x: i8, y: i8) -> Option<Self> {
-        ((0..16).contains(&x) && (0..16).contains(&y)).then(|| Self((x as u8) << 4 | y as u8))
-    }
-
-    pub(crate) fn x(&self) -> u8 {
-        self.0 >> 4 & 0xf
-    }
-
-    pub(crate) fn y(&self) -> u8 {
-        self.0 & 0xf
-    }
-
-    pub(crate) fn is_valid(&self, width: u8, height: u8) -> bool {
-        self.x() < width && self.y() < height
     }
 }
 
