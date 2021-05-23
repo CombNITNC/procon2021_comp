@@ -32,8 +32,8 @@ impl std::fmt::Debug for Pos {
 }
 
 impl Pos {
-    pub(crate) fn new(x: u8, y: u8) -> Self {
-        Self(x << 4 | y)
+    pub(crate) fn new(x: i8, y: i8) -> Option<Self> {
+        ((0..16).contains(&x) && (0..16).contains(&y)).then(|| Self((x as u8) << 4 | y as u8))
     }
 
     pub(crate) fn x(&self) -> u8 {
