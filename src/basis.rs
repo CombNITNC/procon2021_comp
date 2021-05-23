@@ -97,6 +97,21 @@ impl Dir {
             Rot::R270 => self.r90().r90().r90(),
         }
     }
+
+    /// この辺 `self` に別の断片画像を回転させてその辺 `other` をつなげるとき, 別の断片画像を回転させる角度を計算する.
+    pub(crate) fn calc_rot(mut self, mut other: Self) -> Rot {
+        while !matches!(self, Dir::North) {
+            self = self.r90();
+            other = other.r90();
+        }
+        use Rot::*;
+        match other {
+            Dir::North => R180,
+            Dir::East => R90,
+            Dir::South => R0,
+            Dir::West => R270,
+        }
+    }
 }
 
 /// `Edge` は断片画像における辺のピクセル列を表す.
