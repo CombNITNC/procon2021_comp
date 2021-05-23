@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
-
 /// `Color` は 24 ビットの RGB カラーを表す.
 #[derive(Clone)]
 pub(crate) struct Color {
@@ -71,10 +69,6 @@ pub(crate) enum Rot {
     R270,
 }
 
-/// `Edge` は画像上の連続する一直線のピクセル列を表す.
-#[derive(Debug, Clone)]
-pub(crate) struct Edge(pub(crate) Vec<Color>);
-
 /// `Dir` はある断片画像において辺が位置する向きを表す.
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Dir {
@@ -104,9 +98,20 @@ impl Dir {
     }
 }
 
+/// `Edge` は断片画像における辺のピクセル列を表す.
+#[derive(Debug, Clone)]
+pub(crate) struct Edge {
+    pub(crate) dir: Dir,
+    pub(crate) pixels: Vec<Color>,
+}
+
+/// `Edges` は断片画像の縁の四辺を表す. また, 断片画像を回転させたときでも同じように扱えるようにする.
+#[derive(Debug)]
+pub(crate) struct Edges([Edge; 4]);
+
 /// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と縁四辺 `edges` を表す.
 #[derive(Debug)]
 pub(crate) struct Fragment {
-    pos: Pos,
-    edges: HashMap<Dir, Edge>,
+    pub(crate) pos: Pos,
+    pub(crate) edges: Edges,
 }
