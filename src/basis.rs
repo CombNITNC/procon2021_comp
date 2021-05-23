@@ -79,7 +79,7 @@ pub(crate) enum Dir {
 }
 
 impl Dir {
-    /// `Dir` の値を `rot` だけ回転させた向きの値にする.
+    /// `self` の値を `rot` だけ回転させた向きの値にする.
     fn rotate(self, rot: Rot) -> Self {
         fn r90(dir: Dir) -> Dir {
             match dir {
