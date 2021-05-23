@@ -40,7 +40,7 @@ impl Pos {
     }
 
     pub(crate) fn is_valid(&self, width: u8, height: u8) -> bool {
-        self.x() <= width && self.y() <= height
+        self.x() < width && self.y() < height
     }
 }
 
