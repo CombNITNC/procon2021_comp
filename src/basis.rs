@@ -60,9 +60,9 @@ pub(crate) struct Operation {
     movements: Vec<Movement>,
 }
 
-/// `Dir` はある断片画像を原画像の状態から時計回りに回転させた角度を表す.
+/// `Rot` はある断片画像を原画像の状態から時計回りに回転させた角度を表す.
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum Dir {
+pub(crate) enum Rot {
     R0,
     R90,
     R180,
