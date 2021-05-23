@@ -79,21 +79,22 @@ pub(crate) enum Dir {
 }
 
 impl Dir {
-    /// `self` の値を `rot` だけ回転させた向きの値にする.
-    fn rotate(self, rot: Rot) -> Self {
-        fn r90(dir: Dir) -> Dir {
-            match dir {
-                Dir::North => Dir::East,
-                Dir::East => Dir::South,
-                Dir::South => Dir::West,
-                Dir::West => Dir::North,
-            }
+    fn r90(self) -> Dir {
+        match self {
+            Dir::North => Dir::East,
+            Dir::East => Dir::South,
+            Dir::South => Dir::West,
+            Dir::West => Dir::North,
         }
+    }
+
+    /// `self` の値を `rot` だけ回転させた向きの値にする.
+    pub(crate) fn rotate(self, rot: Rot) -> Self {
         match rot {
             Rot::R0 => self,
-            Rot::R90 => r90(self),
-            Rot::R180 => r90(r90(self)),
-            Rot::R270 => r90(r90(r90(self))),
+            Rot::R90 => self.r90(),
+            Rot::R180 => self.r90().r90(),
+            Rot::R270 => self.r90().r90().r90(),
         }
     }
 }
