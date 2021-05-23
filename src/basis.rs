@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+
 /// `Color` は 24 ビットの RGB カラーを表す.
 #[derive(Clone)]
 pub(crate) struct Color {
@@ -73,12 +75,18 @@ pub(crate) enum Rot {
 #[derive(Debug, Clone)]
 pub(crate) struct Edge(pub(crate) Vec<Color>);
 
-/// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と縁四辺 `north_edge`, `east_edge`, `south_edge`, `west_edge` を表す.
+/// `Dir` はある断片画像において辺が位置する向きを表す.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Dir {
+    North,
+    East,
+    South,
+    West,
+}
+
+/// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と縁四辺 `edges` を表す.
 #[derive(Debug)]
 pub(crate) struct Fragment {
     pos: Pos,
-    north_edges: Edge,
-    east_edges: Edge,
-    south_edges: Edge,
-    west_edges: Edge,
+    edges: HashMap<Dir, Edge>,
 }
