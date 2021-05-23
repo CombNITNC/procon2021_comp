@@ -3,7 +3,7 @@
 use crate::grid::Pos;
 
 /// `Color` は 24 ビットの RGB カラーを表す.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub(crate) struct Color {
     pub(crate) r: u8,
     pub(crate) g: u8,
