@@ -109,9 +109,10 @@ pub(crate) struct Edge {
 #[derive(Debug)]
 pub(crate) struct Edges([Edge; 4]);
 
-/// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と縁四辺 `edges` を表す.
+/// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と回転させた向き `rot` と縁四辺 `edges` を表す.
 #[derive(Debug)]
 pub(crate) struct Fragment {
-    pub(crate) pos: Pos,
-    pub(crate) edges: Edges,
+    pos: Pos,
+    rot: Rot,
+    edges: Edges,
 }
