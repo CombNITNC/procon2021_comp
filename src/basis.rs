@@ -109,6 +109,29 @@ pub(crate) struct Edge {
 #[derive(Debug)]
 pub(crate) struct Edges([Edge; 4]);
 
+impl Edges {
+    fn new(north: Vec<Color>, east: Vec<Color>, south: Vec<Color>, west: Vec<Color>) -> Self {
+        Self([
+            Edge {
+                dir: Dir::North,
+                pixels: north,
+            },
+            Edge {
+                dir: Dir::East,
+                pixels: east,
+            },
+            Edge {
+                dir: Dir::South,
+                pixels: south,
+            },
+            Edge {
+                dir: Dir::West,
+                pixels: west,
+            },
+        ])
+    }
+}
+
 /// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と回転させた向き `rot` と縁四辺 `edges` を表す.
 #[derive(Debug)]
 pub(crate) struct Fragment {
