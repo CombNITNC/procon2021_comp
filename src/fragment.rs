@@ -38,6 +38,12 @@ impl Edges {
             },
         ])
     }
+
+    fn rotate(&mut self, rot: Rot) {
+        for edge in &mut self.0 {
+            edge.dir = edge.dir.rotate(rot);
+        }
+    }
 }
 
 /// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と回転させた向き `rot` と縁四辺 `edges` を表す.
