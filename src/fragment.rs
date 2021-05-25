@@ -119,7 +119,7 @@ impl Fragment {
 mod tests {
     use {
         crate::{
-            basis::{Color, Rot},
+            basis::{Color, Dir, Rot},
             fragment::Fragment,
             grid::Grid,
         },
@@ -151,9 +151,15 @@ mod tests {
             grid.clamping_pos(2, 1),
         ];
 
-        for test_case in test_cases {
-            let frag = Fragment::new(&pixels, test_case.clone(), 180, 60, 60);
+        for pos in test_cases {
+            let frag = Fragment::new(&pixels, pos.clone(), 180, 60);
 
+            let (x, y) = (pos.x() as usize, pos.y() as usize);
+            let north = &frag.edges.0[0];
+            assert!(matches!(north.dir, Dir::North));
+            for i in 0..60 {
+                assert_eq!(&north.pixels[i], &pixels[x * 60 + i]);
+            }
             assert!(matches!(frag.rot, Rot::R0));
         }
         Ok(())
