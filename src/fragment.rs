@@ -56,9 +56,9 @@ impl Fragment {
             ..
         }: Problem,
     ) -> Vec<Self> {
-        let frag_width = (width / rows as u16) as u8;
-        let frag_height = (height / cols as u16) as u8;
-        let grid = Grid::new(frag_width, frag_height);
+        let grid = Grid::new(rows, cols);
+        let frag_width = width / rows as u16;
+        let frag_height = height / cols as u16;
         let mut frags = vec![];
 
         for col in 0..cols {
@@ -66,6 +66,7 @@ impl Fragment {
                 frags.push(Self::new(
                     &pixels,
                     grid.clamping_pos(row, col),
+                    width as usize,
                     frag_width,
                     frag_height,
                 ));
@@ -74,7 +75,43 @@ impl Fragment {
         frags
     }
 
-    fn new(pixels: &[Color], pos: Pos, frag_width: u8, frag_height: u8) -> Self {
-        todo!()
+    fn new(
+        pixels: &[Color],
+        pos: Pos,
+        whole_width: usize,
+        frag_width: u16,
+        frag_height: u16,
+    ) -> Self {
+        let as_index = |x: u16, y: u16| -> usize {
+            let x = (x + pos.x() as u16 * frag_width) as usize;
+            let y = (y + pos.y() as u16 * frag_height) as usize;
+            x + y * whole_width
+        };
+        let mut north = vec![];
+        let mut east = vec![];
+        let mut south = vec![];
+        let mut west = vec![];
+        for y in 0..frag_height {
+            for x in 0..frag_width {
+                let index = as_index(x, y);
+                if x == 0 {
+                    west.push(pixels[index]);
+                }
+                if x == frag_width - 1 {
+                    east.push(pixels[index]);
+                }
+                if y == 0 {
+                    north.push(pixels[index]);
+                }
+                if y == frag_height - 1 {
+                    south.push(pixels[index]);
+                }
+            }
+        }
+        Self {
+            pos,
+            rot: Rot::R0,
+            edges: Edges::new(north, east, south, west),
+        }
     }
 }
