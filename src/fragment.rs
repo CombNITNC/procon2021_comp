@@ -16,6 +16,9 @@ pub(crate) struct Edges([Edge; 4]);
 
 impl Edges {
     fn new(north: Vec<Color>, east: Vec<Color>, south: Vec<Color>, west: Vec<Color>) -> Self {
+        debug_assert_eq!(north.len(), east.len());
+        debug_assert_eq!(north.len(), south.len());
+        debug_assert_eq!(north.len(), west.len());
         Self([
             Edge {
                 dir: Dir::North,
