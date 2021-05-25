@@ -143,7 +143,8 @@ mod tests {
 
     #[test]
     fn case1() -> Result<()> {
-        let pixels = pixels(32, 180, 120, "test_cases/02_sampled.ppm")?;
+        let width = 180;
+        let pixels = pixels(32, width, 120, "test_cases/02_sampled.ppm")?;
         let grid = Grid::new(3, 2);
         let test_cases = &[
             grid.clamping_pos(0, 0),
@@ -152,13 +153,13 @@ mod tests {
         ];
 
         for pos in test_cases {
-            let frag = Fragment::new(&pixels, pos.clone(), 180, 60);
+            let frag = Fragment::new(&pixels, pos.clone(), width, 60);
 
             let (x, y) = (pos.x() as usize, pos.y() as usize);
             let north = &frag.edges.0[0];
             assert!(matches!(north.dir, Dir::North));
             for i in 0..60 {
-                assert_eq!(&north.pixels[i], &pixels[x * 60 + i]);
+                assert_eq!(&north.pixels[i], &pixels[x * 60 + i + y * 60 * width]);
             }
             assert!(matches!(frag.rot, Rot::R0));
         }
