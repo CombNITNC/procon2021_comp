@@ -111,6 +111,9 @@ impl Fragment {
                 }
             }
         }
+        // make edges to be rotating clockwise
+        south.reverse();
+        west.reverse();
         Self {
             pos,
             rot: Rot::R0,
