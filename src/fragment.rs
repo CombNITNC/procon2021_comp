@@ -104,7 +104,7 @@ impl Fragment {
                 }
             }
         }
-        // make edges to be rotating clockwise
+        // 辺のピクセルが時計回りになるようにする
         south.reverse();
         west.reverse();
         Self {
