@@ -27,7 +27,7 @@ impl Pos {
 }
 
 /// `Grid` は原画像を断片画像に分ける時の分割グリッドを表す. `Pos` はこれを介してのみ作成できる.
-struct Grid {
+pub(crate) struct Grid {
     width: u8,
     height: u8,
 }
