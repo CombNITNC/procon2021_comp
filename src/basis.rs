@@ -91,6 +91,7 @@ impl Dir {
     }
 }
 
+/// `Problem` は原画像から抽出される問題設定の情報を表す.
 pub(crate) struct Problem {
     pub(crate) select_limit: u8,
     pub(crate) select_cost: u16,
