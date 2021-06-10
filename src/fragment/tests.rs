@@ -38,13 +38,13 @@ fn case1() -> Result<()> {
 
             let up_left = x * frag_edge + y * frag_edge * width;
 
-            let edge = &frag.edges.0[0];
+            let edge = frag.edge(Dir::North);
             assert!(matches!(edge.dir, Dir::North));
             for i in 0..60 {
                 assert_eq!(&edge.pixels[i], &pixels[up_left + i]);
             }
 
-            let edge = &frag.edges.0[1];
+            let edge = frag.edge(Dir::East);
             assert!(matches!(edge.dir, Dir::East));
             for i in 0..60 {
                 assert_eq!(
@@ -53,7 +53,7 @@ fn case1() -> Result<()> {
                 );
             }
 
-            let edge = &frag.edges.0[2];
+            let edge = frag.edge(Dir::South);
             assert!(matches!(edge.dir, Dir::South));
             for i in 0..60 {
                 assert_eq!(
@@ -62,7 +62,7 @@ fn case1() -> Result<()> {
                 );
             }
 
-            let edge = &frag.edges.0[3];
+            let edge = frag.edge(Dir::West);
             assert!(matches!(edge.dir, Dir::West));
             for i in 0..60 {
                 assert_eq!(
