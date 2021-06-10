@@ -47,6 +47,10 @@ impl Edges {
             edge.dir = edge.dir.rotate(rot);
         }
     }
+
+    fn edge(&self, dir: Dir) -> &Edge {
+        self.0.iter().filter(|edge| edge.dir == &dir).next().expect("dirs of edges were broken")
+    }
 }
 
 /// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と回転させた向き `rot` と縁四辺 `edges` を表す.
