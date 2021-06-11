@@ -49,7 +49,10 @@ impl Edges {
     }
 
     fn edge(&self, dir: Dir) -> &Edge {
-        self.0.iter().filter(|edge| edge.dir == &dir).next().expect("dirs of edges were broken")
+        self.0
+            .iter()
+            .find(|edge| edge.dir == dir)
+            .expect("dirs of edges were broken")
     }
 }
 
