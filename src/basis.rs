@@ -3,7 +3,7 @@
 use crate::grid::Pos;
 
 /// `Color` は 24 ビットの RGB カラーを表す.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub(crate) struct Color {
     pub(crate) r: u8,
     pub(crate) g: u8,
@@ -47,7 +47,7 @@ pub(crate) enum Rot {
 }
 
 /// `Dir` はある断片画像において辺が位置する向きを表す.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum Dir {
     North,
     East,
@@ -91,44 +91,14 @@ impl Dir {
     }
 }
 
-/// `Edge` は断片画像における辺のピクセル列を表す.
-#[derive(Debug, Clone)]
-pub(crate) struct Edge {
-    pub(crate) dir: Dir,
+/// `Problem` は原画像から抽出される問題設定の情報を表す.
+pub(crate) struct Problem {
+    pub(crate) select_limit: u8,
+    pub(crate) select_cost: u16,
+    pub(crate) swap_cost: u16,
+    pub(crate) width: u16,
+    pub(crate) height: u16,
+    pub(crate) rows: u8,
+    pub(crate) cols: u8,
     pub(crate) pixels: Vec<Color>,
-}
-
-/// `Edges` は断片画像の縁の四辺を表す. また, 断片画像を回転させたときでも同じように扱えるようにする.
-#[derive(Debug)]
-pub(crate) struct Edges([Edge; 4]);
-
-impl Edges {
-    fn new(north: Vec<Color>, east: Vec<Color>, south: Vec<Color>, west: Vec<Color>) -> Self {
-        Self([
-            Edge {
-                dir: Dir::North,
-                pixels: north,
-            },
-            Edge {
-                dir: Dir::East,
-                pixels: east,
-            },
-            Edge {
-                dir: Dir::South,
-                pixels: south,
-            },
-            Edge {
-                dir: Dir::West,
-                pixels: west,
-            },
-        ])
-    }
-}
-
-/// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と回転させた向き `rot` と縁四辺 `edges` を表す.
-#[derive(Debug)]
-pub(crate) struct Fragment {
-    pos: Pos,
-    rot: Rot,
-    edges: Edges,
 }

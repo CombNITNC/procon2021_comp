@@ -1,4 +1,5 @@
 mod basis;
+mod fragment;
 mod grid;
 mod image;
 
