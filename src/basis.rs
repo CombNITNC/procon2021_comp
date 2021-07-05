@@ -22,7 +22,7 @@ impl std::fmt::Debug for Color {
 }
 
 /// `Movement` はある断片画像を動かして入れ替える向きを表す.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum Movement {
     Up,
     Right,
@@ -30,11 +30,26 @@ pub(crate) enum Movement {
     Left,
 }
 
+impl Movement {
+    /// `from` から `to` へ移動させるときの向きを求める.
+    /// 要件: `from.manhattan_distance(to) == 1 && ((from.x() == to.x()) ^ (from.y() == to.y()))`
+    pub(crate) fn between_pos(from: Pos, to: Pos) -> Self {
+        use std::cmp::Ordering::*;
+        match (from.x().cmp(&to.x()), from.y().cmp(&to.y())) {
+            (Less, _) => Self::Right,
+            (Greater, _) => Self::Left,
+            (_, Less) => Self::Down,
+            (_, Greater) => Self::Up,
+            _ => unreachable!(),
+        }
+    }
+}
+
 /// `Operation` は座標 `select` の断片画像を選択してから `movements` の入れ替えを行う操作を表す.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub(crate) struct Operation {
-    select: Pos,
-    movements: Vec<Movement>,
+    pub(crate) select: Pos,
+    pub(crate) movements: Vec<Movement>,
 }
 
 /// `Rot` はある断片画像を原画像の状態から時計回りに回転させた角度を表す.
