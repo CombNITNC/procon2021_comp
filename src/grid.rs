@@ -1,7 +1,7 @@
 /// `Pos` は `Grid` に存在する座標を表す.
 ///
 /// フィールドの `u8` の上位 4 ビットに X 座標, 下位 4 ビットに Y 座標を格納する. それぞれは必ず `Grid` の `width` と `height` 未満になる.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Pos(u8);
 
 impl std::fmt::Debug for Pos {
