@@ -56,6 +56,7 @@ impl Iterator for RangePos {
 }
 
 /// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
+#[derive(Debug, Clone)]
 pub(crate) struct VecOnGrid<'grid, T> {
     vec: Vec<T>,
     grid: &'grid Grid,
@@ -127,6 +128,7 @@ impl<T> ops::IndexMut<Pos> for VecOnGrid<'_, T> {
 }
 
 /// `Grid` は原画像を断片画像に分ける時の分割グリッドを表す. `Pos` はこれを介してのみ作成できる.
+#[derive(Debug)]
 pub(crate) struct Grid {
     width: u8,
     height: u8,
