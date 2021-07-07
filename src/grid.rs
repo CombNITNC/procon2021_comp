@@ -26,6 +26,56 @@ impl Pos {
     }
 }
 
+pub(crate) struct VecOnGrid<'grid, T> {
+    vec: Vec<T>,
+    grid: &'grid Grid,
+}
+
+impl<'grid, T> VecOnGrid<'grid, T> {
+    pub(crate) fn new(grid: &'grid Grid) -> Self {
+        Self {
+            vec: Vec::with_capacity(grid.width as usize * grid.height as usize),
+            grid,
+        }
+    }
+
+    pub(crate) fn with_init(grid: &'grid Grid, init: T) -> Self
+    where
+        T: Clone,
+    {
+        Self {
+            vec: vec![init; grid.width as usize * grid.height as usize],
+            grid,
+        }
+    }
+
+    pub(crate) fn with_default(grid: &'grid Grid) -> Self
+    where
+        T: Default,
+    {
+        Self {
+            vec: std::iter::repeat_with(T::default)
+                .take(grid.width as usize * grid.height as usize)
+                .collect(),
+            grid,
+        }
+    }
+}
+
+impl<T> std::ops::Index<Pos> for VecOnGrid<'_, T> {
+    type Output = T;
+
+    fn index(&self, index: Pos) -> &Self::Output {
+        &self.vec[self.grid.pos_as_index(index)]
+    }
+}
+
+impl<T> std::ops::IndexMut<Pos> for VecOnGrid<'_, T> {
+    fn index_mut(&mut self, index: Pos) -> &mut Self::Output {
+        &mut self.vec[self.grid.pos_as_index(index)]
+    }
+}
+
 /// `Grid` は原画像を断片画像に分ける時の分割グリッドを表す. `Pos` はこれを介してのみ作成できる.
 pub(crate) struct Grid {
     width: u8,
@@ -65,5 +115,17 @@ impl Grid {
         .flatten()
         .cloned()
         .collect()
+    }
+
+    fn pos_as_index(&self, pos: Pos) -> usize {
+        pos.y() as usize * self.width as usize + pos.x() as usize
+    }
+
+    fn index_to_pos(&self, i: usize) -> Pos {
+        debug_assert!(i < self.width as usize * self.height as usize);
+        self.clamping_pos(
+            (i % self.width as usize) as u8,
+            (i / self.width as usize) as u8,
+        )
     }
 }
