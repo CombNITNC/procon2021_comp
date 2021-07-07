@@ -28,6 +28,33 @@ impl Pos {
     }
 }
 
+/// `RangePos` は `Grid` 上の矩形領域を表し, `Iterator` で走査できる.
+pub(crate) struct RangePos {
+    start: Pos,
+    end: Pos,
+    x: u8,
+    y: u8,
+}
+
+impl Iterator for RangePos {
+    type Item = Pos;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.y < self.end.y() {
+            let ret = Pos::new(self.x, self.y);
+            if self.x < self.end.x() {
+                self.x += 1;
+            } else {
+                self.y += 1;
+                self.x = self.start.x();
+            }
+            Some(ret)
+        } else {
+            None
+        }
+    }
+}
+
 /// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
 pub(crate) struct VecOnGrid<'grid, T> {
     vec: Vec<T>,
@@ -138,6 +165,17 @@ impl Grid {
         .flatten()
         .cloned()
         .collect()
+    }
+
+    pub(crate) fn range(&self, up_left: Pos, down_right: Pos) -> RangePos {
+        assert!(up_left.x() < down_right.x());
+        assert!(up_left.y() < down_right.y());
+        RangePos {
+            start: up_left,
+            end: down_right,
+            x: up_left.x(),
+            y: up_left.y(),
+        }
     }
 
     fn pos_as_index(&self, pos: Pos) -> usize {
