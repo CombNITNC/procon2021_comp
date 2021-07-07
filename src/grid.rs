@@ -1,3 +1,5 @@
+use std::ops;
+
 /// `Pos` は `Grid` に存在する座標を表す.
 ///
 /// フィールドの `u8` の上位 4 ビットに X 座標, 下位 4 ビットに Y 座標を格納する. それぞれは必ず `Grid` の `width` と `height` 未満になる.
@@ -83,7 +85,7 @@ impl<'a, 'grid, T> std::iter::IntoIterator for &'a VecOnGrid<'grid, T> {
     }
 }
 
-impl<T> std::ops::Index<Pos> for VecOnGrid<'_, T> {
+impl<T> ops::Index<Pos> for VecOnGrid<'_, T> {
     type Output = T;
 
     fn index(&self, index: Pos) -> &Self::Output {
@@ -91,7 +93,7 @@ impl<T> std::ops::Index<Pos> for VecOnGrid<'_, T> {
     }
 }
 
-impl<T> std::ops::IndexMut<Pos> for VecOnGrid<'_, T> {
+impl<T> ops::IndexMut<Pos> for VecOnGrid<'_, T> {
     fn index_mut(&mut self, index: Pos) -> &mut Self::Output {
         &mut self.vec[self.grid.pos_as_index(index)]
     }
