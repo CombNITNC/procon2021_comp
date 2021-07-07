@@ -26,6 +26,7 @@ impl Pos {
     }
 }
 
+/// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
 pub(crate) struct VecOnGrid<'grid, T> {
     vec: Vec<T>,
     grid: &'grid Grid,
