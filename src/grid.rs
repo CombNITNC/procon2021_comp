@@ -62,6 +62,26 @@ impl<'grid, T> VecOnGrid<'grid, T> {
     }
 }
 
+impl<'grid, T> std::iter::IntoIterator for VecOnGrid<'grid, T> {
+    type Item = T;
+
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.into_iter()
+    }
+}
+
+impl<'a, 'grid, T> std::iter::IntoIterator for &'a VecOnGrid<'grid, T> {
+    type Item = &'a T;
+
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.iter()
+    }
+}
+
 impl<T> std::ops::Index<Pos> for VecOnGrid<'_, T> {
     type Output = T;
 
