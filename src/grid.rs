@@ -56,7 +56,7 @@ impl Iterator for RangePos {
 }
 
 /// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct VecOnGrid<'grid, T> {
     vec: Vec<T>,
     grid: &'grid Grid,
@@ -90,6 +90,12 @@ impl<'grid, T> VecOnGrid<'grid, T> {
                 .collect(),
             grid,
         }
+    }
+}
+
+impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.vec.fmt(f)
     }
 }
 
