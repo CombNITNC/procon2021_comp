@@ -63,13 +63,6 @@ pub(crate) struct VecOnGrid<'grid, T> {
 }
 
 impl<'grid, T> VecOnGrid<'grid, T> {
-    pub(crate) fn new(grid: &'grid Grid) -> Self {
-        Self {
-            vec: Vec::with_capacity(grid.width as usize * grid.height as usize),
-            grid,
-        }
-    }
-
     pub(crate) fn with_init(grid: &'grid Grid, init: T) -> Self
     where
         T: Clone,
