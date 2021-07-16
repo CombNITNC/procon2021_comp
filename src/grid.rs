@@ -189,7 +189,7 @@ impl Grid {
     pub(crate) fn all_pos(&self) -> RangePos {
         RangePos {
             start: Pos::new(0, 0),
-            end: Pos::new(self.width() - 1, self.height() - 1),
+            end: Pos::new(self.width - 1, self.height - 1),
             x: 0,
             y: 0,
         }
