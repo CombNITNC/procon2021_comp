@@ -1,7 +1,9 @@
+use std::ops;
+
 /// `Pos` は `Grid` に存在する座標を表す.
 ///
 /// フィールドの `u8` の上位 4 ビットに X 座標, 下位 4 ビットに Y 座標を格納する. それぞれは必ず `Grid` の `width` と `height` 未満になる.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Pos(u8);
 
 impl std::fmt::Debug for Pos {
@@ -26,7 +28,106 @@ impl Pos {
     }
 }
 
+/// `RangePos` は `Grid` 上の矩形領域を表し, `Iterator` で走査できる.
+pub(crate) struct RangePos {
+    start: Pos,
+    end: Pos,
+    x: u8,
+    y: u8,
+}
+
+impl Iterator for RangePos {
+    type Item = Pos;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.y < self.end.y() {
+            let ret = Pos::new(self.x, self.y);
+            if self.x < self.end.x() {
+                self.x += 1;
+            } else {
+                self.y += 1;
+                self.x = self.start.x();
+            }
+            Some(ret)
+        } else {
+            None
+        }
+    }
+}
+
+/// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
+#[derive(Clone)]
+pub(crate) struct VecOnGrid<'grid, T> {
+    vec: Vec<T>,
+    grid: &'grid Grid,
+}
+
+impl<'grid, T> VecOnGrid<'grid, T> {
+    pub(crate) fn with_init(grid: &'grid Grid, init: T) -> Self
+    where
+        T: Clone,
+    {
+        Self {
+            vec: vec![init; grid.width as usize * grid.height as usize],
+            grid,
+        }
+    }
+
+    pub(crate) fn with_default(grid: &'grid Grid) -> Self
+    where
+        T: Default,
+    {
+        Self {
+            vec: std::iter::repeat_with(T::default)
+                .take(grid.width as usize * grid.height as usize)
+                .collect(),
+            grid,
+        }
+    }
+}
+
+impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.vec.fmt(f)
+    }
+}
+
+impl<'grid, T> std::iter::IntoIterator for VecOnGrid<'grid, T> {
+    type Item = T;
+
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.into_iter()
+    }
+}
+
+impl<'a, 'grid, T> std::iter::IntoIterator for &'a VecOnGrid<'grid, T> {
+    type Item = &'a T;
+
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.iter()
+    }
+}
+
+impl<T> ops::Index<Pos> for VecOnGrid<'_, T> {
+    type Output = T;
+
+    fn index(&self, index: Pos) -> &Self::Output {
+        &self.vec[self.grid.pos_as_index(index)]
+    }
+}
+
+impl<T> ops::IndexMut<Pos> for VecOnGrid<'_, T> {
+    fn index_mut(&mut self, index: Pos) -> &mut Self::Output {
+        &mut self.vec[self.grid.pos_as_index(index)]
+    }
+}
+
 /// `Grid` は原画像を断片画像に分ける時の分割グリッドを表す. `Pos` はこれを介してのみ作成できる.
+#[derive(Debug)]
 pub(crate) struct Grid {
     width: u8,
     height: u8,
@@ -65,5 +166,37 @@ impl Grid {
         .flatten()
         .cloned()
         .collect()
+    }
+
+    pub(crate) fn range(&self, up_left: Pos, down_right: Pos) -> RangePos {
+        assert!(up_left.x() < down_right.x());
+        assert!(up_left.y() < down_right.y());
+        RangePos {
+            start: up_left,
+            end: down_right,
+            x: up_left.x(),
+            y: up_left.y(),
+        }
+    }
+
+    pub(crate) fn all_pos(&self) -> RangePos {
+        RangePos {
+            start: Pos::new(0, 0),
+            end: Pos::new(self.width - 1, self.height - 1),
+            x: 0,
+            y: 0,
+        }
+    }
+
+    fn pos_as_index(&self, pos: Pos) -> usize {
+        pos.y() as usize * self.width as usize + pos.x() as usize
+    }
+
+    fn index_to_pos(&self, i: usize) -> Pos {
+        debug_assert!(i < self.width as usize * self.height as usize);
+        self.clamping_pos(
+            (i % self.width as usize) as u8,
+            (i / self.width as usize) as u8,
+        )
     }
 }
