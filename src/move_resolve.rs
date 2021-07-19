@@ -5,6 +5,7 @@ use crate::{
 };
 
 mod edges_nodes;
+mod ida_star;
 #[cfg(test)]
 mod tests;
 
