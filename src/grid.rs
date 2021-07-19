@@ -1,3 +1,4 @@
+use petgraph::graph::{IndexType, NodeIndex};
 use std::ops;
 
 /// `Pos` は `Grid` に存在する座標を表す.
@@ -9,6 +10,26 @@ pub(crate) struct Pos(u8);
 impl std::fmt::Debug for Pos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.x(), self.y())
+    }
+}
+
+unsafe impl IndexType for Pos {
+    fn new(x: usize) -> Self {
+        Self(x as u8)
+    }
+
+    fn index(&self) -> usize {
+        self.0 as usize
+    }
+
+    fn max() -> Self {
+        Self(std::u8::MAX)
+    }
+}
+
+impl From<NodeIndex<Pos>> for Pos {
+    fn from(idx: NodeIndex<Pos>) -> Self {
+        IndexType::new(idx.index())
     }
 }
 
@@ -140,7 +161,7 @@ impl<T> ops::IndexMut<Pos> for VecOnGrid<'_, T> {
 }
 
 /// `Grid` は原画像を断片画像に分ける時の分割グリッドを表す. `Pos` はこれを介してのみ作成できる.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Grid {
     width: u8,
     height: u8,
