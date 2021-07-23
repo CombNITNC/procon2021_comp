@@ -22,6 +22,7 @@ struct GridState {
     select_cost: u64,
 }
 
+/// 隣接マスどうしのマンハッタン距離が 1 かつ全頂点がゴール位置に無い集合の数を求める.
 fn h1(state: &GridState) -> u64 {
     let mut edges = vec![];
     for pos in state.grid.all_pos() {
@@ -72,15 +73,13 @@ impl State<Vec<GridState>, u64> for GridState {
     }
 
     fn heuristic(&self) -> u64 {
-        // h1 = 隣接マスどうしのマンハッタン距離が 1 かつ全頂点がゴール位置に無い集合の数
-        // h2 = ゴール位置と異なる位置のマスの数
         let h1: u64 = h1(self);
-        let h2: u64 = self
+        let cells_different_to_goal = self
             .grid
             .all_pos()
             .filter(|&pos| pos != self.field[pos])
             .count() as u64;
-        h1 + h2
+        h1 + cells_different_to_goal
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
