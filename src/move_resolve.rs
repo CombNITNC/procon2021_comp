@@ -1,8 +1,12 @@
-use self::{edges_nodes::EdgesNodes, ida_star::State};
+use self::{
+    edges_nodes::EdgesNodes,
+    ida_star::{ida_star, State},
+};
 use crate::{
     basis::Operation,
     grid::{Grid, Pos, VecOnGrid},
 };
+use im_rc::HashSet;
 use petgraph::{
     algo::kosaraju_scc,
     graph::{node_index, IndexType, UnGraph},
@@ -14,12 +18,22 @@ mod ida_star;
 mod tests;
 
 #[derive(Debug, Clone)]
-struct GridState {
-    grid: Grid,
-    field: VecOnGrid<'static, Pos>,
+struct GridState<'grid> {
+    grid: &'grid Grid,
+    field: VecOnGrid<'grid, Pos>,
     selecting: Pos,
-    swap_cost: u64,
-    select_cost: u64,
+    swap_cost: u16,
+    select_cost: u16,
+}
+
+impl PartialEq for GridState<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        (&self.field)
+            .into_iter()
+            .zip(&other.field)
+            .all(|(a, b)| a == b)
+            && self.selecting == other.selecting
+    }
 }
 
 /// 隣接マスどうしのマンハッタン距離が 1 かつ全頂点がゴール位置に無い集合の数を求める.
@@ -54,8 +68,8 @@ fn h1(state: &GridState) -> u64 {
         .count() as u64
 }
 
-impl State<Vec<GridState>, u64> for GridState {
-    fn next_states(&self) -> Vec<GridState> {
+impl<'grid> State<Vec<GridState<'grid>>, u64> for GridState<'grid> {
+    fn next_states(&self) -> Vec<GridState<'grid>> {
         self.grid
             .all_pos()
             .map(|next_select| Self {
@@ -83,16 +97,44 @@ impl State<Vec<GridState>, u64> for GridState {
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
-        if self.selecting.manhattan_distance(next.selecting) == 1 {
-            return self.swap_cost;
-        }
-        self.swap_cost + self.select_cost
+        (if self.selecting.manhattan_distance(next.selecting) == 1 {
+            self.swap_cost
+        } else {
+            self.swap_cost + self.select_cost
+        }) as u64
     }
 }
 
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順を求める.
-pub(crate) fn resolve(grid: &Grid, movements: &[(Pos, Pos)]) -> Vec<Operation> {
-    let edges_nodes = EdgesNodes::new(grid, &movements);
+pub(crate) fn resolve(
+    grid: &Grid,
+    movements: &[(Pos, Pos)],
+    swap_cost: u16,
+    select_cost: u16,
+) -> Vec<Operation> {
+    let EdgesNodes {
+        edges,
+        nodes,
+        reversed_nodes,
+    } = EdgesNodes::new(grid, &movements);
+
+    let moved_nodes: HashSet<Pos> = movements.iter().flat_map(|&(a, b)| [a, b]).collect();
+    let initial_states = moved_nodes.into_iter().flat_map(|node| {
+        grid.around_of(node).into_iter().map(|p| GridState {
+            grid: &grid,
+            field: nodes.clone(),
+            selecting: p,
+            swap_cost,
+            select_cost,
+        })
+    });
+
+    let path = initial_states
+        .into_iter()
+        .map(ida_star)
+        .min_by(|a, b| a.1.cmp(&b.1))
+        .unwrap()
+        .0;
 
     todo!()
 }
