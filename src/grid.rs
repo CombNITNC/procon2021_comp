@@ -161,7 +161,7 @@ impl<T> ops::IndexMut<Pos> for VecOnGrid<'_, T> {
 }
 
 /// `Grid` は原画像を断片画像に分ける時の分割グリッドを表す. `Pos` はこれを介してのみ作成できる.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) struct Grid {
     width: u8,
     height: u8,
