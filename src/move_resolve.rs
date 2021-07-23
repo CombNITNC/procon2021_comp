@@ -3,7 +3,7 @@ use self::{
     ida_star::{ida_star, State},
 };
 use crate::{
-    basis::Operation,
+    basis::{Movement, Operation},
     grid::{Grid, Pos, VecOnGrid},
 };
 use im_rc::HashSet;
@@ -112,11 +112,7 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    let EdgesNodes {
-        edges,
-        nodes,
-        reversed_nodes,
-    } = EdgesNodes::new(grid, &movements);
+    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, &movements);
 
     let moved_nodes: HashSet<Pos> = movements.iter().flat_map(|&(a, b)| [a, b]).collect();
     let initial_states = moved_nodes.into_iter().flat_map(|node| {
@@ -129,12 +125,31 @@ pub(crate) fn resolve(
         })
     });
 
-    let path = initial_states
+    let mut path = initial_states
         .into_iter()
         .map(ida_star)
         .min_by(|a, b| a.1.cmp(&b.1))
         .unwrap()
         .0;
 
-    todo!()
+    let mut current_operation = Operation {
+        select: path.pop().unwrap().selecting,
+        movements: vec![],
+    };
+    let mut operations = vec![];
+    for state in path {
+        if current_operation.select.manhattan_distance(state.selecting) == 1 {
+            current_operation.movements.push(Movement::between_pos(
+                current_operation.select,
+                state.selecting,
+            ));
+        } else {
+            operations.push(current_operation);
+            current_operation = Operation {
+                select: state.selecting,
+                movements: vec![],
+            };
+        }
+    }
+    operations
 }
