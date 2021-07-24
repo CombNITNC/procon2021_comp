@@ -68,7 +68,8 @@ fn h1(state: &GridState) -> u64 {
         .count() as u64
 }
 
-impl<'grid> State<Vec<GridState<'grid>>, u64> for GridState<'grid> {
+impl<'grid> State<u64> for GridState<'grid> {
+    type NextStates = Vec<GridState<'grid>>;
     fn next_states(&self) -> Vec<GridState<'grid>> {
         self.grid
             .all_pos()
