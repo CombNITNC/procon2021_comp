@@ -42,7 +42,7 @@ fn case1() {
             movements: vec![Left, Left, Left],
         },
     ];
-    let actual = resolve(&grid, case);
+    let actual = resolve(&grid, case, 1, 1);
     test_vec(expected, actual);
 }
 
@@ -67,6 +67,6 @@ fn case2() {
             movements: vec![Up, Right, Right, Right],
         },
     ];
-    let actual = resolve(&grid, case);
+    let actual = resolve(&grid, case, 1, 1);
     test_vec(expected, actual);
 }
