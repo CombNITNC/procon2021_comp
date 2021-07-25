@@ -1,7 +1,7 @@
-use super::{resolve, EdgesNodes};
+use super::resolve;
 use crate::{
     basis::{Movement::*, Operation},
-    grid::{Grid, VecOnGrid},
+    grid::Grid,
 };
 
 fn test_vec<E, A, T>(expected: E, actual: A)
