@@ -27,10 +27,12 @@ fn test_next_states() {
     // 00 01
     assert_eq!(next_states[0].field[grid.pos(0, 0)], grid.pos(1, 0));
     assert_eq!(next_states[0].field[grid.pos(0, 1)], grid.pos(0, 0));
+    assert_eq!(next_states[0].selecting, grid.pos(0, 0));
     // 00 11
     // 01 10
     assert_eq!(next_states[1].field[grid.pos(0, 1)], grid.pos(0, 1));
     assert_eq!(next_states[1].field[grid.pos(1, 1)], grid.pos(1, 0));
+    assert_eq!(next_states[1].selecting, grid.pos(1, 1));
 }
 
 fn test_vec<E, A, T>(expected: E, actual: A)
