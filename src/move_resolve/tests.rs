@@ -1,8 +1,37 @@
-use super::resolve;
+use super::{ida_star::State, resolve, GridState};
 use crate::{
     basis::{Movement::*, Operation},
-    grid::Grid,
+    grid::{Grid, VecOnGrid},
 };
+
+#[test]
+fn test_next_states() {
+    // 00 11
+    // 10 01
+    let grid = Grid::new(2, 2);
+    let mut field = VecOnGrid::with_init(&grid, grid.pos(0, 0));
+    field[grid.pos(0, 0)] = grid.pos(0, 0);
+    field[grid.pos(1, 0)] = grid.pos(1, 1);
+    field[grid.pos(0, 1)] = grid.pos(1, 0);
+    field[grid.pos(1, 1)] = grid.pos(0, 1);
+    let state = GridState {
+        grid: &grid,
+        field,
+        selecting: grid.pos(0, 1),
+        swap_cost: 1,
+        select_cost: 1,
+    };
+    let next_states = state.next_states();
+    assert_eq!(next_states.len(), 2);
+    // 10 11
+    // 00 01
+    assert_eq!(next_states[0].field[grid.pos(0, 0)], grid.pos(1, 0));
+    assert_eq!(next_states[0].field[grid.pos(0, 1)], grid.pos(0, 0));
+    // 00 11
+    // 01 10
+    assert_eq!(next_states[1].field[grid.pos(0, 1)], grid.pos(0, 1));
+    assert_eq!(next_states[1].field[grid.pos(1, 1)], grid.pos(1, 0));
+}
 
 fn test_vec<E, A, T>(expected: E, actual: A)
 where
