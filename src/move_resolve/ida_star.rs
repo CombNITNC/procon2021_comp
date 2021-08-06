@@ -1,5 +1,6 @@
 use std::ops::Add;
 
+/// A* で探索する状態が実装するべき trait.
 pub trait State<C> {
     type NextStates: IntoIterator<Item = Self>;
     fn next_states(&self) -> Self::NextStates;
