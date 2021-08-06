@@ -161,12 +161,11 @@ pub(crate) fn resolve(
         })
     });
 
-    let path = initial_states
+    initial_states
         .into_iter()
         .map(ida_star)
-        .min_by(|a, b| a.1.cmp(&b.1))
+        .min_by(|(_, a), (_, b)| a.cmp(b))
+        .map(|(path, cost)| (path_to_operations(path), cost))
         .unwrap()
-        .0;
-
-    path_to_operations(path)
+        .0
 }
