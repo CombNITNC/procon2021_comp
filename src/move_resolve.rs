@@ -72,7 +72,8 @@ impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
     fn next_states(&self) -> Vec<GridState<'grid>> {
         self.grid
-            .all_pos()
+            .around_of(self.selecting)
+            .into_iter()
             .map(|next_select| {
                 let mut new_field = self.field.clone();
                 new_field.swap(self.selecting, next_select);
