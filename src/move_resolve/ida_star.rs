@@ -20,7 +20,7 @@ enum FindResult<C> {
 
 fn find<V, N, C>(history: &mut Vec<V>, distance: C, bound: C) -> FindResult<C>
 where
-    V: PartialEq + Clone + State<C, NextStates = N>,
+    V: PartialEq + Clone + State<C, NextStates = N> + std::fmt::Debug,
     N: IntoIterator<Item = V>,
     C: PartialOrd + Add<Output = C> + Copy,
 {
@@ -58,7 +58,7 @@ where
 // 反復深化 A* アルゴリズムの実装.
 pub fn ida_star<V, N, C>(start: V) -> (Vec<V>, C)
 where
-    V: PartialEq + Clone + State<C, NextStates = N>,
+    V: PartialEq + Clone + State<C, NextStates = N> + std::fmt::Debug,
     N: IntoIterator<Item = V>,
     C: PartialOrd + Default + Add<Output = C> + Copy,
 {
