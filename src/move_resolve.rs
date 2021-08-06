@@ -123,23 +123,19 @@ impl<'grid> State<u64> for GridState<'grid> {
 
 /// 状態の履歴 Vec<GridState> を Vec<Operation> に変換する.
 fn path_to_operations(mut path: Vec<GridState>) -> Vec<Operation> {
-    let mut current_operation = Operation {
-        select: path.pop().unwrap().selecting,
-        movements: vec![],
-    };
+    let mut current_operation: Option<Operation> = None;
     let mut operations = vec![];
     for state in path {
-        if current_operation.select.manhattan_distance(state.selecting) == 1 {
-            current_operation.movements.push(Movement::between_pos(
-                current_operation.select,
-                state.selecting,
-            ));
-        } else {
-            operations.push(current_operation);
-            current_operation = Operation {
-                select: state.selecting,
-                movements: vec![],
-            };
+        let is_adj = |op: &Operation| op.select.manhattan_distance(state.selecting) == 1;
+        if current_operation.as_ref().map_or(false, is_adj) {
+            let movement =
+                Movement::between_pos(current_operation.as_ref().unwrap().select, state.selecting);
+            current_operation.as_mut().unwrap().movements.push(movement);
+        } else if let Some(op) = current_operation.replace(Operation {
+            select: state.selecting,
+            movements: vec![],
+        }) {
+            operations.push(op);
         }
     }
     operations
