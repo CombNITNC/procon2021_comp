@@ -25,12 +25,12 @@ where
     C: PartialOrd + Add<Output = C> + Copy,
 {
     let visiting = history.last().cloned().unwrap();
+    if visiting.is_goal() {
+        return FindResult::Found;
+    }
     let total_estimated = distance + visiting.heuristic();
     if bound < total_estimated {
         return FindResult::Deeper(total_estimated);
-    }
-    if visiting.is_goal() {
-        return FindResult::Found;
     }
     let mut min = None;
     for neighbor in visiting.next_states() {
