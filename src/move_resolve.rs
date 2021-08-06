@@ -121,33 +121,8 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 }
 
-/// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順を求める.
-pub(crate) fn resolve(
-    grid: &Grid,
-    movements: &[(Pos, Pos)],
-    swap_cost: u16,
-    select_cost: u16,
-) -> Vec<Operation> {
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
-
-    let moved_nodes: HashSet<Pos> = movements.iter().flat_map(|&(a, b)| [a, b]).collect();
-    let initial_states = moved_nodes.into_iter().flat_map(|node| {
-        grid.around_of(node).into_iter().map(|p| GridState {
-            grid,
-            field: nodes.clone(),
-            selecting: p,
-            swap_cost,
-            select_cost,
-        })
-    });
-
-    let mut path = initial_states
-        .into_iter()
-        .map(ida_star)
-        .min_by(|a, b| a.1.cmp(&b.1))
-        .unwrap()
-        .0;
-
+/// 状態の履歴 Vec<GridState> を Vec<Operation> に変換する.
+fn path_to_operations(mut path: Vec<GridState>) -> Vec<Operation> {
     let mut current_operation = Operation {
         select: path.pop().unwrap().selecting,
         movements: vec![],
@@ -168,4 +143,34 @@ pub(crate) fn resolve(
         }
     }
     operations
+}
+
+/// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順を求める.
+pub(crate) fn resolve(
+    grid: &Grid,
+    movements: &[(Pos, Pos)],
+    swap_cost: u16,
+    select_cost: u16,
+) -> Vec<Operation> {
+    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
+
+    let moved_nodes: HashSet<Pos> = movements.iter().flat_map(|&(a, b)| [a, b]).collect();
+    let initial_states = moved_nodes.into_iter().flat_map(|node| {
+        grid.around_of(node).into_iter().map(|p| GridState {
+            grid,
+            field: nodes.clone(),
+            selecting: p,
+            swap_cost,
+            select_cost,
+        })
+    });
+
+    let path = initial_states
+        .into_iter()
+        .map(ida_star)
+        .min_by(|a, b| a.1.cmp(&b.1))
+        .unwrap()
+        .0;
+
+    path_to_operations(path)
 }
