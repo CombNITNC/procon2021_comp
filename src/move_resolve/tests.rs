@@ -43,6 +43,8 @@ fn simple_case() {
     //  10  [01]
     assert_eq!(next_states[4].selecting, grid.pos(1, 1));
 
+    // 00 11
+    // 10 01
     let path = resolve(
         &grid,
         &[
