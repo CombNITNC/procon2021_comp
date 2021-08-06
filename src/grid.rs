@@ -48,10 +48,6 @@ impl Pos {
         self.0 & 0xf
     }
 
-    pub(crate) fn as_raw(&self) -> u8 {
-        self.0
-    }
-
     pub(crate) fn manhattan_distance(self, other: Self) -> u32 {
         ((self.x() as i32 - other.x() as i32).abs() + (self.y() as i32 - other.y() as i32).abs())
             as u32
