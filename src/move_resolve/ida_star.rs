@@ -55,7 +55,7 @@ where
     }
 }
 
-// 反復深化 A* アルゴリズムの実装.
+/// 反復深化 A* アルゴリズムの実装.
 pub fn ida_star<V, N, C>(start: V) -> (Vec<V>, C)
 where
     V: PartialEq + Clone + State<C, NextStates = N> + std::fmt::Debug,
