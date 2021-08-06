@@ -11,8 +11,8 @@ impl<'grid> EdgesNodes<'grid> {
     pub(super) fn new(grid: &'grid Grid, movements: &[(Pos, Pos)]) -> Self {
         let w = grid.width();
         let h = grid.height();
-        let mut nodes = VecOnGrid::with_init(&grid, grid.clamping_pos(0, 0));
-        let mut reversed_nodes = VecOnGrid::with_init(&grid, grid.clamping_pos(0, 0));
+        let mut nodes = VecOnGrid::with_init(grid, grid.clamping_pos(0, 0));
+        let mut reversed_nodes = VecOnGrid::with_init(grid, grid.clamping_pos(0, 0));
         for col in 0..h {
             for row in 0..w {
                 let pos = grid.clamping_pos(row, col);

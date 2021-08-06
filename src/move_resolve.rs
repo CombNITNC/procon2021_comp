@@ -119,12 +119,12 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, &movements);
+    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
 
     let moved_nodes: HashSet<Pos> = movements.iter().flat_map(|&(a, b)| [a, b]).collect();
     let initial_states = moved_nodes.into_iter().flat_map(|node| {
         grid.around_of(node).into_iter().map(|p| GridState {
-            grid: &grid,
+            grid,
             field: nodes.clone(),
             selecting: p,
             swap_cost,
