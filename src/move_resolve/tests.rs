@@ -5,7 +5,7 @@ use crate::{
 };
 
 #[test]
-fn test_next_states() {
+fn simple_case() {
     //  00   11
     // [10]  01
     let grid = Grid::new(2, 2);
@@ -42,6 +42,25 @@ fn test_next_states() {
     //  00   11
     //  10  [01]
     assert_eq!(next_states[4].selecting, grid.pos(1, 1));
+
+    let path = resolve(
+        &grid,
+        &[
+            (grid.pos(1, 0), grid.pos(0, 1)),
+            (grid.pos(0, 1), grid.pos(1, 1)),
+            (grid.pos(1, 1), grid.pos(1, 0)),
+        ],
+        1,
+        1,
+    );
+    assert_eq!(path.len(), 1);
+    assert_eq!(
+        path[0],
+        Operation {
+            select: grid.pos(0, 1),
+            movements: vec![Right, Up],
+        }
+    );
 }
 
 fn test_vec<E, A, T>(expected: E, actual: A)
