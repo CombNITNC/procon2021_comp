@@ -122,7 +122,7 @@ impl<'grid> State<u64> for GridState<'grid> {
 }
 
 /// 状態の履歴 Vec<GridState> を Vec<Operation> に変換する.
-fn path_to_operations(mut path: Vec<GridState>) -> Vec<Operation> {
+fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
     let mut current_operation: Option<Operation> = None;
     let mut operations = vec![];
     for state in path {
