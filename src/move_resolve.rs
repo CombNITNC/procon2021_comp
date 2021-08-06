@@ -74,15 +74,24 @@ impl<'grid> State<u64> for GridState<'grid> {
         self.grid
             .around_of(self.selecting)
             .into_iter()
-            .map(|next_select| {
+            .map(|next_swap| {
                 let mut new_field = self.field.clone();
-                new_field.swap(self.selecting, next_select);
+                new_field.swap(self.selecting, next_swap);
                 Self {
-                    selecting: next_select,
+                    selecting: next_swap,
                     field: new_field,
                     ..self.clone()
                 }
             })
+            .chain(
+                self.grid
+                    .all_pos()
+                    .filter(|&p| p != self.selecting)
+                    .map(|next_select| Self {
+                        selecting: next_select,
+                        ..self.clone()
+                    }),
+            )
             .collect()
     }
 
