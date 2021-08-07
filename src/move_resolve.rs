@@ -21,7 +21,7 @@ mod tests;
 struct GridState<'grid> {
     grid: &'grid Grid,
     field: VecOnGrid<'grid, Pos>,
-    selecting: Pos,
+    selecting: Option<Pos>,
     swap_cost: u16,
     select_cost: u16,
 }
@@ -72,28 +72,38 @@ fn h1(state: &GridState) -> u64 {
 impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
     fn next_states(&self) -> Vec<GridState<'grid>> {
-        self.grid
-            .around_of(self.selecting)
-            .into_iter()
-            .map(|next_swap| {
-                let mut new_field = self.field.clone();
-                new_field.swap(self.selecting, next_swap);
-                Self {
-                    selecting: next_swap,
-                    field: new_field,
-                    ..self.clone()
-                }
-            })
-            .chain(
-                self.grid
-                    .all_pos()
-                    .filter(|&p| p != self.selecting)
-                    .map(|next_select| Self {
-                        selecting: next_select,
+        if let Some(selecting) = self.selecting {
+            self.grid
+                .around_of(selecting)
+                .into_iter()
+                .map(|next_swap| {
+                    let mut new_field = self.field.clone();
+                    new_field.swap(selecting, next_swap);
+                    Self {
+                        selecting: Some(next_swap),
+                        field: new_field,
                         ..self.clone()
-                    }),
-            )
-            .collect()
+                    }
+                })
+                .chain(
+                    self.grid
+                        .all_pos()
+                        .filter(|&p| p != selecting)
+                        .map(|next_select| Self {
+                            selecting: Some(next_select),
+                            ..self.clone()
+                        }),
+                )
+                .collect()
+        } else {
+            self.grid
+                .all_pos()
+                .map(|next_select| Self {
+                    selecting: Some(next_select),
+                    ..self.clone()
+                })
+                .collect()
+        }
     }
 
     fn is_goal(&self) -> bool {
@@ -130,14 +140,16 @@ impl<'grid> State<u64> for GridState<'grid> {
 fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
     let mut current_operation: Option<Operation> = None;
     let mut operations = vec![];
-    for state in path {
-        let is_adj = |op: &Operation| op.select.manhattan_distance(state.selecting) == 1;
+    for state in &path[1..] {
+        let is_adj = |op: &Operation| op.select.manhattan_distance(state.selecting.unwrap()) == 1;
         if current_operation.as_ref().map_or(false, is_adj) {
-            let movement =
-                Movement::between_pos(current_operation.as_ref().unwrap().select, state.selecting);
+            let movement = Movement::between_pos(
+                current_operation.as_ref().unwrap().select,
+                state.selecting.unwrap(),
+            );
             current_operation.as_mut().unwrap().movements.push(movement);
         } else if let Some(op) = current_operation.replace(Operation {
-            select: state.selecting,
+            select: state.selecting.unwrap(),
             movements: vec![],
         }) {
             operations.push(op);
@@ -157,23 +169,12 @@ pub(crate) fn resolve(
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
-
-    let moved_nodes: HashSet<Pos> = movements.iter().flat_map(|&(a, b)| [a, b]).collect();
-    let initial_states = moved_nodes.into_iter().flat_map(|node| {
-        grid.around_of(node).into_iter().map(|p| GridState {
-            grid,
-            field: nodes.clone(),
-            selecting: p,
-            swap_cost,
-            select_cost,
-        })
+    let (path, _total_cost) = ida_star(GridState {
+        grid,
+        field: nodes.clone(),
+        selecting: None,
+        swap_cost,
+        select_cost,
     });
-
-    initial_states
-        .into_iter()
-        .map(ida_star)
-        .min_by(|(_, a), (_, b)| a.cmp(b))
-        .map(|(path, cost)| (path_to_operations(path), cost))
-        .unwrap()
-        .0
+    path_to_operations(path)
 }
