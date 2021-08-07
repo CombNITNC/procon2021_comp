@@ -138,6 +138,9 @@ fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
             operations.push(op);
         }
     }
+    if let Some(op) = current_operation {
+        operations.push(op);
+    }
     operations
 }
 
