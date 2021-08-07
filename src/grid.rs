@@ -176,6 +176,10 @@ impl Grid {
         self.height
     }
 
+    pub(crate) fn is_pos_valid(&self, pos: Pos) -> bool {
+        pos.x() < self.width && pos.y() < self.height
+    }
+
     pub(crate) fn clamping_pos(&self, x: u8, y: u8) -> Pos {
         Pos::new(x.clamp(0, self.width - 1), y.clamp(0, self.height - 1))
     }
