@@ -1,14 +1,35 @@
+use petgraph::graph::{IndexType, NodeIndex};
 use std::ops;
 
 /// `Pos` は `Grid` に存在する座標を表す.
 ///
 /// フィールドの `u8` の上位 4 ビットに X 座標, 下位 4 ビットに Y 座標を格納する. それぞれは必ず `Grid` の `width` と `height` 未満になる.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub(crate) struct Pos(u8);
 
 impl std::fmt::Debug for Pos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.x(), self.y())
+    }
+}
+
+unsafe impl IndexType for Pos {
+    fn new(x: usize) -> Self {
+        Self(x as u8)
+    }
+
+    fn index(&self) -> usize {
+        self.0 as usize
+    }
+
+    fn max() -> Self {
+        Self(std::u8::MAX)
+    }
+}
+
+impl From<NodeIndex<Pos>> for Pos {
+    fn from(idx: NodeIndex<Pos>) -> Self {
+        IndexType::new(idx.index())
     }
 }
 
@@ -26,32 +47,35 @@ impl Pos {
     pub(crate) fn y(&self) -> u8 {
         self.0 & 0xf
     }
+
+    pub(crate) fn manhattan_distance(self, other: Self) -> u32 {
+        ((self.x() as i32 - other.x() as i32).abs() + (self.y() as i32 - other.y() as i32).abs())
+            as u32
+    }
 }
 
 /// `RangePos` は `Grid` 上の矩形領域を表し, `Iterator` で走査できる.
 pub(crate) struct RangePos {
     start: Pos,
     end: Pos,
-    x: u8,
-    y: u8,
+    x: usize,
+    y: usize,
 }
 
 impl Iterator for RangePos {
     type Item = Pos;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.y < self.end.y() {
-            let ret = Pos::new(self.x, self.y);
-            if self.x < self.end.x() {
-                self.x += 1;
-            } else {
-                self.y += 1;
-                self.x = self.start.x();
-            }
-            Some(ret)
-        } else {
-            None
+        if (self.end.y() as usize) < self.y {
+            return None;
         }
+        let ret = Pos::new(self.x as u8, self.y as u8);
+        self.x += 1;
+        if (self.end.x() as usize) < self.x {
+            self.y += 1;
+            self.x = self.start.x() as usize;
+        }
+        Some(ret)
     }
 }
 
@@ -83,6 +107,12 @@ impl<'grid, T> VecOnGrid<'grid, T> {
                 .collect(),
             grid,
         }
+    }
+
+    /// `a` の位置と `b` の位置の要素を入れ替える.
+    pub(crate) fn swap(&mut self, a: Pos, b: Pos) {
+        self.vec
+            .swap(self.grid.pos_as_index(a), self.grid.pos_as_index(b))
     }
 }
 
@@ -138,8 +168,27 @@ impl Grid {
         Self { width, height }
     }
 
+    pub(crate) fn width(&self) -> u8 {
+        self.width
+    }
+
+    pub(crate) fn height(&self) -> u8 {
+        self.height
+    }
+
+    pub(crate) fn is_pos_valid(&self, pos: Pos) -> bool {
+        pos.x() < self.width && pos.y() < self.height
+    }
+
     pub(crate) fn clamping_pos(&self, x: u8, y: u8) -> Pos {
         Pos::new(x.clamp(0, self.width - 1), y.clamp(0, self.height - 1))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn pos(&self, x: u8, y: u8) -> Pos {
+        debug_assert!(x < self.width);
+        debug_assert!(y < self.height);
+        Pos::new(x, y)
     }
 
     pub(crate) fn up_of(&self, pos: Pos) -> Option<Pos> {
@@ -169,13 +218,13 @@ impl Grid {
     }
 
     pub(crate) fn range(&self, up_left: Pos, down_right: Pos) -> RangePos {
-        assert!(up_left.x() < down_right.x());
-        assert!(up_left.y() < down_right.y());
+        assert!(up_left.x() <= down_right.x());
+        assert!(up_left.y() <= down_right.y());
         RangePos {
             start: up_left,
             end: down_right,
-            x: up_left.x(),
-            y: up_left.y(),
+            x: up_left.x() as usize,
+            y: up_left.y() as usize,
         }
     }
 
@@ -190,13 +239,5 @@ impl Grid {
 
     fn pos_as_index(&self, pos: Pos) -> usize {
         pos.y() as usize * self.width as usize + pos.x() as usize
-    }
-
-    fn index_to_pos(&self, i: usize) -> Pos {
-        debug_assert!(i < self.width as usize * self.height as usize);
-        self.clamping_pos(
-            (i % self.width as usize) as u8,
-            (i / self.width as usize) as u8,
-        )
     }
 }
