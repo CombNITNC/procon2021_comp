@@ -17,7 +17,7 @@ fn test_h1() {
     let state = GridState {
         grid: &grid,
         field,
-        selecting: grid.pos(0, 1),
+        selecting: Some(grid.pos(0, 1)),
         swap_cost: 1,
         select_cost: 1,
     };
@@ -37,7 +37,7 @@ fn simple_case() {
     let state = GridState {
         grid: &grid,
         field,
-        selecting: grid.pos(0, 1),
+        selecting: Some(grid.pos(0, 1)),
         swap_cost: 1,
         select_cost: 1,
     };
@@ -47,21 +47,21 @@ fn simple_case() {
     //  00   01
     assert_eq!(next_states[0].field[grid.pos(0, 0)], grid.pos(1, 0));
     assert_eq!(next_states[0].field[grid.pos(0, 1)], grid.pos(0, 0));
-    assert_eq!(next_states[0].selecting, grid.pos(0, 0));
+    assert_eq!(next_states[0].selecting.unwrap(), grid.pos(0, 0));
     // 00  11
     // 01 [10]
     assert_eq!(next_states[1].field[grid.pos(0, 1)], grid.pos(0, 1));
     assert_eq!(next_states[1].field[grid.pos(1, 1)], grid.pos(1, 0));
-    assert_eq!(next_states[1].selecting, grid.pos(1, 1));
+    assert_eq!(next_states[1].selecting.unwrap(), grid.pos(1, 1));
     // [00]  11
     //  10   01
-    assert_eq!(next_states[2].selecting, grid.pos(0, 0));
+    assert_eq!(next_states[2].selecting.unwrap(), grid.pos(0, 0));
     //  00  [11]
     //  10   01
-    assert_eq!(next_states[3].selecting, grid.pos(1, 0));
+    assert_eq!(next_states[3].selecting.unwrap(), grid.pos(1, 0));
     //  00   11
     //  10  [01]
-    assert_eq!(next_states[4].selecting, grid.pos(1, 1));
+    assert_eq!(next_states[4].selecting.unwrap(), grid.pos(1, 1));
 
     // 00 11
     // 10 01
