@@ -21,7 +21,7 @@ fn test_h1() {
         swap_cost: 1,
         select_cost: 1,
     };
-    assert_eq!(h1(&state), 1);
+    assert_eq!(h1(&state), 2);
 }
 
 #[test]
