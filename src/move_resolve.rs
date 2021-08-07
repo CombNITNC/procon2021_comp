@@ -49,19 +49,25 @@ fn h1(state: &GridState) -> u64 {
             }
         }
     }
-    let mut g = UnGraph::<usize, (), Pos>::from_edges(edges);
+    let mut g = UnGraph::<Pos, (), Pos>::from_edges(edges);
     for pos in points {
         if let Some(weight) = g.node_weight_mut(pos.into()) {
-            *weight = state.field[pos].index();
+            *weight = state.field[pos];
         }
     }
     let forest = kosaraju_scc(&g);
     forest
         .iter()
-        .filter(|tree| tree.iter().any(|&idx| idx.index() != g[idx]))
         .filter(|tree| {
             tree.iter()
                 .all(|p| state.grid.is_pos_valid(<Pos as IndexType>::new(p.index())))
+        })
+        .filter(|tree| {
+            eprintln!("--- {:?}", tree);
+            tree.iter().any(|&idx| {
+                eprintln!("{:?} {:?}", <Pos as IndexType>::new(idx.index()), g[idx]);
+                <Pos as IndexType>::new(idx.index()) != g[idx]
+            })
         })
         .count() as u64
 }
