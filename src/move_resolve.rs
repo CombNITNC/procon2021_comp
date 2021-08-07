@@ -9,7 +9,7 @@ use crate::{
 use im_rc::HashSet;
 use petgraph::{
     algo::kosaraju_scc,
-    graph::{node_index, IndexType, UnGraph},
+    graph::{IndexType, UnGraph},
 };
 
 mod edges_nodes;
