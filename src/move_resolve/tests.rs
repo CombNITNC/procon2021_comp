@@ -85,15 +85,15 @@ fn case1() {
     ];
     let expected = vec![
         Operation {
-            select: grid.pos(1, 0),
-            movements: vec![Right, Right, Right, Up, Left],
+            select: grid.pos(0, 1),
+            movements: vec![Right, Right, Up, Left],
         },
         Operation {
-            select: grid.pos(0, 1),
+            select: grid.pos(3, 1),
             movements: vec![Left, Left, Left],
         },
     ];
-    let actual = resolve(&grid, case, 1, 1);
+    let actual = resolve(&grid, case, 1, 2);
     test_vec(expected, actual);
 }
 
@@ -110,11 +110,11 @@ fn case2() {
     ];
     let expected = vec![
         Operation {
-            select: grid.pos(0, 0),
+            select: grid.pos(3, 1),
             movements: vec![Up, Left, Left],
         },
         Operation {
-            select: grid.pos(3, 0),
+            select: grid.pos(0, 1),
             movements: vec![Up, Right, Right, Right],
         },
     ];
