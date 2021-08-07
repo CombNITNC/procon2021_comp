@@ -39,31 +39,29 @@ impl PartialEq for GridState<'_> {
 /// 隣接マスどうしのマンハッタン距離が 1 かつ全頂点がゴール位置に無い集合の数を求める.
 fn h1(state: &GridState) -> u64 {
     let mut edges = vec![];
+    let mut points = HashSet::new();
     for pos in state.grid.all_pos() {
-        if let Some(right) = state.grid.right_of(pos) {
-            if state.field[pos].manhattan_distance(state.field[right]) == 1 {
-                edges.push((state.field[pos], state.field[right]));
-            }
-        }
-        if let Some(down) = state.grid.down_of(pos) {
-            if state.field[pos].manhattan_distance(state.field[down]) == 1 {
-                edges.push((state.field[pos], state.field[down]));
+        for around in state.grid.around_of(pos) {
+            if state.field[pos].manhattan_distance(state.field[around]) == 1 {
+                edges.push((pos, around));
+                points.insert(pos);
+                points.insert(around);
             }
         }
     }
-    let mut g = UnGraph::<Pos, (), Pos>::from_edges(edges);
-    for pos in state.grid.all_pos() {
-        if let Some(weight) = g.node_weight_mut(node_index(state.field[pos].index())) {
-            *weight = pos;
+    let mut g = UnGraph::<usize, (), Pos>::from_edges(edges);
+    for pos in points {
+        if let Some(weight) = g.node_weight_mut(pos.into()) {
+            *weight = state.field[pos].index();
         }
     }
     let forest = kosaraju_scc(&g);
     forest
         .iter()
+        .filter(|tree| tree.iter().any(|&idx| idx.index() != g[idx]))
         .filter(|tree| {
             tree.iter()
-                .map(|&idx| -> (Pos, Pos) { (idx.into(), *g.node_weight(idx).unwrap()) })
-                .any(|(pos, cell)| cell != pos)
+                .all(|p| state.grid.is_pos_valid(<Pos as IndexType>::new(p.index())))
         })
         .count() as u64
 }
