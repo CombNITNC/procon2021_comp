@@ -17,13 +17,22 @@ mod ida_star;
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct GridState<'grid> {
     grid: &'grid Grid,
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
     swap_cost: u16,
     select_cost: u16,
+}
+
+impl std::fmt::Debug for GridState<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GridState")
+            .field("field", &self.field)
+            .field("selecting", &self.selecting)
+            .finish()
+    }
 }
 
 impl PartialEq for GridState<'_> {
