@@ -186,8 +186,8 @@ impl Grid {
 
     #[cfg(test)]
     pub(crate) fn pos(&self, x: u8, y: u8) -> Pos {
-        debug_assert!(x <= self.width);
-        debug_assert!(y <= self.height);
+        debug_assert!(x < self.width);
+        debug_assert!(y < self.height);
         Pos::new(x, y)
     }
 
