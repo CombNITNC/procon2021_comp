@@ -63,11 +63,8 @@ fn h1(state: &GridState) -> u64 {
                 .all(|p| state.grid.is_pos_valid(<Pos as IndexType>::new(p.index())))
         })
         .filter(|tree| {
-            eprintln!("--- {:?}", tree);
-            tree.iter().any(|&idx| {
-                eprintln!("{:?} {:?}", <Pos as IndexType>::new(idx.index()), g[idx]);
-                <Pos as IndexType>::new(idx.index()) != g[idx]
-            })
+            tree.iter()
+                .any(|&idx| <Pos as IndexType>::new(idx.index()) != g[idx])
         })
         .count() as u64
 }
