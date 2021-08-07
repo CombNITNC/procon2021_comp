@@ -113,10 +113,14 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
-        (if self.selecting.manhattan_distance(next.selecting) == 1 {
-            self.swap_cost
+        (if (&self.field)
+            .into_iter()
+            .zip((&next.field).into_iter())
+            .all(|(a, b)| a == b)
+        {
+            self.select_cost
         } else {
-            self.swap_cost + self.select_cost
+            self.swap_cost
         }) as u64
     }
 }
