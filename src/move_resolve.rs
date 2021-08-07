@@ -150,14 +150,14 @@ fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
     eprintln!("{:?}", path);
     let mut current_operation: Option<Operation> = None;
     let mut operations = vec![];
-    let mut prev = &path[0].field;
+    let mut prev = &path[0];
     for state in &path[1..] {
-        let is_swapped = prev.into_iter().zip(&state.field).any(|(a, b)| a != b);
+        let is_swapped = (&prev.field)
+            .into_iter()
+            .zip(&state.field)
+            .any(|(a, b)| a != b);
         if is_swapped {
-            let movement = Movement::between_pos(
-                current_operation.as_ref().unwrap().select,
-                state.selecting.unwrap(),
-            );
+            let movement = Movement::between_pos(prev.selecting.unwrap(), state.selecting.unwrap());
             current_operation.as_mut().unwrap().movements.push(movement);
         } else if let Some(op) = current_operation.replace(Operation {
             select: state.selecting.unwrap(),
@@ -165,6 +165,7 @@ fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
         }) {
             operations.push(op);
         }
+        prev = state;
     }
     if let Some(op) = current_operation {
         operations.push(op);
