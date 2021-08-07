@@ -236,12 +236,4 @@ impl Grid {
     fn pos_as_index(&self, pos: Pos) -> usize {
         pos.y() as usize * self.width as usize + pos.x() as usize
     }
-
-    fn index_to_pos(&self, i: usize) -> Pos {
-        debug_assert!(i < self.width as usize * self.height as usize);
-        self.clamping_pos(
-            (i % self.width as usize) as u8,
-            (i / self.width as usize) as u8,
-        )
-    }
 }
