@@ -92,21 +92,10 @@ impl<'grid> State<u64> for GridState<'grid> {
                 .collect();
         }
         let selecting = self.selecting.unwrap();
-        if history[history.len() - 1].selecting != history[history.len() - 2].selecting {
-            self.grid
-                .around_of(selecting)
-                .into_iter()
-                .map(|next_swap| {
-                    let mut new_field = self.field.clone();
-                    new_field.swap(selecting, next_swap);
-                    Self {
-                        selecting: Some(next_swap),
-                        field: new_field,
-                        ..self.clone()
-                    }
-                })
-                .collect()
-        } else {
+        if history[history.len() - 2].selecting.is_none()
+            || self.field[history[history.len() - 1].selecting.unwrap()]
+                != self.field[history[history.len() - 2].selecting.unwrap()]
+        {
             self.grid
                 .around_of(selecting)
                 .into_iter()
@@ -128,6 +117,20 @@ impl<'grid> State<u64> for GridState<'grid> {
                             ..self.clone()
                         }),
                 )
+                .collect()
+        } else {
+            self.grid
+                .around_of(selecting)
+                .into_iter()
+                .map(|next_swap| {
+                    let mut new_field = self.field.clone();
+                    new_field.swap(selecting, next_swap);
+                    Self {
+                        selecting: Some(next_swap),
+                        field: new_field,
+                        ..self.clone()
+                    }
+                })
                 .collect()
         }
     }
