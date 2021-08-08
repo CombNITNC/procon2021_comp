@@ -80,8 +80,33 @@ fn h1(state: &GridState) -> u64 {
 
 impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
-    fn next_states(&self) -> Vec<GridState<'grid>> {
-        if let Some(selecting) = self.selecting {
+    fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
+        if history.len() <= 1 {
+            return self
+                .grid
+                .all_pos()
+                .map(|next_select| Self {
+                    selecting: Some(next_select),
+                    ..self.clone()
+                })
+                .collect();
+        }
+        let selecting = self.selecting.unwrap();
+        if history[history.len() - 1].selecting != history[history.len() - 2].selecting {
+            self.grid
+                .around_of(selecting)
+                .into_iter()
+                .map(|next_swap| {
+                    let mut new_field = self.field.clone();
+                    new_field.swap(selecting, next_swap);
+                    Self {
+                        selecting: Some(next_swap),
+                        field: new_field,
+                        ..self.clone()
+                    }
+                })
+                .collect()
+        } else {
             self.grid
                 .around_of(selecting)
                 .into_iter()
@@ -103,14 +128,6 @@ impl<'grid> State<u64> for GridState<'grid> {
                             ..self.clone()
                         }),
                 )
-                .collect()
-        } else {
-            self.grid
-                .all_pos()
-                .map(|next_select| Self {
-                    selecting: Some(next_select),
-                    ..self.clone()
-                })
                 .collect()
         }
     }
