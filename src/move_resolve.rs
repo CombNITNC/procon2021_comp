@@ -92,22 +92,26 @@ impl<'grid> State<u64> for GridState<'grid> {
                 .collect();
         }
         let selecting = self.selecting.unwrap();
+        let prev_selecting = history.last().unwrap().selecting.unwrap();
+        let swapping_states = self
+            .grid
+            .around_of(selecting)
+            .into_iter()
+            .filter(|&around| around != prev_selecting)
+            .map(|next_swap| {
+                let mut new_field = self.field.clone();
+                new_field.swap(selecting, next_swap);
+                Self {
+                    selecting: Some(next_swap),
+                    field: new_field,
+                    ..self.clone()
+                }
+            });
         if history[history.len() - 2].selecting.is_none()
-            || self.field[history[history.len() - 1].selecting.unwrap()]
+            || self.field[prev_selecting]
                 != self.field[history[history.len() - 2].selecting.unwrap()]
         {
-            self.grid
-                .around_of(selecting)
-                .into_iter()
-                .map(|next_swap| {
-                    let mut new_field = self.field.clone();
-                    new_field.swap(selecting, next_swap);
-                    Self {
-                        selecting: Some(next_swap),
-                        field: new_field,
-                        ..self.clone()
-                    }
-                })
+            swapping_states
                 .chain(
                     self.grid
                         .all_pos()
@@ -119,19 +123,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                 )
                 .collect()
         } else {
-            self.grid
-                .around_of(selecting)
-                .into_iter()
-                .map(|next_swap| {
-                    let mut new_field = self.field.clone();
-                    new_field.swap(selecting, next_swap);
-                    Self {
-                        selecting: Some(next_swap),
-                        field: new_field,
-                        ..self.clone()
-                    }
-                })
-                .collect()
+            swapping_states.collect()
         }
     }
 
