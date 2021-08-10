@@ -114,6 +114,11 @@ impl<'grid, T> VecOnGrid<'grid, T> {
         self.vec
             .swap(self.grid.pos_as_index(a), self.grid.pos_as_index(b))
     }
+
+    /// 借用のイテレータを作る.
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &T> {
+        self.into_iter()
+    }
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
