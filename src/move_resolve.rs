@@ -130,6 +130,7 @@ impl<'grid> State<u64> for GridState<'grid> {
         }
         let selecting = self.selecting.unwrap();
         let prev = history.last().unwrap();
+        let prev_prev = &history[history.len() - 2];
         let swapping_states = self
             .grid
             .around_of(selecting)
@@ -152,7 +153,12 @@ impl<'grid> State<u64> for GridState<'grid> {
                 selecting: Some(next_select),
                 ..self.clone()
             });
-        if self.field[self.selecting.unwrap()] == prev.field[prev.selecting.unwrap()] {
+        let moved_in_prev = prev
+            .field
+            .iter()
+            .zip(prev_prev.field.iter())
+            .any(|(a, b)| a != b);
+        if moved_in_prev {
             swapping_states.chain(selecting_states).collect()
         } else {
             swapping_states.collect()
