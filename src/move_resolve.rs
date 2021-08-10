@@ -78,6 +78,21 @@ fn h1(state: &GridState) -> u64 {
         .count() as u64
 }
 
+/// 選択中のマスを取り除いたときの転倒数を求める.
+fn h2(state: &GridState) -> u64 {
+    if state.selecting.is_none() {
+        return 0;
+    }
+    let selecting = state.selecting.unwrap();
+    let nums: Vec<_> = state
+        .grid
+        .all_pos()
+        .filter(|&p| p != selecting)
+        .map(|p| p.x() + state.grid.width() * p.y())
+        .collect();
+    todo!()
+}
+
 impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
     fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
@@ -131,12 +146,13 @@ impl<'grid> State<u64> for GridState<'grid> {
 
     fn heuristic(&self) -> u64 {
         let h1: u64 = h1(self);
+        let h2: u64 = h2(self);
         let cells_different_to_goal = self
             .grid
             .all_pos()
             .filter(|&pos| pos != self.field[pos])
             .count() as u64;
-        h1 + cells_different_to_goal
+        h1 + h2 + cells_different_to_goal
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
