@@ -1,4 +1,4 @@
-use super::{resolve, GridState};
+use super::resolve;
 use crate::{
     basis::{Movement::*, Operation},
     grid::{Grid, VecOnGrid},
