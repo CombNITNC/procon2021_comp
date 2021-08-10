@@ -74,7 +74,6 @@ fn case1() {
         },
     ];
     let actual = resolve(&grid, case, 1, 2);
-    eprintln!("{:?}", actual);
     test_vec(expected, actual);
 }
 
