@@ -6,11 +6,6 @@ use crate::{
     basis::{Movement, Operation},
     grid::{Grid, Pos, VecOnGrid},
 };
-use im_rc::HashSet;
-use petgraph::{
-    algo::kosaraju_scc,
-    graph::{IndexType, UnGraph},
-};
 
 mod edges_nodes;
 mod ida_star;
@@ -45,73 +40,53 @@ impl PartialEq for GridState<'_> {
     }
 }
 
-/// 隣接マスどうしのマンハッタン距離が 1 かつ全頂点がゴール位置に無い集合の数を求める.
-fn h1(state: &GridState) -> u64 {
-    let mut edges = vec![];
-    let mut points = HashSet::new();
-    for pos in state.grid.all_pos() {
-        for around in state.grid.around_of(pos) {
-            if state.field[pos].manhattan_distance(state.field[around]) == 1 {
-                edges.push((pos, around));
-                points.insert(pos);
-                points.insert(around);
-            }
-        }
-    }
-    let mut g = UnGraph::<Pos, (), Pos>::from_edges(edges);
-    for pos in points {
-        if let Some(weight) = g.node_weight_mut(pos.into()) {
-            *weight = state.field[pos];
-        }
-    }
-    let forest = kosaraju_scc(&g);
-    forest
-        .iter()
-        .filter(|tree| {
-            tree.iter()
-                .all(|p| state.grid.is_pos_valid(<Pos as IndexType>::new(p.index())))
-        })
-        .filter(|tree| {
-            tree.iter()
-                .any(|&idx| <Pos as IndexType>::new(idx.index()) != g[idx])
-        })
-        .count() as u64
-}
-
 impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
-    fn next_states(&self) -> Vec<GridState<'grid>> {
-        if let Some(selecting) = self.selecting {
-            self.grid
-                .around_of(selecting)
-                .into_iter()
-                .map(|next_swap| {
-                    let mut new_field = self.field.clone();
-                    new_field.swap(selecting, next_swap);
-                    Self {
-                        selecting: Some(next_swap),
-                        field: new_field,
-                        ..self.clone()
-                    }
-                })
-                .chain(
-                    self.grid
-                        .all_pos()
-                        .filter(|&p| p != selecting)
-                        .map(|next_select| Self {
-                            selecting: Some(next_select),
-                            ..self.clone()
-                        }),
-                )
-                .collect()
-        } else {
-            self.grid
+    fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
+        if history.len() <= 1 {
+            return self
+                .grid
                 .all_pos()
                 .map(|next_select| Self {
                     selecting: Some(next_select),
                     ..self.clone()
                 })
-                .collect()
+                .collect();
+        }
+        let selecting = self.selecting.unwrap();
+        let prev = history.last().unwrap();
+        let prev_prev = &history[history.len() - 2];
+        let swapping_states = self
+            .grid
+            .around_of(selecting)
+            .into_iter()
+            .filter(|&around| around != prev.selecting.unwrap())
+            .map(|next_swap| {
+                let mut new_field = self.field.clone();
+                new_field.swap(selecting, next_swap);
+                Self {
+                    selecting: Some(next_swap),
+                    field: new_field,
+                    ..self.clone()
+                }
+            });
+        let selecting_states = self
+            .grid
+            .all_pos()
+            .filter(|&p| p != selecting)
+            .map(|next_select| Self {
+                selecting: Some(next_select),
+                ..self.clone()
+            });
+        let moved_in_prev = prev
+            .field
+            .iter()
+            .zip(prev_prev.field.iter())
+            .any(|(a, b)| a != b);
+        if moved_in_prev {
+            swapping_states.chain(selecting_states).collect()
+        } else {
+            swapping_states.collect()
         }
     }
 
@@ -123,13 +98,10 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn heuristic(&self) -> u64 {
-        let h1: u64 = h1(self);
-        let cells_different_to_goal = self
-            .grid
+        self.grid
             .all_pos()
             .filter(|&pos| pos != self.field[pos])
-            .count() as u64;
-        h1 + cells_different_to_goal
+            .count() as u64
     }
 
     fn cost_between(&self, next: &Self) -> u64 {

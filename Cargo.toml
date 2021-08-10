@@ -8,5 +8,3 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.40"
-im-rc = "15.0.0"
-petgraph = "0.6.0"

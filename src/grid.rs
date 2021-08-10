@@ -1,4 +1,3 @@
-use petgraph::graph::{IndexType, NodeIndex};
 use std::ops;
 
 /// `Pos` は `Grid` に存在する座標を表す.
@@ -10,26 +9,6 @@ pub(crate) struct Pos(u8);
 impl std::fmt::Debug for Pos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({}, {})", self.x(), self.y())
-    }
-}
-
-unsafe impl IndexType for Pos {
-    fn new(x: usize) -> Self {
-        Self(x as u8)
-    }
-
-    fn index(&self) -> usize {
-        self.0 as usize
-    }
-
-    fn max() -> Self {
-        Self(std::u8::MAX)
-    }
-}
-
-impl From<NodeIndex<Pos>> for Pos {
-    fn from(idx: NodeIndex<Pos>) -> Self {
-        IndexType::new(idx.index())
     }
 }
 
@@ -113,6 +92,11 @@ impl<'grid, T> VecOnGrid<'grid, T> {
     pub(crate) fn swap(&mut self, a: Pos, b: Pos) {
         self.vec
             .swap(self.grid.pos_as_index(a), self.grid.pos_as_index(b))
+    }
+
+    /// 借用のイテレータを作る.
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &T> {
+        self.into_iter()
     }
 }
 

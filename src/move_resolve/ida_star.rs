@@ -3,7 +3,9 @@ use std::ops::Add;
 /// A* で探索する状態が実装するべき trait.
 pub trait State<C> {
     type NextStates: IntoIterator<Item = Self>;
-    fn next_states(&self) -> Self::NextStates;
+    fn next_states(&self, history: &[Self]) -> Self::NextStates
+    where
+        Self: Sized;
 
     fn is_goal(&self) -> bool;
 
@@ -34,7 +36,7 @@ where
         return FindResult::Found;
     }
     let mut min = None;
-    for neighbor in visiting.next_states() {
+    for neighbor in visiting.next_states(history) {
         if !history.contains(&neighbor) {
             history.push(neighbor.clone());
             let next_distance = distance + visiting.cost_between(&neighbor);

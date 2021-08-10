@@ -1,28 +1,8 @@
-use super::{h1, ida_star::State, resolve, GridState};
+use super::resolve;
 use crate::{
     basis::{Movement::*, Operation},
     grid::{Grid, VecOnGrid},
 };
-
-#[test]
-fn test_h1() {
-    // 00 11
-    // 10 01
-    let grid = Grid::new(2, 2);
-    let mut field = VecOnGrid::with_init(&grid, grid.pos(0, 0));
-    field[grid.pos(0, 0)] = grid.pos(0, 0);
-    field[grid.pos(1, 0)] = grid.pos(1, 1);
-    field[grid.pos(0, 1)] = grid.pos(1, 0);
-    field[grid.pos(1, 1)] = grid.pos(0, 1);
-    let state = GridState {
-        grid: &grid,
-        field,
-        selecting: Some(grid.pos(0, 1)),
-        swap_cost: 1,
-        select_cost: 1,
-    };
-    assert_eq!(h1(&state), 2);
-}
 
 #[test]
 fn simple_case() {
