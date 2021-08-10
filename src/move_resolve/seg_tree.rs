@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::ops::{Index, Range};
 
 /// Monoid は以下を満たさなければならない.
 /// ```rs
@@ -55,5 +55,13 @@ impl<T: Monoid> SegTree<T> {
 
     pub fn query(&self, querying: Range<usize>) -> T {
         self.query_sub(querying, 0, 0..self.size)
+    }
+}
+
+impl<T> Index<usize> for SegTree<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.vec[index + self.size - 1]
     }
 }
