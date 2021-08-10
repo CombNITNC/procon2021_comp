@@ -1,21 +1,14 @@
 use self::{
     edges_nodes::EdgesNodes,
     ida_star::{ida_star, State},
-    seg_tree::{Monoid, SegTree},
 };
 use crate::{
     basis::{Movement, Operation},
     grid::{Grid, Pos, VecOnGrid},
 };
-use im_rc::HashSet;
-use petgraph::{
-    algo::kosaraju_scc,
-    graph::{IndexType, UnGraph},
-};
 
 mod edges_nodes;
 mod ida_star;
-mod seg_tree;
 #[cfg(test)]
 mod tests;
 
@@ -45,74 +38,6 @@ impl PartialEq for GridState<'_> {
             .all(|(a, b)| a == b)
             && self.selecting == other.selecting
     }
-}
-
-/// 隣接マスどうしのマンハッタン距離が 1 かつ全頂点がゴール位置に無い集合の数を求める.
-fn h1(state: &GridState) -> u64 {
-    let mut edges = vec![];
-    let mut points = HashSet::new();
-    for pos in state.grid.all_pos() {
-        for around in state.grid.around_of(pos) {
-            if state.field[pos].manhattan_distance(state.field[around]) == 1 {
-                edges.push((pos, around));
-                points.insert(pos);
-                points.insert(around);
-            }
-        }
-    }
-    let mut g = UnGraph::<Pos, (), Pos>::from_edges(edges);
-    for pos in points {
-        if let Some(weight) = g.node_weight_mut(pos.into()) {
-            *weight = state.field[pos];
-        }
-    }
-    let forest = kosaraju_scc(&g);
-    forest
-        .iter()
-        .filter(|tree| {
-            tree.iter()
-                .all(|p| state.grid.is_pos_valid(<Pos as IndexType>::new(p.index())))
-        })
-        .filter(|tree| {
-            tree.iter()
-                .any(|&idx| <Pos as IndexType>::new(idx.index()) != g[idx])
-        })
-        .count() as u64
-}
-
-/// 選択中のマスを取り除いたときの転倒数を求める.
-fn h2(state: &GridState) -> u64 {
-    if state.selecting.is_none() {
-        return 0;
-    }
-    let selecting = state.selecting.unwrap();
-    let nums: Vec<_> = state
-        .grid
-        .all_pos()
-        .filter(|&p| p != selecting)
-        .map(|p| p.x() + state.grid.width() * p.y())
-        .collect();
-
-    #[derive(Debug, Clone, Copy, PartialEq)]
-    struct InversionCount(u8);
-    impl Monoid for InversionCount {
-        fn identity() -> Self {
-            InversionCount(0)
-        }
-
-        fn op(self, other: Self) -> Self {
-            Self(self.0 + other.0)
-        }
-    }
-
-    let mut tree = SegTree::<InversionCount>::new(nums.len());
-    let mut inversions = 0u64;
-    for (i, &n) in nums.iter().enumerate() {
-        inversions += i as u64 - tree.query(0..i).0 as u64;
-        let plus_one = InversionCount(1).op(tree[n as usize]);
-        tree.insert(n as usize, plus_one);
-    }
-    inversions
 }
 
 impl<'grid> State<u64> for GridState<'grid> {
@@ -173,14 +98,10 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn heuristic(&self) -> u64 {
-        let h1: u64 = h1(self);
-        let h2: u64 = h2(self);
-        let cells_different_to_goal = self
-            .grid
+        self.grid
             .all_pos()
             .filter(|&pos| pos != self.field[pos])
-            .count() as u64;
-        h1 + h2 + cells_different_to_goal
+            .count() as u64
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
