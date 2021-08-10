@@ -36,7 +36,7 @@ where
         return FindResult::Found;
     }
     let mut min = None;
-    for neighbor in visiting.next_states(&history) {
+    for neighbor in visiting.next_states(history) {
         if !history.contains(&neighbor) {
             history.push(neighbor.clone());
             let next_distance = distance + visiting.cost_between(&neighbor);
