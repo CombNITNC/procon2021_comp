@@ -105,10 +105,7 @@ fn h2(state: &GridState) -> u64 {
         }
     }
 
-    let mut tree = SegTree::new(nums.len());
-    nums.iter()
-        .enumerate()
-        .for_each(|(i, &n)| tree.insert(i, InversionCount(n)));
+    let mut tree = SegTree::<InversionCount>::new(nums.len());
     let mut inversions = 0u64;
     for (i, &n) in nums.iter().enumerate() {
         inversions += i as u64 - tree.query(0..i).0 as u64;
