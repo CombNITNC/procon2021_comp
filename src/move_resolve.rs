@@ -1,6 +1,7 @@
 use self::{
     edges_nodes::EdgesNodes,
     ida_star::{ida_star, State},
+    seg_tree::{Monoid, SegTree},
 };
 use crate::{
     basis::{Movement, Operation},
@@ -91,7 +92,30 @@ fn h2(state: &GridState) -> u64 {
         .filter(|&p| p != selecting)
         .map(|p| p.x() + state.grid.width() * p.y())
         .collect();
-    todo!()
+
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    struct InversionCount(u8);
+    impl Monoid for InversionCount {
+        fn identity() -> Self {
+            InversionCount(0)
+        }
+
+        fn op(self, other: Self) -> Self {
+            Self(self.0 + other.0)
+        }
+    }
+
+    let mut tree = SegTree::new(nums.len());
+    nums.iter()
+        .enumerate()
+        .for_each(|(i, &n)| tree.insert(i, InversionCount(n)));
+    let mut inversions = 0u64;
+    for (i, &n) in nums.iter().enumerate() {
+        inversions += i as u64 - tree.query(0..i).0 as u64;
+        let plus_one = InversionCount(1).op(tree[n as usize]);
+        tree.insert(n as usize, plus_one);
+    }
+    inversions
 }
 
 impl<'grid> State<u64> for GridState<'grid> {
