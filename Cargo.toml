@@ -8,3 +8,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.40"
+
+[dev-dependencies]
+rand = "0.8.4"
