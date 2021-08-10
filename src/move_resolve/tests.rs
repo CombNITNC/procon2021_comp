@@ -1,4 +1,4 @@
-use super::{h1, ida_star::State, resolve, GridState};
+use super::{h1, resolve, GridState};
 use crate::{
     basis::{Movement::*, Operation},
     grid::{Grid, VecOnGrid},
