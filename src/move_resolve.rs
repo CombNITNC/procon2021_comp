@@ -14,6 +14,7 @@ use petgraph::{
 
 mod edges_nodes;
 mod ida_star;
+mod seg_tree;
 #[cfg(test)]
 mod tests;
 
