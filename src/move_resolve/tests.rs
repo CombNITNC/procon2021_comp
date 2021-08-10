@@ -1,7 +1,7 @@
-use super::resolve;
+use super::{edges_nodes::EdgesNodes, resolve};
 use crate::{
     basis::{Movement::*, Operation},
-    grid::{Grid, VecOnGrid},
+    grid::{Grid, Pos, VecOnGrid},
 };
 
 #[test]
@@ -100,4 +100,48 @@ fn case2() {
     ];
     let actual = resolve(&grid, case, 1, 1);
     test_vec(expected, actual);
+}
+
+#[test]
+fn rand_case() {
+    fn gen_circular(grid: &Grid, rng: &mut rand::rngs::ThreadRng) -> Vec<Pos> {
+        use rand::{
+            distributions::{Distribution, Uniform},
+            seq::SliceRandom,
+        };
+        let mut points: Vec<_> = grid.all_pos().collect();
+        points.shuffle(rng);
+        let between = Uniform::from(2..points.len());
+        let taking = between.sample(rng);
+        points.into_iter().take(taking).collect()
+    }
+    const WIDTH: u8 = 4;
+    const HEIGHT: u8 = 4;
+    let mut rng = rand::thread_rng();
+
+    let grid = Grid::new(WIDTH, HEIGHT);
+    let circular = gen_circular(&grid, &mut rng);
+    let mut case = vec![];
+    for pair in circular.windows(2) {
+        case.push((pair[0], pair[1]));
+    }
+    case.push((*circular.last().unwrap(), *circular.first().unwrap()));
+    let result = resolve(&grid, &case, 1, 2);
+
+    let EdgesNodes { mut nodes, .. } = EdgesNodes::new(&grid, &case);
+    for Operation { select, movements } in result {
+        let mut current = select;
+        for movement in movements {
+            let to_swap = match movement {
+                Up => grid.up_of(current),
+                Right => grid.right_of(current),
+                Down => grid.down_of(current),
+                Left => grid.left_of(current),
+            }
+            .unwrap();
+            nodes.swap(current, to_swap);
+            current = to_swap;
+        }
+    }
+    assert!(grid.all_pos().zip(nodes.into_iter()).all(|(p, n)| p == n));
 }
