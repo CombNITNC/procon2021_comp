@@ -43,10 +43,10 @@ impl PartialEq for GridState<'_> {
 impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
     fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
+        // 揃っているマスどうしは入れ替えない
+        let different_cells = self.grid.all_pos().filter(|&p| p != self.field[p]);
         if history.len() <= 1 {
-            return self
-                .grid
-                .all_pos()
+            return different_cells
                 .map(|next_select| Self {
                     selecting: Some(next_select),
                     ..self.clone()
@@ -70,9 +70,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                     ..self.clone()
                 }
             });
-        let selecting_states = self
-            .grid
-            .all_pos()
+        let selecting_states = different_cells
             .filter(|&p| p != selecting)
             .map(|next_select| Self {
                 selecting: Some(next_select),
