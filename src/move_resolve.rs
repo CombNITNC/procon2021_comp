@@ -17,6 +17,7 @@ struct GridState<'grid> {
     grid: &'grid Grid,
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
+    different_cells: u8,
     swap_cost: u16,
     select_cost: u16,
 }
@@ -62,11 +63,20 @@ impl<'grid> State<u64> for GridState<'grid> {
             .into_iter()
             .filter(|&around| around != prev.selecting.unwrap())
             .map(|next_swap| {
+                let different_cells = (self.different_cells as i32
+                    + if next_swap == self.field[next_swap] {
+                        1
+                    } else if selecting == self.field[next_swap] {
+                        -1
+                    } else {
+                        0
+                    }) as u8;
                 let mut new_field = self.field.clone();
                 new_field.swap(selecting, next_swap);
                 Self {
                     selecting: Some(next_swap),
                     field: new_field,
+                    different_cells,
                     ..self.clone()
                 }
             });
@@ -89,17 +99,11 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn is_goal(&self) -> bool {
-        self.grid
-            .all_pos()
-            .map(|pos| (pos, self.field[pos]))
-            .all(|(pos, cell)| pos == cell)
+        self.different_cells == 0
     }
 
     fn heuristic(&self) -> u64 {
-        self.grid
-            .all_pos()
-            .filter(|&pos| pos != self.field[pos])
-            .count() as u64
+        self.different_cells as u64
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
@@ -154,6 +158,11 @@ pub(crate) fn resolve(
         grid,
         field: nodes.clone(),
         selecting: None,
+        different_cells: grid
+            .all_pos()
+            .zip(nodes.iter())
+            .filter(|&(p, &n)| p != n)
+            .count() as u8,
         swap_cost,
         select_cost,
     });
