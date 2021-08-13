@@ -195,3 +195,15 @@ impl Image {
         })
     }
 }
+
+#[test]
+fn problem_read_test() {
+    let problem = include_bytes!("../test_cases/01_q.ppm");
+    let reader = std::io::BufReader::new(problem.as_ref());
+    let result = Problem::read(reader).unwrap();
+    assert_eq!(result.selectable_count, 1);
+    assert_eq!(result.selection_cost_convert_rate, 3);
+    assert_eq!(result.swap_cost_convert_rate, 1);
+    assert_eq!(result.horizontal_split_count, 2);
+    assert_eq!(result.vertical_split_count, 2);
+}
