@@ -20,6 +20,7 @@ struct GridState<'grid> {
     different_cells: u8,
     swap_cost: u16,
     select_cost: u16,
+    remaining_select: u8,
 }
 
 impl std::fmt::Debug for GridState<'_> {
@@ -50,6 +51,7 @@ impl<'grid> State<u64> for GridState<'grid> {
             return different_cells
                 .map(|next_select| Self {
                     selecting: Some(next_select),
+                    remaining_select: self.remaining_select - 1,
                     ..self.clone()
                 })
                 .collect();
@@ -80,18 +82,19 @@ impl<'grid> State<u64> for GridState<'grid> {
                     ..self.clone()
                 }
             });
-        let selecting_states = different_cells
-            .filter(|&p| p != selecting)
-            .map(|next_select| Self {
-                selecting: Some(next_select),
-                ..self.clone()
-            });
         let moved_in_prev = prev
             .field
             .iter()
             .zip(prev_prev.field.iter())
             .any(|(a, b)| a != b);
-        if moved_in_prev {
+        if moved_in_prev && 1 <= self.remaining_select {
+            let selecting_states = different_cells
+                .filter(|&p| p != selecting)
+                .map(|next_select| Self {
+                    selecting: Some(next_select),
+                    remaining_select: self.remaining_select - 1,
+                    ..self.clone()
+                });
             swapping_states.chain(selecting_states).collect()
         } else {
             swapping_states.collect()
@@ -150,6 +153,7 @@ fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
 pub(crate) fn resolve(
     grid: &Grid,
     movements: &[(Pos, Pos)],
+    select_limit: u8,
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
@@ -165,6 +169,7 @@ pub(crate) fn resolve(
             .count() as u8,
         swap_cost,
         select_cost,
+        remaining_select: select_limit,
     });
     path_to_operations(path)
 }

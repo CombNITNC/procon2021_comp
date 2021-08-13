@@ -24,6 +24,7 @@ fn simple_case() {
         ],
         1,
         1,
+        1,
     );
     assert_eq!(path.len(), 1);
     assert_eq!(
@@ -73,7 +74,7 @@ fn case1() {
             movements: vec![Left, Left, Left],
         },
     ];
-    let actual = resolve(&grid, case, 1, 2);
+    let actual = resolve(&grid, case, 2, 1, 2);
     test_vec(expected, actual);
 }
 
@@ -98,7 +99,7 @@ fn case2() {
             movements: vec![Up, Left, Left, Left],
         },
     ];
-    let actual = resolve(&grid, case, 1, 1);
+    let actual = resolve(&grid, case, 2, 1, 1);
     test_vec(expected, actual);
 }
 
@@ -126,7 +127,7 @@ fn rand_case() {
         case.push((pair[0], pair[1]));
     }
     case.push((*circular.last().unwrap(), *circular.first().unwrap()));
-    let result = resolve(&grid, &case, 1, 2);
+    let result = resolve(&grid, &case, 3, 1, 2);
 
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(&grid, &case);
     for Operation { select, movements } in result {
