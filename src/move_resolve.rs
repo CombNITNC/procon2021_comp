@@ -12,12 +12,40 @@ mod ida_star;
 #[cfg(test)]
 mod tests;
 
+#[derive(Clone, Copy)]
+struct DifferentCells(u8);
+
+impl std::fmt::Debug for DifferentCells {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl DifferentCells {
+    fn on_swap(self, field: &VecOnGrid<Pos>, selecting_a: Pos, selecting_b: Pos) -> Self {
+        Self(
+            (self.0 as i32
+                + if selecting_b == field[selecting_b] {
+                    1
+                } else if selecting_a == field[selecting_b] {
+                    if selecting_b == field[selecting_a] {
+                        -2
+                    } else {
+                        -1
+                    }
+                } else {
+                    0
+                }) as u8,
+        )
+    }
+}
+
 #[derive(Clone)]
 struct GridState<'grid> {
     grid: &'grid Grid,
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
-    different_cells: u8,
+    different_cells: DifferentCells,
     swap_cost: u16,
     select_cost: u16,
     remaining_select: u8,
@@ -70,24 +98,16 @@ impl<'grid> State<u64> for GridState<'grid> {
                     .map_or(true, |selected| around != selected)
             })
             .map(|next_swap| {
-                let different_cells = (self.different_cells as i32
-                    + if next_swap == self.field[next_swap] {
-                        1
-                    } else if selecting == self.field[next_swap] {
-                        if next_swap == self.field[selecting] {
-                            -2
-                        } else {
-                            -1
-                        }
-                    } else {
-                        0
-                    }) as u8;
                 let mut new_field = self.field.clone();
                 new_field.swap(selecting, next_swap);
                 Self {
                     selecting: Some(next_swap),
                     field: new_field,
-                    different_cells,
+                    different_cells: self.different_cells.on_swap(
+                        &self.field,
+                        selecting,
+                        next_swap,
+                    ),
                     ..self.clone()
                 }
             });
@@ -111,11 +131,11 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn is_goal(&self) -> bool {
-        self.different_cells == 0
+        self.different_cells.0 == 0
     }
 
     fn heuristic(&self) -> u64 {
-        self.different_cells as u64
+        self.different_cells.0 as u64
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
@@ -167,15 +187,17 @@ pub(crate) fn resolve(
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
+    let different_cells = DifferentCells(
+        grid.all_pos()
+            .zip(nodes.iter())
+            .filter(|&(p, &n)| p != n)
+            .count() as u8,
+    );
     let (path, _total_cost) = ida_star(GridState {
         grid,
         field: nodes.clone(),
         selecting: None,
-        different_cells: grid
-            .all_pos()
-            .zip(nodes.iter())
-            .filter(|&(p, &n)| p != n)
-            .count() as u8,
+        different_cells,
         swap_cost,
         select_cost,
         remaining_select: select_limit,
