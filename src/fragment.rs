@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::{
-    basis::{Color, Dir, Problem, Rot},
+    basis::{Color, Dir, Image, Problem, Rot},
     grid::{Grid, Pos},
 };
 
@@ -67,11 +67,14 @@ pub(crate) struct Fragment {
 impl Fragment {
     pub(crate) fn new_all(
         Problem {
-            width,
-            height,
             rows,
             cols,
-            pixels,
+            image:
+                Image {
+                    width,
+                    height,
+                    pixels,
+                },
             ..
         }: Problem,
     ) -> Vec<Self> {
