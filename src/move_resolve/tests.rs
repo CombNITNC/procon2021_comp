@@ -5,6 +5,25 @@ use crate::{
 };
 
 #[test]
+fn smallest_case() {
+    // 10 00
+    let grid = Grid::new(2, 1);
+    let mut field = VecOnGrid::with_init(&grid, grid.pos(0, 0));
+    field[grid.pos(0, 0)] = grid.pos(1, 0);
+    field[grid.pos(1, 0)] = grid.pos(0, 0);
+
+    let path = resolve(&grid, &[(grid.pos(0, 0), grid.pos(1, 0))], 1, 1, 1);
+    assert_eq!(path.len(), 1);
+    assert_eq!(
+        path[0],
+        Operation {
+            select: grid.pos(0, 0),
+            movements: vec![Right],
+        }
+    );
+}
+
+#[test]
 fn simple_case() {
     // 00 11
     // 10 01
