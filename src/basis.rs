@@ -111,9 +111,13 @@ pub(crate) struct Problem {
     pub(crate) select_limit: u8,
     pub(crate) select_cost: u16,
     pub(crate) swap_cost: u16,
-    pub(crate) width: u16,
-    pub(crate) height: u16,
     pub(crate) rows: u8,
     pub(crate) cols: u8,
+    pub(crate) image: Image,
+}
+
+pub(crate) struct Image {
+    pub(crate) width: u16,
+    pub(crate) height: u16,
     pub(crate) pixels: Vec<Color>,
 }
