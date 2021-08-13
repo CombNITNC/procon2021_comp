@@ -175,30 +175,42 @@ impl Grid {
         Pos::new(x, y)
     }
 
-    pub(crate) fn up_of(&self, pos: Pos) -> Option<Pos> {
-        (pos.y() != 0).then(|| Pos::new(pos.x(), pos.y() - 1))
+    pub(crate) fn up_of(&self, pos: Pos) -> Pos {
+        if pos.y() != 0 {
+            Pos::new(pos.x(), pos.y() - 1)
+        } else {
+            Pos::new(pos.x(), self.height - 1)
+        }
     }
-    pub(crate) fn right_of(&self, pos: Pos) -> Option<Pos> {
-        (pos.x() + 1 != self.width).then(|| Pos::new(pos.x() + 1, pos.y()))
+    pub(crate) fn right_of(&self, pos: Pos) -> Pos {
+        if pos.x() + 1 != self.width {
+            Pos::new(pos.x() + 1, pos.y())
+        } else {
+            Pos::new(0, pos.y())
+        }
     }
-    pub(crate) fn down_of(&self, pos: Pos) -> Option<Pos> {
-        (pos.y() + 1 != self.height).then(|| Pos::new(pos.x(), pos.y() + 1))
+    pub(crate) fn down_of(&self, pos: Pos) -> Pos {
+        if pos.y() + 1 != self.height {
+            Pos::new(pos.x(), pos.y() + 1)
+        } else {
+            Pos::new(pos.x(), 0)
+        }
     }
-    pub(crate) fn left_of(&self, pos: Pos) -> Option<Pos> {
-        (pos.x() != 0).then(|| Pos::new(pos.x() - 1, pos.y()))
+    pub(crate) fn left_of(&self, pos: Pos) -> Pos {
+        if pos.x() != 0 {
+            Pos::new(pos.x() - 1, pos.y())
+        } else {
+            Pos::new(self.width - 1, pos.y())
+        }
     }
 
     pub(crate) fn around_of(&self, pos: Pos) -> Vec<Pos> {
-        [
+        vec![
             self.up_of(pos),
             self.right_of(pos),
             self.down_of(pos),
             self.left_of(pos),
         ]
-        .iter()
-        .flatten()
-        .cloned()
-        .collect()
     }
 
     pub(crate) fn range(&self, up_left: Pos, down_right: Pos) -> RangePos {

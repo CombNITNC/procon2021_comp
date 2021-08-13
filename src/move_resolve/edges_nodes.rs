@@ -25,17 +25,21 @@ impl<'grid> EdgesNodes<'grid> {
             reversed_nodes[from] = to;
         }
         let mut edges = Vec::with_capacity(2 * w as usize * h as usize - w as usize - h as usize);
-        for pos in grid.range(grid.clamping_pos(0, 0), grid.clamping_pos(w - 2, h - 1)) {
-            let right = grid.right_of(pos).unwrap();
-            let a = nodes[pos];
-            let b = nodes[right];
-            edges.push((a, b));
+        if 2 <= w {
+            for pos in grid.range(grid.clamping_pos(0, 0), grid.clamping_pos(w - 2, h - 1)) {
+                let right = grid.right_of(pos);
+                let a = nodes[pos];
+                let b = nodes[right];
+                edges.push((a, b));
+            }
         }
-        for pos in grid.range(grid.clamping_pos(0, 0), grid.clamping_pos(w - 1, h - 2)) {
-            let down = grid.down_of(pos).unwrap();
-            let a = nodes[pos];
-            let b = nodes[down];
-            edges.push((a, b));
+        if 2 <= h {
+            for pos in grid.range(grid.clamping_pos(0, 0), grid.clamping_pos(w - 1, h - 2)) {
+                let down = grid.down_of(pos);
+                let a = nodes[pos];
+                let b = nodes[down];
+                edges.push((a, b));
+            }
         }
         Self {
             edges,
@@ -99,6 +103,22 @@ fn edge_cases2() {
     test_edges(expected, actual);
 }
 
+#[test]
+fn edge_cases3() {
+    // (1, 0) (0, 0)
+    let grid = Grid::new(2, 1);
+    let case = &[
+        (grid.pos(0, 0), grid.pos(1, 0)),
+        (grid.pos(1, 0), grid.pos(0, 0)),
+    ];
+    let expected = vec![(grid.pos(1, 0), grid.pos(0, 0))];
+    let actual = EdgesNodes::new(&grid, case);
+    test_edges(expected, actual.edges);
+    assert_eq!(actual.nodes[grid.pos(0, 0)], grid.pos(1, 0));
+    assert_eq!(actual.nodes[grid.pos(1, 0)], grid.pos(0, 0));
+}
+
+#[cfg(test)]
 fn test_edges(mut expected: Vec<(Pos, Pos)>, mut actual: Vec<(Pos, Pos)>) {
     assert_eq!(expected.len(), actual.len());
     expected.sort();

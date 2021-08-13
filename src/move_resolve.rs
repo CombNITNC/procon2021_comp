@@ -12,13 +12,43 @@ mod ida_star;
 #[cfg(test)]
 mod tests;
 
+#[derive(Clone, Copy)]
+struct DifferentCells(u8);
+
+impl std::fmt::Debug for DifferentCells {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl DifferentCells {
+    fn on_swap(self, field: &VecOnGrid<Pos>, selecting_a: Pos, selecting_b: Pos) -> Self {
+        let mut diff = self.0 as i32;
+        if selecting_a == field[selecting_a] {
+            diff += 1;
+        }
+        if selecting_a == field[selecting_b] {
+            diff -= 1;
+        }
+        if selecting_b == field[selecting_b] {
+            diff += 1;
+        }
+        if selecting_b == field[selecting_a] {
+            diff -= 1;
+        }
+        Self(diff as u8)
+    }
+}
+
 #[derive(Clone)]
 struct GridState<'grid> {
     grid: &'grid Grid,
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
+    different_cells: DifferentCells,
     swap_cost: u16,
     select_cost: u16,
+    remaining_select: u8,
 }
 
 impl std::fmt::Debug for GridState<'_> {
@@ -26,6 +56,8 @@ impl std::fmt::Debug for GridState<'_> {
         f.debug_struct("GridState")
             .field("field", &self.field)
             .field("selecting", &self.selecting)
+            .field("different_cells", &self.different_cells)
+            .field("remaining_select", &self.remaining_select)
             .finish()
     }
 }
@@ -43,47 +75,55 @@ impl PartialEq for GridState<'_> {
 impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
     fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
+        // 揃っているマスどうしは入れ替えない
+        let different_cells = self.grid.all_pos().filter(|&p| p != self.field[p]);
         if history.len() <= 1 {
-            return self
-                .grid
-                .all_pos()
+            return different_cells
                 .map(|next_select| Self {
                     selecting: Some(next_select),
+                    remaining_select: self.remaining_select - 1,
                     ..self.clone()
                 })
                 .collect();
         }
         let selecting = self.selecting.unwrap();
-        let prev = history.last().unwrap();
         let prev_prev = &history[history.len() - 2];
         let swapping_states = self
             .grid
             .around_of(selecting)
             .into_iter()
-            .filter(|&around| around != prev.selecting.unwrap())
+            .filter(|&around| {
+                prev_prev
+                    .selecting
+                    .map_or(true, |selected| around != selected)
+            })
             .map(|next_swap| {
                 let mut new_field = self.field.clone();
                 new_field.swap(selecting, next_swap);
                 Self {
                     selecting: Some(next_swap),
                     field: new_field,
+                    different_cells: self.different_cells.on_swap(
+                        &self.field,
+                        selecting,
+                        next_swap,
+                    ),
                     ..self.clone()
                 }
             });
-        let selecting_states = self
-            .grid
-            .all_pos()
-            .filter(|&p| p != selecting)
-            .map(|next_select| Self {
-                selecting: Some(next_select),
-                ..self.clone()
-            });
-        let moved_in_prev = prev
+        let moved_in_prev = self
             .field
             .iter()
             .zip(prev_prev.field.iter())
             .any(|(a, b)| a != b);
-        if moved_in_prev {
+        if moved_in_prev && 1 <= self.remaining_select {
+            let selecting_states = different_cells
+                .filter(|&p| p != selecting)
+                .map(|next_select| Self {
+                    selecting: Some(next_select),
+                    remaining_select: self.remaining_select - 1,
+                    ..self.clone()
+                });
             swapping_states.chain(selecting_states).collect()
         } else {
             swapping_states.collect()
@@ -91,17 +131,11 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn is_goal(&self) -> bool {
-        self.grid
-            .all_pos()
-            .map(|pos| (pos, self.field[pos]))
-            .all(|(pos, cell)| pos == cell)
+        self.different_cells.0 == 0
     }
 
     fn heuristic(&self) -> u64 {
-        self.grid
-            .all_pos()
-            .filter(|&pos| pos != self.field[pos])
-            .count() as u64
+        self.different_cells.0 as u64
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
@@ -148,16 +182,25 @@ fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
 pub(crate) fn resolve(
     grid: &Grid,
     movements: &[(Pos, Pos)],
+    select_limit: u8,
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
+    let different_cells = DifferentCells(
+        grid.all_pos()
+            .zip(nodes.iter())
+            .filter(|&(p, &n)| p != n)
+            .count() as u8,
+    );
     let (path, _total_cost) = ida_star(GridState {
         grid,
         field: nodes.clone(),
         selecting: None,
+        different_cells,
         swap_cost,
         select_cost,
+        remaining_select: select_limit,
     });
     path_to_operations(path)
 }
