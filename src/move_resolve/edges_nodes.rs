@@ -99,6 +99,7 @@ fn edge_cases2() {
     test_edges(expected, actual);
 }
 
+#[cfg(test)]
 fn test_edges(mut expected: Vec<(Pos, Pos)>, mut actual: Vec<(Pos, Pos)>) {
     assert_eq!(expected.len(), actual.len());
     expected.sort();
