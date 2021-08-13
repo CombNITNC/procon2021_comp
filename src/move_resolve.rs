@@ -57,13 +57,12 @@ impl<'grid> State<u64> for GridState<'grid> {
                 .collect();
         }
         let selecting = self.selecting.unwrap();
-        let prev = history.last().unwrap();
         let prev_prev = &history[history.len() - 2];
         let swapping_states = self
             .grid
             .around_of(selecting)
             .into_iter()
-            .filter(|&around| around != prev.selecting.unwrap())
+            .filter(|&around| around != self.selecting.unwrap())
             .map(|next_swap| {
                 let different_cells = (self.different_cells as i32
                     + if next_swap == self.field[next_swap] {
@@ -82,7 +81,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                     ..self.clone()
                 }
             });
-        let moved_in_prev = prev
+        let moved_in_prev = self
             .field
             .iter()
             .zip(prev_prev.field.iter())
