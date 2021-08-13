@@ -204,8 +204,8 @@ impl Grid {
         }
     }
 
-    pub(crate) fn around_of(&self, pos: Pos) -> Vec<Pos> {
-        vec![
+    pub(crate) fn around_of(&self, pos: Pos) -> [Pos; 4] {
+        [
             self.up_of(pos),
             self.right_of(pos),
             self.down_of(pos),

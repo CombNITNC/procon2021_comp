@@ -88,10 +88,10 @@ impl<'grid> State<u64> for GridState<'grid> {
         }
         let selecting = self.selecting.unwrap();
         let prev_prev = &history[history.len() - 2];
-        let swapping_states = self
-            .grid
-            .around_of(selecting)
-            .into_iter()
+        let around = self.grid.around_of(selecting);
+        let swapping_states = around
+            .iter()
+            .cloned()
             .filter(|&around| {
                 prev_prev
                     .selecting
