@@ -62,7 +62,11 @@ impl<'grid> State<u64> for GridState<'grid> {
             .grid
             .around_of(selecting)
             .into_iter()
-            .filter(|&around| around != self.selecting.unwrap())
+            .filter(|&around| {
+                prev_prev
+                    .selecting
+                    .map_or(true, |selected| around != selected)
+            })
             .map(|next_swap| {
                 let different_cells = (self.different_cells as i32
                     + if next_swap == self.field[next_swap] {
