@@ -32,15 +32,29 @@ pub(crate) enum Movement {
 
 impl Movement {
     /// `from` から `to` へ移動させるときの向きを求める.
-    /// 要件: `from.manhattan_distance(to) == 1 && ((from.x() == to.x()) ^ (from.y() == to.y()))`
+    /// 要件: (from.x() == to.x()) ^ (from.y() == to.y())`
     pub(crate) fn between_pos(from: Pos, to: Pos) -> Self {
-        use std::cmp::Ordering::*;
-        match (from.x().cmp(&to.x()), from.y().cmp(&to.y())) {
-            (Less, _) => Self::Right,
-            (Greater, _) => Self::Left,
-            (_, Less) => Self::Down,
-            (_, Greater) => Self::Up,
-            _ => unreachable!(),
+        use Movement::*;
+        let from_x = from.x() as i32;
+        let from_y = from.y() as i32;
+        let to_x = to.x() as i32;
+        let to_y = to.y() as i32;
+        if from_x == to_x {
+            match (1 < (from_y - to_y).abs(), from_y < to_y) {
+                (true, true) => Up,
+                (true, false) => Down,
+                (false, true) => Down,
+                (false, false) => Up,
+            }
+        } else if from_y == to_y {
+            match (1 < (from_x - to_x).abs(), from_x < to_x) {
+                (true, true) => Left,
+                (true, false) => Right,
+                (false, true) => Right,
+                (false, false) => Left,
+            }
+        } else {
+            unreachable!()
         }
     }
 }
