@@ -103,6 +103,21 @@ fn edge_cases2() {
     test_edges(expected, actual);
 }
 
+#[test]
+fn edge_cases3() {
+    // (1, 0) (0, 0)
+    let grid = Grid::new(2, 1);
+    let case = &[
+        (grid.pos(0, 0), grid.pos(1, 0)),
+        (grid.pos(1, 0), grid.pos(0, 0)),
+    ];
+    let expected = vec![(grid.pos(1, 0), grid.pos(0, 0))];
+    let actual = EdgesNodes::new(&grid, case);
+    test_edges(expected, actual.edges);
+    assert_eq!(actual.nodes[grid.pos(0, 0)], grid.pos(1, 0));
+    assert_eq!(actual.nodes[grid.pos(1, 0)], grid.pos(0, 0));
+}
+
 #[cfg(test)]
 fn test_edges(mut expected: Vec<(Pos, Pos)>, mut actual: Vec<(Pos, Pos)>) {
     assert_eq!(expected.len(), actual.len());
