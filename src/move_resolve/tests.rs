@@ -12,7 +12,16 @@ fn smallest_case() {
     field[grid.pos(0, 0)] = grid.pos(1, 0);
     field[grid.pos(1, 0)] = grid.pos(0, 0);
 
-    let path = resolve(&grid, &[(grid.pos(0, 0), grid.pos(1, 0))], 1, 1, 1);
+    let path = resolve(
+        &grid,
+        &[
+            (grid.pos(0, 0), grid.pos(1, 0)),
+            (grid.pos(1, 0), grid.pos(0, 0)),
+        ],
+        1,
+        1,
+        1,
+    );
     assert_eq!(path.len(), 1);
     assert_eq!(
         path[0],
