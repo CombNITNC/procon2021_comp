@@ -137,8 +137,7 @@ fn rand_case() {
                 Right => grid.right_of(current),
                 Down => grid.down_of(current),
                 Left => grid.left_of(current),
-            }
-            .unwrap();
+            };
             nodes.swap(current, to_swap);
             current = to_swap;
         }
