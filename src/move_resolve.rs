@@ -28,6 +28,8 @@ impl std::fmt::Debug for GridState<'_> {
         f.debug_struct("GridState")
             .field("field", &self.field)
             .field("selecting", &self.selecting)
+            .field("different_cells", &self.different_cells)
+            .field("remaining_select", &self.remaining_select)
             .finish()
     }
 }
