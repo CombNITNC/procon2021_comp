@@ -24,7 +24,7 @@ impl Problem {
         let nl = &mut || {
             let mut buf = String::new();
             data.read_line(&mut buf).context("failed to read line")?;
-            Ok(buf)
+            Ok(buf.trim().to_string())
         };
 
         let magic = Self::parse_line(nl, |x| Ok(x.to_string()), "magic number")?;
@@ -42,13 +42,15 @@ impl Problem {
         let (width, height) = Self::parse_line(nl, Self::parse_dim, "image dimensions")?;
         let _max_color_value = Self::parse_line(nl, Self::parse_max_color_value, "max color value");
 
+        let image = Image::read(data, width, height).context("failed to read image")?;
+
         Ok(Self {
             selectable_count,
             selection_cost_convert_rate,
             swap_cost_convert_rate,
             horizontal_split_count,
             vertical_split_count,
-            image: Image::read(data, width, height)?,
+            image,
         })
     }
 
@@ -134,50 +136,57 @@ pub(crate) struct Image {
 impl Image {
     // http://netpbm.sourceforge.net/doc/ppm.html
     fn read(data: impl Read, width: u16, height: u16) -> Result<Self> {
-        let mut bytes_iter = data.bytes().skip_while(|x| {
-            if let Ok(x) = x {
-                (*x as char).is_ascii_whitespace()
-            } else {
-                false
-            }
-        });
+        let bytes_iter = data.bytes();
 
         let mut image_data = Vec::with_capacity(height as _);
         image_data.push(Vec::with_capacity(width as _));
 
         let mut r = None;
         let mut g = None;
-        let mut b = None;
 
-        while let Some(byte_result) = bytes_iter.next() {
+        for byte_result in bytes_iter {
             let byte = byte_result.context("failed to read image body byte")?;
 
-            match (r, g, b) {
-                (None, None, None) => r = Some(byte),
-                (Some(_), None, None) => g = Some(byte),
-                (Some(_), Some(_), None) => b = Some(byte),
-                (Some(ar), Some(ag), Some(ab)) => {
-                    let last = image_data.last_mut().unwrap();
+            match (r, g) {
+                (None, None) => r = Some(byte),
+                (Some(_), None) => g = Some(byte),
+                (Some(ar), Some(ag)) => {
+                    let mut last = image_data.last_mut().unwrap();
+
+                    if last.len() == width as _ {
+                        image_data.push(Vec::with_capacity(width as _));
+                        last = image_data.last_mut().unwrap();
+                    }
+
                     last.push(Color {
                         r: ar,
                         g: ag,
-                        b: ab,
+                        b: byte,
                     });
 
                     r = None;
                     g = None;
-                    b = None;
-
-                    if last.len() == width as _ {
-                        image_data.push(Vec::with_capacity(width as _));
-                    }
                 }
                 _ => unreachable!(),
             }
         }
 
-        assert!(r.is_none() && g.is_none() && b.is_none());
-        assert!(image_data.last().unwrap().len() == width as _);
+        ensure!(
+            r.is_none() && g.is_none(),
+            "there were trailing bytes (rg buffers are not none)"
+        );
+
+        ensure!(
+            image_data.last().unwrap().len() == width as _,
+            "there were trailing bytes (last row has not enough pixels)"
+        );
+
+        ensure!(
+            image_data.iter().all(|x| x.len() == width as _),
+            "image width mismatch"
+        );
+
+        ensure!(image_data.len() == height as _, "image height mismatch");
 
         Ok(Image {
             width,
