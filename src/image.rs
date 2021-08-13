@@ -148,7 +148,7 @@ fn read_image(data: impl Read, width: u16, height: u16) -> Result<Image> {
 
     ensure!(
         image_data.len() == width as usize * height as usize,
-        "image height mismatch"
+        "image pixel count mismatch"
     );
 
     Ok(Image {
