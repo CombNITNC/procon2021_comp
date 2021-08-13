@@ -1,8 +1,25 @@
-use super::{edges_nodes::EdgesNodes, resolve};
+use super::{edges_nodes::EdgesNodes, resolve, DifferentCells};
 use crate::{
     basis::{Movement::*, Operation},
     grid::{Grid, Pos, VecOnGrid},
 };
+
+#[test]
+fn test_different_cells() {
+    // (0, 0) (1, 1)
+    // (1, 0) (0, 1)
+    let grid = Grid::new(2, 2);
+    let case = &[
+        (grid.pos(0, 1), grid.pos(1, 1)),
+        (grid.pos(1, 0), grid.pos(0, 1)),
+        (grid.pos(1, 1), grid.pos(1, 0)),
+    ];
+    let EdgesNodes { nodes: field, .. } = EdgesNodes::new(&grid, case);
+
+    let diff = DifferentCells(3);
+    assert_eq!(diff.on_swap(&field, grid.pos(0, 1), grid.pos(1, 1)).0, 2);
+    assert_eq!(diff.on_swap(&field, grid.pos(0, 1), grid.pos(0, 0)).0, 4);
+}
 
 #[test]
 fn smallest_case() {
