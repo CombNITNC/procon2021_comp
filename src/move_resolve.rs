@@ -74,7 +74,11 @@ impl<'grid> State<u64> for GridState<'grid> {
                     + if next_swap == self.field[next_swap] {
                         1
                     } else if selecting == self.field[next_swap] {
-                        -1
+                        if next_swap == self.field[selecting] {
+                            -2
+                        } else {
+                            -1
+                        }
                     } else {
                         0
                     }) as u8;
