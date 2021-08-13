@@ -25,17 +25,21 @@ impl<'grid> EdgesNodes<'grid> {
             reversed_nodes[from] = to;
         }
         let mut edges = Vec::with_capacity(2 * w as usize * h as usize - w as usize - h as usize);
-        for pos in grid.range(grid.clamping_pos(0, 0), grid.clamping_pos(w - 2, h - 1)) {
-            let right = grid.right_of(pos);
-            let a = nodes[pos];
-            let b = nodes[right];
-            edges.push((a, b));
+        if 2 <= w {
+            for pos in grid.range(grid.clamping_pos(0, 0), grid.clamping_pos(w - 2, h - 1)) {
+                let right = grid.right_of(pos);
+                let a = nodes[pos];
+                let b = nodes[right];
+                edges.push((a, b));
+            }
         }
-        for pos in grid.range(grid.clamping_pos(0, 0), grid.clamping_pos(w - 1, h - 2)) {
-            let down = grid.down_of(pos);
-            let a = nodes[pos];
-            let b = nodes[down];
-            edges.push((a, b));
+        if 2 <= h {
+            for pos in grid.range(grid.clamping_pos(0, 0), grid.clamping_pos(w - 1, h - 2)) {
+                let down = grid.down_of(pos);
+                let a = nodes[pos];
+                let b = nodes[down];
+                edges.push((a, b));
+            }
         }
         Self {
             edges,
