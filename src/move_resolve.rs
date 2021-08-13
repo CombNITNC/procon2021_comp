@@ -23,20 +23,20 @@ impl std::fmt::Debug for DifferentCells {
 
 impl DifferentCells {
     fn on_swap(self, field: &VecOnGrid<Pos>, selecting_a: Pos, selecting_b: Pos) -> Self {
-        Self(
-            (self.0 as i32
-                + if selecting_b == field[selecting_b] {
-                    1
-                } else if selecting_a == field[selecting_b] {
-                    if selecting_b == field[selecting_a] {
-                        -2
-                    } else {
-                        -1
-                    }
-                } else {
-                    0
-                }) as u8,
-        )
+        let mut diff = self.0 as i32;
+        if selecting_a == field[selecting_a] {
+            diff += 1;
+        }
+        if selecting_a == field[selecting_b] {
+            diff -= 1;
+        }
+        if selecting_b == field[selecting_b] {
+            diff += 1;
+        }
+        if selecting_b == field[selecting_a] {
+            diff -= 1;
+        }
+        Self(diff as u8)
     }
 }
 
