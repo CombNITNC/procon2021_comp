@@ -176,31 +176,31 @@ impl Grid {
     }
 
     pub(crate) fn up_of(&self, pos: Pos) -> Pos {
-        if pos.y() != 0 {
-            Pos::new(pos.x(), pos.y() - 1)
-        } else {
+        if pos.y() == 0 {
             Pos::new(pos.x(), self.height - 1)
+        } else {
+            Pos::new(pos.x(), pos.y() - 1)
         }
     }
     pub(crate) fn right_of(&self, pos: Pos) -> Pos {
-        if pos.x() + 1 != self.width {
-            Pos::new(pos.x() + 1, pos.y())
-        } else {
+        if pos.x() + 1 == self.width {
             Pos::new(0, pos.y())
+        } else {
+            Pos::new(pos.x() + 1, pos.y())
         }
     }
     pub(crate) fn down_of(&self, pos: Pos) -> Pos {
-        if pos.y() + 1 != self.height {
-            Pos::new(pos.x(), pos.y() + 1)
-        } else {
+        if pos.y() + 1 == self.height {
             Pos::new(pos.x(), 0)
+        } else {
+            Pos::new(pos.x(), pos.y() + 1)
         }
     }
     pub(crate) fn left_of(&self, pos: Pos) -> Pos {
-        if pos.x() != 0 {
-            Pos::new(pos.x() - 1, pos.y())
-        } else {
+        if pos.x() == 0 {
             Pos::new(self.width - 1, pos.y())
+        } else {
+            Pos::new(pos.x() - 1, pos.y())
         }
     }
 
