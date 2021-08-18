@@ -7,8 +7,8 @@ use crate::{
     grid::{Grid, Pos, VecOnGrid},
 };
 
-mod edges_nodes;
-mod ida_star;
+pub mod edges_nodes;
+pub mod ida_star;
 #[cfg(test)]
 mod tests;
 

@@ -1,14 +1,14 @@
 use crate::grid::{Grid, Pos, VecOnGrid};
 
-pub(super) struct EdgesNodes<'grid> {
-    pub(super) edges: Vec<(Pos, Pos)>,
-    pub(super) nodes: VecOnGrid<'grid, Pos>,
-    pub(super) reversed_nodes: VecOnGrid<'grid, Pos>,
+pub(crate) struct EdgesNodes<'grid> {
+    pub(crate) edges: Vec<(Pos, Pos)>,
+    pub(crate) nodes: VecOnGrid<'grid, Pos>,
+    pub(crate) reversed_nodes: VecOnGrid<'grid, Pos>,
 }
 
 impl<'grid> EdgesNodes<'grid> {
     /// 頂点の移動元と移動先からグラフの重み付き辺と頂点に対する移動先を格納したものを作る.
-    pub(super) fn new(grid: &'grid Grid, movements: &[(Pos, Pos)]) -> Self {
+    pub(crate) fn new(grid: &'grid Grid, movements: &[(Pos, Pos)]) -> Self {
         let w = grid.width();
         let h = grid.height();
         let mut nodes = VecOnGrid::with_init(grid, grid.clamping_pos(0, 0));
