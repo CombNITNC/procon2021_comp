@@ -161,8 +161,11 @@ fn rand_case() {
         let taking = between.sample(rng);
         points.into_iter().take(taking).collect()
     }
-    const WIDTH: u8 = 4;
-    const HEIGHT: u8 = 4;
+    const WIDTH: u8 = 16;
+    const HEIGHT: u8 = 16;
+    const SELECT_LIMIT: u8 = 3;
+    const SWAP_COST: u16 = 1;
+    const SELECT_COST: u16 = 2;
     let mut rng = rand::thread_rng();
 
     let grid = Grid::new(WIDTH, HEIGHT);
@@ -172,7 +175,7 @@ fn rand_case() {
         case.push((pair[0], pair[1]));
     }
     case.push((*circular.last().unwrap(), *circular.first().unwrap()));
-    let result = resolve(&grid, &case, 3, 1, 2);
+    let result = resolve(&grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(&grid, &case);
     for Operation { select, movements } in result {
