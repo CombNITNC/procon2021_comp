@@ -165,7 +165,7 @@ fn rand_case() {
     const HEIGHT: u8 = 16;
     const SELECT_LIMIT: u8 = 3;
     const SWAP_COST: u16 = 1;
-    const SELECT_COST: u16 = 2;
+    const SELECT_COST: u16 = 8;
     let mut rng = rand::thread_rng();
 
     let grid = Grid::new(WIDTH, HEIGHT);
