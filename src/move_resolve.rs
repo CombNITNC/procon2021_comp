@@ -76,7 +76,11 @@ impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
     fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
         // 揃っているマスどうしは入れ替えない
-        let different_cells = self.grid.all_pos().filter(|&p| p != self.field[p]);
+        let different_cells = self
+            .field
+            .iter_with_pos()
+            .filter(|&(pos, &cell)| pos != cell)
+            .map(|(_, &cell)| cell);
         if history.len() <= 1 {
             return different_cells
                 .map(|next_select| Self {
@@ -187,16 +191,11 @@ pub(crate) fn resolve(
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
-    let different_cells = DifferentCells(
-        grid.all_pos()
-            .zip(nodes.iter())
-            .filter(|&(p, &n)| p != n)
-            .count() as u8,
-    );
+    let different_cells =
+        DifferentCells(nodes.iter_with_pos().filter(|&(p, &n)| p != n).count() as u8);
     let lower_bound = {
-        let mut distances: Vec<_> = grid
-            .all_pos()
-            .zip(nodes.iter())
+        let mut distances: Vec<_> = nodes
+            .iter_with_pos()
             .map(|(p, &n)| p.manhattan_distance(n) as u64)
             .collect();
         distances.sort_unstable();

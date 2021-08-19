@@ -98,6 +98,11 @@ impl<'grid, T> VecOnGrid<'grid, T> {
     pub(crate) fn iter(&self) -> impl Iterator<Item = &T> {
         self.into_iter()
     }
+
+    /// 各 Pos のタプルとなるイテレータを作る.
+    pub(crate) fn iter_with_pos(&self) -> impl Iterator<Item = (Pos, &T)> {
+        self.grid.all_pos().zip(self.iter())
+    }
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
