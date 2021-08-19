@@ -12,8 +12,9 @@ pub mod ida_star;
 #[cfg(test)]
 mod tests;
 
+/// フィールドにあるマスのゴール位置までの距離の合計.
 #[derive(Clone, Copy)]
-struct DifferentCells(u8);
+struct DifferentCells(u64);
 
 impl std::fmt::Debug for DifferentCells {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -22,21 +23,12 @@ impl std::fmt::Debug for DifferentCells {
 }
 
 impl DifferentCells {
-    fn on_swap(self, field: &VecOnGrid<Pos>, selecting_a: Pos, selecting_b: Pos) -> Self {
-        let mut diff = self.0 as i32;
-        if selecting_a == field[selecting_a] {
-            diff += 1;
-        }
-        if selecting_a == field[selecting_b] {
-            diff -= 1;
-        }
-        if selecting_b == field[selecting_b] {
-            diff += 1;
-        }
-        if selecting_b == field[selecting_a] {
-            diff -= 1;
-        }
-        Self(diff as u8)
+    /// a の位置と b の位置のマスを入れ替えた場合を計算する.
+    fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
+        let before = (field[a].manhattan_distance(a) + field[b].manhattan_distance(b)) as i64;
+        let after = (field[a].manhattan_distance(b) + field[b].manhattan_distance(a)) as i64;
+        let diff = self.0 as i64 - before + after;
+        Self(diff as _)
     }
 }
 
@@ -191,17 +183,15 @@ pub(crate) fn resolve(
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
-    let different_cells =
-        DifferentCells(nodes.iter_with_pos().filter(|&(p, &n)| p != n).count() as u8);
     let lower_bound = {
         let mut distances: Vec<_> = nodes
             .iter_with_pos()
             .map(|(p, &n)| p.manhattan_distance(n) as u64)
             .collect();
         distances.sort_unstable();
-        distances.pop();
         distances.iter().sum()
     };
+    let different_cells = DifferentCells(lower_bound);
     // 600e8 = (WH)^select => select = 10 log 6 / log WH
     let maximum_select =
         (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
