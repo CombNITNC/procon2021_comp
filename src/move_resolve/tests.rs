@@ -161,8 +161,8 @@ fn rand_case() {
         let taking = between.sample(rng);
         points.into_iter().take(taking).collect()
     }
-    const WIDTH: u8 = 16;
-    const HEIGHT: u8 = 16;
+    const WIDTH: u8 = 4;
+    const HEIGHT: u8 = 4;
     const SELECT_LIMIT: u8 = 3;
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
