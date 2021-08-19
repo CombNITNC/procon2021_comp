@@ -59,14 +59,14 @@ where
 }
 
 /// 反復深化 A* アルゴリズムの実装.
-pub fn ida_star<V, N, C>(start: V) -> (Vec<V>, C)
+pub fn ida_star<V, N, C>(start: V, lower_bound: C) -> (Vec<V>, C)
 where
     V: PartialEq + Clone + State<C, NextStates = N> + std::fmt::Debug,
     N: IntoIterator<Item = V>,
     C: PartialOrd + Default + Add<Output = C> + Copy + std::fmt::Debug,
 {
     let mut history = vec![start];
-    let mut bound = C::default();
+    let mut bound = lower_bound;
     loop {
         match find(&mut history, C::default(), bound) {
             FindResult::Found => return (history, bound),

@@ -98,6 +98,11 @@ impl<'grid, T> VecOnGrid<'grid, T> {
     pub(crate) fn iter(&self) -> impl Iterator<Item = &T> {
         self.into_iter()
     }
+
+    /// 各 Pos のタプルとなるイテレータを作る.
+    pub(crate) fn iter_with_pos(&self) -> impl Iterator<Item = (Pos, &T)> {
+        self.grid.all_pos().zip(self.iter())
+    }
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
@@ -176,36 +181,36 @@ impl Grid {
     }
 
     pub(crate) fn up_of(&self, pos: Pos) -> Pos {
-        if pos.y() != 0 {
-            Pos::new(pos.x(), pos.y() - 1)
-        } else {
+        if pos.y() == 0 {
             Pos::new(pos.x(), self.height - 1)
+        } else {
+            Pos::new(pos.x(), pos.y() - 1)
         }
     }
     pub(crate) fn right_of(&self, pos: Pos) -> Pos {
-        if pos.x() + 1 != self.width {
-            Pos::new(pos.x() + 1, pos.y())
-        } else {
+        if pos.x() + 1 == self.width {
             Pos::new(0, pos.y())
+        } else {
+            Pos::new(pos.x() + 1, pos.y())
         }
     }
     pub(crate) fn down_of(&self, pos: Pos) -> Pos {
-        if pos.y() + 1 != self.height {
-            Pos::new(pos.x(), pos.y() + 1)
-        } else {
+        if pos.y() + 1 == self.height {
             Pos::new(pos.x(), 0)
+        } else {
+            Pos::new(pos.x(), pos.y() + 1)
         }
     }
     pub(crate) fn left_of(&self, pos: Pos) -> Pos {
-        if pos.x() != 0 {
-            Pos::new(pos.x() - 1, pos.y())
-        } else {
+        if pos.x() == 0 {
             Pos::new(self.width - 1, pos.y())
+        } else {
+            Pos::new(pos.x() - 1, pos.y())
         }
     }
 
-    pub(crate) fn around_of(&self, pos: Pos) -> Vec<Pos> {
-        vec![
+    pub(crate) fn around_of(&self, pos: Pos) -> [Pos; 4] {
+        [
             self.up_of(pos),
             self.right_of(pos),
             self.down_of(pos),
