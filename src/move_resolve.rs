@@ -193,17 +193,30 @@ pub(crate) fn resolve(
             .filter(|&(p, &n)| p != n)
             .count() as u8,
     );
+    let lower_bound = {
+        let mut distances: Vec<_> = grid
+            .all_pos()
+            .zip(nodes.iter())
+            .map(|(p, &n)| p.manhattan_distance(n) as u64)
+            .collect();
+        distances.sort_unstable();
+        distances.pop();
+        distances.iter().sum()
+    };
     // 600e8 = (WH)^select => select = 10 log 6 / log WH
     let maximum_select =
         (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
-    let (path, _total_cost) = ida_star(GridState {
-        grid,
-        field: nodes.clone(),
-        selecting: None,
-        different_cells,
-        swap_cost,
-        select_cost,
-        remaining_select: select_limit.min(maximum_select),
-    });
+    let (path, _total_cost) = ida_star(
+        GridState {
+            grid,
+            field: nodes.clone(),
+            selecting: None,
+            different_cells,
+            swap_cost,
+            select_cost,
+            remaining_select: select_limit.min(maximum_select),
+        },
+        lower_bound,
+    );
     path_to_operations(path)
 }
