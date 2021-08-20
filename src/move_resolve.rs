@@ -144,7 +144,9 @@ impl GridState<'_> {
     }
 
     fn is_moved_from(&self, prev: &Self) -> bool {
-        prev.field[prev.selecting.unwrap()] == self.field[self.selecting.unwrap()]
+        prev.selecting.map_or(true, |prev_selecting| {
+            prev.field[prev_selecting] == self.field[self.selecting.unwrap()]
+        })
     }
 }
 
