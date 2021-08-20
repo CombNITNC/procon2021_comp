@@ -105,7 +105,7 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn heuristic(&self) -> u64 {
-        self.different_cells.0 as u64
+        self.different_cells.0
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
