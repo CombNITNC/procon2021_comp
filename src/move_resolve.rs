@@ -25,8 +25,14 @@ impl std::fmt::Debug for DifferentCells {
 impl DifferentCells {
     /// a の位置と b の位置のマスを入れ替えた場合を計算する.
     fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
-        let before = (field[a].manhattan_distance(a) + field[b].manhattan_distance(b)) as i64;
-        let after = (field[a].manhattan_distance(b) + field[b].manhattan_distance(a)) as i64;
+        let before = unsafe {
+            field.get_unchecked(a).manhattan_distance(a)
+                + field.get_unchecked(b).manhattan_distance(b)
+        } as i64;
+        let after = unsafe {
+            field.get_unchecked(a).manhattan_distance(b)
+                + field.get_unchecked(b).manhattan_distance(a)
+        } as i64;
         let diff = self.0 as i64 - before + after;
         Self(diff as _)
     }
@@ -79,7 +85,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                 .collect();
         }
         let selecting = self.selecting.unwrap();
-        let prev_prev = &history[history.len() - 2];
+        let prev_prev = unsafe { history.get_unchecked(history.len() - 2) };
         let around = self.grid.around_of(selecting);
         let swapping_states = around
             .iter()
@@ -147,8 +153,9 @@ impl GridState<'_> {
 
     #[inline]
     fn is_moved_from(&self, prev: &Self) -> bool {
-        prev.selecting.map_or(true, |prev_selecting| {
-            prev.field[prev_selecting] == self.field[self.selecting.unwrap()]
+        prev.selecting.map_or(true, |prev_selecting| unsafe {
+            prev.field.get_unchecked(prev_selecting)
+                == self.field.get_unchecked(self.selecting.unwrap())
         })
     }
 }
