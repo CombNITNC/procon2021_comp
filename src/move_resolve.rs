@@ -75,11 +75,7 @@ impl<'grid> State<u64> for GridState<'grid> {
             .map(|(_, &cell)| cell);
         if history.len() <= 1 {
             return different_cells
-                .map(|next_select| Self {
-                    selecting: Some(next_select),
-                    remaining_select: self.remaining_select - 1,
-                    ..self.clone()
-                })
+                .map(|next_select| self.with_next_select(next_select))
                 .collect();
         }
         let selecting = self.selecting.unwrap();
@@ -110,11 +106,7 @@ impl<'grid> State<u64> for GridState<'grid> {
         if self.is_moved_from(prev_prev) && 1 <= self.remaining_select {
             let selecting_states = different_cells
                 .filter(|&p| p != selecting)
-                .map(|next_select| Self {
-                    selecting: Some(next_select),
-                    remaining_select: self.remaining_select - 1,
-                    ..self.clone()
-                });
+                .map(|next_select| self.with_next_select(next_select));
             swapping_states.chain(selecting_states).collect()
         } else {
             swapping_states.collect()
@@ -142,6 +134,14 @@ impl<'grid> State<u64> for GridState<'grid> {
 }
 
 impl GridState<'_> {
+    fn with_next_select(&self, next_select: Pos) -> Self {
+        Self {
+            selecting: Some(next_select),
+            remaining_select: self.remaining_select - 1,
+            ..self.clone()
+        }
+    }
+
     fn is_moved_from(&self, prev: &Self) -> bool {
         prev.field[prev.selecting.unwrap()] == self.field[self.selecting.unwrap()]
     }
