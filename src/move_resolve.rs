@@ -107,12 +107,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                     ..self.clone()
                 }
             });
-        let moved_in_prev = self
-            .field
-            .iter()
-            .zip(prev_prev.field.iter())
-            .any(|(a, b)| a != b);
-        if moved_in_prev && 1 <= self.remaining_select {
+        if self.is_moved_from(prev_prev) && 1 <= self.remaining_select {
             let selecting_states = different_cells
                 .filter(|&p| p != selecting)
                 .map(|next_select| Self {
