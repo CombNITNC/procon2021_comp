@@ -138,11 +138,17 @@ impl<'grid> State<u64> for GridState<'grid> {
         if self.selecting.is_none() {
             return self.swap_cost as u64;
         }
-        (if self.field[self.selecting.unwrap()] != next.field[next.selecting.unwrap()] {
-            self.select_cost
-        } else {
+        (if next.is_moved_from(self) {
             self.swap_cost
+        } else {
+            self.select_cost
         }) as u64
+    }
+}
+
+impl GridState<'_> {
+    fn is_moved_from(&self, prev: &Self) -> bool {
+        prev.field[prev.selecting.unwrap()] == self.field[self.selecting.unwrap()]
     }
 }
 
