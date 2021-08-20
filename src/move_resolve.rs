@@ -121,6 +121,7 @@ impl<'grid> State<u64> for GridState<'grid> {
 }
 
 impl GridState<'_> {
+    #[inline]
     fn with_next_select(&self, next_select: Pos) -> Self {
         Self {
             selecting: Some(next_select),
@@ -129,6 +130,7 @@ impl GridState<'_> {
         }
     }
 
+    #[inline]
     fn with_next_swap(&self, next_swap: Pos) -> Self {
         let selecting = self.selecting.unwrap();
         let mut new_field = self.field.clone();
@@ -143,6 +145,7 @@ impl GridState<'_> {
         }
     }
 
+    #[inline]
     fn is_moved_from(&self, prev: &Self) -> bool {
         prev.selecting.map_or(true, |prev_selecting| {
             prev.field[prev_selecting] == self.field[self.selecting.unwrap()]
