@@ -89,20 +89,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                     .selecting
                     .map_or(true, |selected| around != selected)
             })
-            .map(|next_swap| {
-                let mut new_field = self.field.clone();
-                new_field.swap(selecting, next_swap);
-                Self {
-                    selecting: Some(next_swap),
-                    field: new_field,
-                    different_cells: self.different_cells.on_swap(
-                        &self.field,
-                        selecting,
-                        next_swap,
-                    ),
-                    ..self.clone()
-                }
-            });
+            .map(|next_swap| self.with_next_swap(next_swap));
         if self.is_moved_from(prev_prev) && 1 <= self.remaining_select {
             let selecting_states = different_cells
                 .filter(|&p| p != selecting)
@@ -138,6 +125,20 @@ impl GridState<'_> {
         Self {
             selecting: Some(next_select),
             remaining_select: self.remaining_select - 1,
+            ..self.clone()
+        }
+    }
+
+    fn with_next_swap(&self, next_swap: Pos) -> Self {
+        let selecting = self.selecting.unwrap();
+        let mut new_field = self.field.clone();
+        new_field.swap(selecting, next_swap);
+        Self {
+            selecting: Some(next_swap),
+            field: new_field,
+            different_cells: self
+                .different_cells
+                .on_swap(&self.field, selecting, next_swap),
             ..self.clone()
         }
     }
