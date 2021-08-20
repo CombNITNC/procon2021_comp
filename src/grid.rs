@@ -103,6 +103,24 @@ impl<'grid, T> VecOnGrid<'grid, T> {
     pub(crate) fn iter_with_pos(&self) -> impl Iterator<Item = (Pos, &T)> {
         self.grid.all_pos().zip(self.iter())
     }
+
+    /// アサーションなしで要素にアクセスする.
+    ///
+    /// # Safety
+    ///
+    /// 範囲外の `Pos` で呼び出すと未定義動作となる.
+    pub(crate) unsafe fn get_unchecked(&self, pos: Pos) -> &T {
+        self.vec.get_unchecked(self.grid.pos_as_index(pos))
+    }
+
+    /// アサーションなしで可変要素にアクセスする.
+    ///
+    /// # Safety
+    ///
+    /// 範囲外の `Pos` で呼び出すと未定義動作となる.
+    pub(crate) unsafe fn get_unchecked_mut(&mut self, pos: Pos) -> &mut T {
+        self.vec.get_unchecked_mut(self.grid.pos_as_index(pos))
+    }
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
