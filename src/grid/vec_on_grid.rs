@@ -65,6 +65,31 @@ impl<'grid, T> VecOnGrid<'grid, T> {
     pub(crate) unsafe fn get_unchecked_mut(&mut self, pos: Pos) -> &mut T {
         self.vec.get_unchecked_mut(self.grid.pos_as_index(pos))
     }
+
+    /// `Grid` の X 方向で全体を巡回させる.
+    pub(crate) fn rotate_x(&mut self, offset: isize) {
+        for y in 0..self.grid.height() {
+            let start = self.grid.pos_as_index(self.grid.clamping_pos(0, y));
+            let end = self
+                .grid
+                .pos_as_index(self.grid.clamping_pos(self.grid.width() - 1, y));
+            if 0 < offset {
+                self.vec[start..=end].rotate_right(offset.max(0) as usize);
+            } else {
+                self.vec[start..=end].rotate_left((-offset).max(0) as usize);
+            }
+        }
+    }
+
+    /// `Grid` の Y 方向で全体を巡回させる.
+    pub(crate) fn rotate_y(&mut self, offset: isize) {
+        let mut chunks: Vec<_> = self.vec.chunks_exact(self.grid.width() as usize).collect();
+        if 0 < offset {
+            chunks.rotate_right(offset.max(0) as usize);
+        } else {
+            chunks.rotate_left((-offset).max(0) as usize);
+        }
+    }
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
