@@ -199,7 +199,12 @@ pub(crate) fn resolve(
     let lower_bound = {
         let mut distances: Vec<_> = nodes
             .iter_with_pos()
-            .map(|(p, &n)| (p.manhattan_distance(n) as u64).min((p.x() as u64 + grid.width() as u64 - n.x() as u64 + p.y() as u64 + grid.height() as u64 - n.y() as u64).abs()))
+            .map(|(p, &n)| {
+                (p.manhattan_distance(n) as u64).min(
+                    (p.x() as i64 + grid.width() as i64 - n.x() as i64).unsigned_abs()
+                        + (p.y() as i64 + grid.height() as i64 - n.y() as i64).unsigned_abs(),
+                )
+            })
             .collect();
         distances.sort_unstable();
         distances.iter().sum()
