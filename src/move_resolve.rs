@@ -25,14 +25,8 @@ impl std::fmt::Debug for DifferentCells {
 impl DifferentCells {
     /// a の位置と b の位置のマスを入れ替えた場合を計算する.
     fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
-        let before = unsafe {
-            field.get_unchecked(a).manhattan_distance(a)
-                + field.get_unchecked(b).manhattan_distance(b)
-        } as i64;
-        let after = unsafe {
-            field.get_unchecked(a).manhattan_distance(b)
-                + field.get_unchecked(b).manhattan_distance(a)
-        } as i64;
+        let before = (field[a].manhattan_distance(a) + field[b].manhattan_distance(b)) as i64;
+        let after = (field[a].manhattan_distance(b) + field[b].manhattan_distance(a)) as i64;
         let diff = self.0 as i64 - before + after;
         Self(diff as _)
     }
