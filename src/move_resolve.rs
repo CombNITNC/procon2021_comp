@@ -79,7 +79,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                 .collect();
         }
         let selecting = self.selecting.unwrap();
-        let prev_prev = unsafe { history.get_unchecked(history.len() - 2) };
+        let prev_prev = &history[history.len() - 2];
         let around = self.grid.around_of(selecting);
         let swapping_states = around
             .iter()
@@ -147,9 +147,8 @@ impl GridState<'_> {
 
     #[inline]
     fn is_moved_from(&self, prev: &Self) -> bool {
-        prev.selecting.map_or(true, |prev_selecting| unsafe {
-            prev.field.get_unchecked(prev_selecting)
-                == self.field.get_unchecked(self.selecting.unwrap())
+        prev.selecting.map_or(true, |prev_selecting| {
+            prev.field[prev_selecting] == self.field[self.selecting.unwrap()]
         })
     }
 }
