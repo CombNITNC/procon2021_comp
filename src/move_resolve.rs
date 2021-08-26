@@ -34,7 +34,6 @@ impl DifferentCells {
 
 #[derive(Clone)]
 struct GridState<'grid> {
-    grid: &'grid Grid,
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
     different_cells: DifferentCells,
@@ -80,7 +79,7 @@ impl<'grid> State<u64> for GridState<'grid> {
         }
         let selecting = self.selecting.unwrap();
         let prev_prev = &history[history.len() - 2];
-        let around = self.grid.around_of(selecting);
+        let around = self.field.grid.around_of(selecting);
         let swapping_states = around
             .iter()
             .cloned()
@@ -233,7 +232,6 @@ pub(crate) fn resolve(
         (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
     let (path, _total_cost) = ida_star(
         GridState {
-            grid,
             field: nodes.clone(),
             selecting: None,
             different_cells,
