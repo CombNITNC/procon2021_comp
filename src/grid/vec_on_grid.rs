@@ -6,7 +6,7 @@ use super::{Grid, Pos};
 #[derive(Clone)]
 pub(crate) struct VecOnGrid<'grid, T> {
     vec: Vec<T>,
-    grid: &'grid Grid,
+    pub(crate) grid: &'grid Grid,
 }
 
 impl<'grid, T> VecOnGrid<'grid, T> {
