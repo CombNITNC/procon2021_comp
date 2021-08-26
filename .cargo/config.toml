@@ -1,0 +1,2 @@
+[target.release]
+rustflags = ["-C", "target-cpu=native"]

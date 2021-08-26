@@ -12,3 +12,7 @@ reqwest = { version = "0.11.4", features = ["blocking"] }
 
 [dev-dependencies]
 rand = "0.8.4"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
