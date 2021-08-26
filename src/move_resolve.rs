@@ -75,11 +75,7 @@ impl<'grid> State<u64> for GridState<'grid> {
             .map(|(_, &cell)| cell);
         if history.len() <= 1 {
             return different_cells
-                .map(|next_select| Self {
-                    selecting: Some(next_select),
-                    remaining_select: self.remaining_select - 1,
-                    ..self.clone()
-                })
+                .map(|next_select| self.with_next_select(next_select))
                 .collect();
         }
         let selecting = self.selecting.unwrap();
@@ -93,33 +89,11 @@ impl<'grid> State<u64> for GridState<'grid> {
                     .selecting
                     .map_or(true, |selected| around != selected)
             })
-            .map(|next_swap| {
-                let mut new_field = self.field.clone();
-                new_field.swap(selecting, next_swap);
-                Self {
-                    selecting: Some(next_swap),
-                    field: new_field,
-                    different_cells: self.different_cells.on_swap(
-                        &self.field,
-                        selecting,
-                        next_swap,
-                    ),
-                    ..self.clone()
-                }
-            });
-        let moved_in_prev = self
-            .field
-            .iter()
-            .zip(prev_prev.field.iter())
-            .any(|(a, b)| a != b);
-        if moved_in_prev && 1 <= self.remaining_select {
+            .map(|next_swap| self.with_next_swap(next_swap));
+        if self.is_moved_from(prev_prev) && 1 <= self.remaining_select {
             let selecting_states = different_cells
                 .filter(|&p| p != selecting)
-                .map(|next_select| Self {
-                    selecting: Some(next_select),
-                    remaining_select: self.remaining_select - 1,
-                    ..self.clone()
-                });
+                .map(|next_select| self.with_next_select(next_select));
             swapping_states.chain(selecting_states).collect()
         } else {
             swapping_states.collect()
@@ -131,19 +105,51 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn heuristic(&self) -> u64 {
-        self.different_cells.0 as u64
+        self.different_cells.0
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
-        (if (&self.field)
-            .into_iter()
-            .zip((&next.field).into_iter())
-            .all(|(a, b)| a == b)
-        {
-            self.select_cost
-        } else {
+        if self.selecting.is_none() {
+            return self.swap_cost as u64;
+        }
+        (if next.is_moved_from(self) {
             self.swap_cost
+        } else {
+            self.select_cost
         }) as u64
+    }
+}
+
+impl GridState<'_> {
+    #[inline]
+    fn with_next_select(&self, next_select: Pos) -> Self {
+        Self {
+            selecting: Some(next_select),
+            remaining_select: self.remaining_select - 1,
+            ..self.clone()
+        }
+    }
+
+    #[inline]
+    fn with_next_swap(&self, next_swap: Pos) -> Self {
+        let selecting = self.selecting.unwrap();
+        let mut new_field = self.field.clone();
+        new_field.swap(selecting, next_swap);
+        Self {
+            selecting: Some(next_swap),
+            field: new_field,
+            different_cells: self
+                .different_cells
+                .on_swap(&self.field, selecting, next_swap),
+            ..self.clone()
+        }
+    }
+
+    #[inline]
+    fn is_moved_from(&self, prev: &Self) -> bool {
+        prev.selecting.map_or(true, |prev_selecting| {
+            prev.field[prev_selecting] == self.field[self.selecting.unwrap()]
+        })
     }
 }
 
@@ -186,7 +192,12 @@ pub(crate) fn resolve(
     let lower_bound = {
         let mut distances: Vec<_> = nodes
             .iter_with_pos()
-            .map(|(p, &n)| p.manhattan_distance(n) as u64)
+            .map(|(p, &n)| {
+                (p.manhattan_distance(n) as u64).min(
+                    (p.x() as i64 + grid.width() as i64 - n.x() as i64).unsigned_abs()
+                        + (p.y() as i64 + grid.height() as i64 - n.y() as i64).unsigned_abs(),
+                )
+            })
             .collect();
         distances.sort_unstable();
         distances.iter().sum()
