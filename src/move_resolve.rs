@@ -32,11 +32,17 @@ impl DifferentCells {
     }
 }
 
+#[derive(Debug, Clone)]
+enum StatePhase<'grid> {
+    _1 { goal: &'grid VecOnGrid<'grid, Pos> },
+    _2 { different_cells: DifferentCells },
+}
+
 #[derive(Clone)]
 struct GridState<'grid> {
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
-    different_cells: DifferentCells,
+    phase: StatePhase<'grid>,
     swap_cost: u16,
     select_cost: u16,
     remaining_select: u8,
@@ -47,7 +53,7 @@ impl std::fmt::Debug for GridState<'_> {
         f.debug_struct("GridState")
             .field("field", &self.field)
             .field("selecting", &self.selecting)
-            .field("different_cells", &self.different_cells)
+            .field("phase", &self.phase)
             .field("remaining_select", &self.remaining_select)
             .finish()
     }
@@ -100,11 +106,17 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn is_goal(&self) -> bool {
-        self.different_cells.0 == 0
+        match self.phase {
+            StatePhase::_1 { goal } => todo!(),
+            StatePhase::_2 { different_cells } => different_cells.0 == 0,
+        }
     }
 
     fn heuristic(&self) -> u64 {
-        self.different_cells.0
+        match self.phase {
+            StatePhase::_1 { goal } => todo!(),
+            StatePhase::_2 { different_cells } => different_cells.0,
+        }
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
@@ -137,9 +149,12 @@ impl GridState<'_> {
         Self {
             selecting: Some(next_swap),
             field: new_field,
-            different_cells: self
-                .different_cells
-                .on_swap(&self.field, selecting, next_swap),
+            phase: match self.phase {
+                StatePhase::_1 { goal } => todo!(),
+                StatePhase::_2 { different_cells } => StatePhase::_2 {
+                    different_cells: different_cells.on_swap(&self.field, selecting, next_swap),
+                },
+            },
             ..self.clone()
         }
     }
@@ -212,7 +227,13 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
+    let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
+    // 600e8 = (WH)^select => select = 10 log 6 / log WH
+    let maximum_select =
+        (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
+    let (x, y) = min_shift(&mut nodes);
+    nodes.rotate_x(x);
+    nodes.rotate_y(y);
     let lower_bound = {
         let mut distances: Vec<_> = nodes
             .iter_with_pos()
@@ -227,19 +248,44 @@ pub(crate) fn resolve(
         distances.iter().sum()
     };
     let different_cells = DifferentCells(lower_bound);
-    // 600e8 = (WH)^select => select = 10 log 6 / log WH
-    let maximum_select =
-        (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
-    let (path, _total_cost) = ida_star(
-        GridState {
-            field: nodes.clone(),
-            selecting: None,
-            different_cells,
-            swap_cost,
-            select_cost,
-            remaining_select: select_limit.min(maximum_select),
-        },
-        lower_bound,
-    );
+    let mut min_cost = 1u64 << 60;
+    let path = loop {
+        let (mut phase1_path, phase1_cost) = ida_star(
+            GridState {
+                field: nodes.clone(),
+                selecting: None,
+                phase: StatePhase::_1 { goal: &nodes },
+                swap_cost,
+                select_cost,
+                remaining_select: select_limit.min(maximum_select),
+            },
+            lower_bound,
+        );
+        let selected1 = phase1_path
+            .windows(2)
+            .filter(|win| {
+                win[0].field[win[0].selecting.unwrap()] == win[1].field[win[1].selecting.unwrap()]
+            })
+            .count();
+        let phase1_last = phase1_path.pop().unwrap();
+        let (mut phase2_path, phase2_cost) = ida_star(
+            GridState {
+                field: phase1_last.field.clone(),
+                selecting: phase1_last.selecting.clone(),
+                phase: StatePhase::_2 { different_cells },
+                swap_cost,
+                select_cost,
+                remaining_select: select_limit - selected1 as u8,
+            },
+            lower_bound - phase1_cost,
+        );
+        let total_cost = phase1_cost + phase2_cost;
+        if total_cost < min_cost {
+            min_cost = total_cost;
+        } else {
+            phase1_path.append(&mut phase2_path);
+            break phase1_path;
+        }
+    };
     path_to_operations(path)
 }
