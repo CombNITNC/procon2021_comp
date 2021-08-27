@@ -37,8 +37,11 @@ impl DifferentCells {
 #[derive(Debug, Clone)]
 enum StatePhase {
     _1 {
-        x_amount: Vec<i8>,
-        y_amount: Vec<i8>,
+        x_amount: i8,
+        x_schedule: Vec<u8>,
+        y_amount: i8,
+        y_schedule: Vec<u8>,
+        remaining_move: Option<(Movement, u8)>,
     },
     _2 {
         different_cells: DifferentCells,
@@ -90,6 +93,24 @@ impl<'grid> State<u64> for GridState<'grid> {
                 .map(|next_select| self.with_next_select(next_select))
                 .collect();
         }
+        if let StatePhase::_1 {
+            remaining_move: Some((dir, _)),
+            ..
+        } = &self.phase
+        {
+            let mut field = self.field.clone();
+            let sel = self.selecting.unwrap();
+            match dir {
+                Movement::Up => field.swap(sel, self.field.grid.up_of(sel)),
+                Movement::Right => field.swap(sel, self.field.grid.right_of(sel)),
+                Movement::Down => field.swap(sel, self.field.grid.down_of(sel)),
+                Movement::Left => field.swap(sel, self.field.grid.left_of(sel)),
+            }
+            return vec![Self {
+                field,
+                ..self.clone()
+            }];
+        }
         let selecting = self.selecting.unwrap();
         let prev_prev = &history[history.len() - 2];
         let around = self.field.grid.around_of(selecting);
@@ -114,21 +135,22 @@ impl<'grid> State<u64> for GridState<'grid> {
 
     fn is_goal(&self) -> bool {
         match &self.phase {
-            StatePhase::_1 { x_amount, y_amount } => {
-                x_amount.iter().chain(y_amount.iter()).all(|&a| a == 0)
-            }
+            StatePhase::_1 {
+                x_schedule,
+                y_schedule,
+                ..
+            } => x_schedule.is_empty() && y_schedule.is_empty(),
             StatePhase::_2 { different_cells } => different_cells.0 == 0,
         }
     }
 
     fn heuristic(&self) -> u64 {
         match &self.phase {
-            StatePhase::_1 { x_amount, y_amount } => x_amount
-                .iter()
-                .chain(y_amount.iter())
-                .map(|&n| n as i32)
-                .sum::<i32>()
-                .unsigned_abs() as _,
+            StatePhase::_1 {
+                x_schedule,
+                y_schedule,
+                ..
+            } => (x_schedule.len() + y_schedule.len()) as _,
             StatePhase::_2 { different_cells } => different_cells.0,
         }
     }
@@ -164,21 +186,44 @@ impl GridState<'_> {
             selecting: Some(next_swap),
             field: new_field,
             phase: match &self.phase {
-                StatePhase::_1 { x_amount, y_amount } => {
-                    let mut x_amount = x_amount.clone();
-                    let mut y_amount = y_amount.clone();
-                    let mov = Movement::between_pos(selecting, next_swap);
-                    match mov {
-                        Movement::Left | Movement::Right => {
-                            y_amount[selecting.x() as usize] +=
-                                if mov == Movement::Left { 1 } else { -1 };
+                StatePhase::_1 {
+                    x_amount,
+                    x_schedule,
+                    y_amount,
+                    y_schedule,
+                    remaining_move,
+                } => {
+                    let mut x_schedule = x_schedule.clone();
+                    let mut y_schedule = y_schedule.clone();
+                    if let Some((mov, remaining)) = *remaining_move {
+                        StatePhase::_1 {
+                            remaining_move: (1 <= remaining).then(|| (mov, remaining - 1)),
+                            x_amount: *x_amount,
+                            x_schedule,
+                            y_amount: *y_amount,
+                            y_schedule,
                         }
-                        Movement::Up | Movement::Down => {
-                            x_amount[selecting.y() as usize] +=
-                                if mov == Movement::Up { 1 } else { -1 };
+                    } else if let Some(x) = y_schedule.pop() {
+                        let mov = Movement::between_pos(selecting, next_swap);
+                        StatePhase::_1 {
+                            remaining_move: Some((mov, *x_amount as u8)),
+                            x_amount: *x_amount,
+                            x_schedule,
+                            y_amount: *y_amount,
+                            y_schedule,
                         }
+                    } else if let Some(y) = x_schedule.pop() {
+                        let mov = Movement::between_pos(selecting, next_swap);
+                        StatePhase::_1 {
+                            remaining_move: Some((mov, *y_amount as u8)),
+                            x_amount: *x_amount,
+                            x_schedule,
+                            y_amount: *y_amount,
+                            y_schedule,
+                        }
+                    } else {
+                        self.phase.clone()
                     }
-                    StatePhase::_1 { x_amount, y_amount }
                 }
                 StatePhase::_2 { different_cells } => StatePhase::_2 {
                     different_cells: different_cells.on_swap(&self.field, selecting, next_swap),
@@ -267,6 +312,20 @@ pub(crate) fn resolve(
         ns.rotate_y(y);
         ns
     };
+    let hint = rotated
+        .iter_with_pos()
+        .filter(|&(p, &r)| p != r)
+        .map(|(p, _)| p)
+        .next();
+    let mut x_schedule: Vec<_> = (0..grid.height()).collect();
+    let mut y_schedule: Vec<_> = (0..grid.width()).collect();
+    if let Some(hint) = hint {
+        // 最後に hint の位置を入れ替えると効率的
+        let move_on_last = x_schedule.remove(hint.y() as usize);
+        x_schedule.insert(0, move_on_last);
+        let move_on_last = y_schedule.remove(hint.x() as usize);
+        y_schedule.insert(0, move_on_last);
+    }
     let lower_bound = {
         let distances: Vec<_> = rotated
             .iter_with_pos()
@@ -288,8 +347,11 @@ pub(crate) fn resolve(
             field: nodes.clone(),
             selecting: None,
             phase: StatePhase::_1 {
-                x_amount: vec![x as i8; grid.height() as usize],
-                y_amount: vec![y as i8; grid.width() as usize],
+                x_amount: x as i8,
+                x_schedule,
+                y_amount: y as i8,
+                y_schedule,
+                remaining_move: None,
             },
             swap_cost,
             select_cost,
