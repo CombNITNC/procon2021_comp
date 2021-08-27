@@ -234,10 +234,14 @@ pub(crate) fn resolve(
 ) -> Vec<Operation> {
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
     let (x, y) = min_shift(&mut nodes);
-    nodes.rotate_x(x);
-    nodes.rotate_y(y);
+    let rotated = {
+        let mut ns = nodes.clone();
+        ns.rotate_x(x);
+        ns.rotate_y(y);
+        ns
+    };
     let lower_bound = {
-        let distances: Vec<_> = nodes
+        let distances: Vec<_> = rotated
             .iter_with_pos()
             .map(|(p, &n)| {
                 (p.manhattan_distance(n) as u64).min(
@@ -249,28 +253,30 @@ pub(crate) fn resolve(
         distances.iter().sum()
     };
     let different_cells = DifferentCells(lower_bound);
-    let mut min_cost = 1u64 << 60;
-    let mut min_path = vec![];
+    let mut min = (vec![], 1 << 60);
     for (total_path, total_cost) in ida_star(
         GridState {
             field: nodes.clone(),
             selecting: None,
-            phase: StatePhase::_1 { goal: &nodes },
+            phase: StatePhase::_1 { goal: &rotated },
             swap_cost,
             select_cost,
             remaining_select: select_limit,
         },
         lower_bound,
     )
-    .flat_map(|(mut phase1_path, phase1_cost)| {
+    .map(|(mut phase1_path, phase1_cost)| {
         let selected1 = phase1_path
             .windows(2)
             .filter(|win| {
-                win[0].field[win[0].selecting.unwrap()] == win[1].field[win[1].selecting.unwrap()]
+                win[0].selecting.map_or(true, |selecting_0| {
+                    win[0].field[selecting_0] != win[1].field[win[1].selecting.unwrap()]
+                })
             })
             .count();
         let phase1_last = phase1_path.pop().unwrap();
-        ida_star(
+        let mut min = (vec![], 1 << 60);
+        for (path, cost) in ida_star(
             GridState {
                 field: phase1_last.field.clone(),
                 selecting: phase1_last.selecting,
@@ -282,17 +288,23 @@ pub(crate) fn resolve(
             lower_bound,
         )
         .map(move |(mut phase2_path, phase2_cost)| {
-            phase1_path.append(&mut phase2_path);
-            (phase1_path.clone(), phase1_cost + phase2_cost)
-        })
+            let mut path = phase1_path.clone();
+            path.append(&mut phase2_path);
+            (path, phase1_cost + phase2_cost)
+        }) {
+            if cost < min.1 {
+                min = (path, cost);
+            } else {
+                break;
+            }
+        }
+        min
     }) {
-        eprintln!("{:?}: {:?}", total_cost, total_path);
-        if total_cost < min_cost {
-            min_cost = total_cost;
-            min_path = total_path;
+        if total_cost < min.1 {
+            min = (total_path, total_cost);
         } else {
             break;
         }
     }
-    path_to_operations(min_path)
+    path_to_operations(min.0)
 }
