@@ -279,8 +279,7 @@ pub(crate) fn resolve(
             })
             .count();
         let phase1_last = phase1_path.pop().unwrap();
-        let mut min = (vec![], 1 << 60);
-        for (path, cost) in ida_star(
+        ida_star(
             GridState {
                 field: phase1_last.field.clone(),
                 selecting: phase1_last.selecting,
@@ -295,17 +294,9 @@ pub(crate) fn resolve(
             let mut path = phase1_path.clone();
             path.append(&mut phase2_path);
             (path, phase1_cost + phase2_cost)
-        }) {
-            if cost < min.1 {
-                min = (path, cost);
-            } else {
-                break;
-            }
-            if SEARCH_TIMEOUT <= Instant::now().duration_since(start_instant).as_secs() {
-                break;
-            }
-        }
-        min
+        })
+        .next()
+        .unwrap()
     }) {
         if total_cost < min.1 {
             min = (total_path, total_cost);
