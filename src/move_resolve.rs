@@ -233,14 +233,11 @@ pub(crate) fn resolve(
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
-    // 600e8 = (WH)^select => select = 10 log 6 / log WH
-    let maximum_select =
-        (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
     let (x, y) = min_shift(&mut nodes);
     nodes.rotate_x(x);
     nodes.rotate_y(y);
     let lower_bound = {
-        let mut distances: Vec<_> = nodes
+        let distances: Vec<_> = nodes
             .iter_with_pos()
             .map(|(p, &n)| {
                 (p.manhattan_distance(n) as u64).min(
@@ -249,7 +246,6 @@ pub(crate) fn resolve(
                 )
             })
             .collect();
-        distances.sort_unstable();
         distances.iter().sum()
     };
     let different_cells = DifferentCells(lower_bound);
@@ -262,7 +258,7 @@ pub(crate) fn resolve(
             phase: StatePhase::_1 { goal: &nodes },
             swap_cost,
             select_cost,
-            remaining_select: select_limit.min(maximum_select),
+            remaining_select: select_limit,
         },
         lower_bound,
     )
@@ -290,6 +286,7 @@ pub(crate) fn resolve(
             (phase1_path.clone(), phase1_cost + phase2_cost)
         })
     }) {
+        eprintln!("{:?}: {:?}", total_cost, total_path);
         if total_cost < min_cost {
             min_cost = total_cost;
             min_path = total_path;
