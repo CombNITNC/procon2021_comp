@@ -107,14 +107,19 @@ impl<'grid> State<u64> for GridState<'grid> {
 
     fn is_goal(&self) -> bool {
         match self.phase {
-            StatePhase::_1 { goal } => todo!(),
+            StatePhase::_1 { goal } => self.field.iter().zip(goal.iter()).all(|(f, g)| f == g),
             StatePhase::_2 { different_cells } => different_cells.0 == 0,
         }
     }
 
     fn heuristic(&self) -> u64 {
         match self.phase {
-            StatePhase::_1 { goal } => todo!(),
+            StatePhase::_1 { goal } => self
+                .field
+                .iter()
+                .zip(goal.iter())
+                .filter(|(f, g)| f == g)
+                .count() as _,
             StatePhase::_2 { different_cells } => different_cells.0,
         }
     }
@@ -150,7 +155,7 @@ impl GridState<'_> {
             selecting: Some(next_swap),
             field: new_field,
             phase: match self.phase {
-                StatePhase::_1 { goal } => todo!(),
+                StatePhase::_1 { goal } => StatePhase::_1 { goal },
                 StatePhase::_2 { different_cells } => StatePhase::_2 {
                     different_cells: different_cells.on_swap(&self.field, selecting, next_swap),
                 },
@@ -278,12 +283,18 @@ pub(crate) fn resolve(
                 select_cost,
                 remaining_select: select_limit - selected1 as u8,
             },
-            lower_bound - phase1_cost,
+            lower_bound,
         )
+        .map(move |(mut phase2_path, phase2_cost)| {
+            phase1_path.append(&mut phase2_path);
+            (phase1_path.clone(), phase1_cost + phase2_cost)
+        })
     }) {
         if total_cost < min_cost {
             min_cost = total_cost;
             min_path = total_path;
+        } else {
+            break;
         }
     }
     path_to_operations(min_path)
