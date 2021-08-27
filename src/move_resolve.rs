@@ -198,6 +198,9 @@ impl GridState<'_> {
 
 /// 状態の履歴 Vec<GridState> を Vec<Operation> に変換する.
 fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
+    if path.is_empty() {
+        return vec![];
+    }
     let mut current_operation: Option<Operation> = None;
     let mut operations = vec![];
     let mut prev = &path[0];
