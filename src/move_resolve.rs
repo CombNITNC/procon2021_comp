@@ -35,16 +35,21 @@ impl DifferentCells {
 }
 
 #[derive(Debug, Clone)]
-enum StatePhase<'grid> {
-    _1 { goal: &'grid VecOnGrid<'grid, Pos> },
-    _2 { different_cells: DifferentCells },
+enum StatePhase {
+    _1 {
+        x_amount: Vec<i8>,
+        y_amount: Vec<i8>,
+    },
+    _2 {
+        different_cells: DifferentCells,
+    },
 }
 
 #[derive(Clone)]
 struct GridState<'grid> {
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
-    phase: StatePhase<'grid>,
+    phase: StatePhase,
     swap_cost: u16,
     select_cost: u16,
     remaining_select: u8,
@@ -108,20 +113,22 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn is_goal(&self) -> bool {
-        match self.phase {
-            StatePhase::_1 { goal } => self.field.iter().zip(goal.iter()).all(|(f, g)| f == g),
+        match &self.phase {
+            StatePhase::_1 { x_amount, y_amount } => {
+                x_amount.iter().chain(y_amount.iter()).all(|&a| a == 0)
+            }
             StatePhase::_2 { different_cells } => different_cells.0 == 0,
         }
     }
 
     fn heuristic(&self) -> u64 {
-        match self.phase {
-            StatePhase::_1 { goal } => self
-                .field
+        match &self.phase {
+            StatePhase::_1 { x_amount, y_amount } => x_amount
                 .iter()
-                .zip(goal.iter())
-                .filter(|(f, g)| f == g)
-                .count() as _,
+                .chain(y_amount.iter())
+                .map(|&n| n as i32)
+                .sum::<i32>()
+                .unsigned_abs() as _,
             StatePhase::_2 { different_cells } => different_cells.0,
         }
     }
@@ -156,8 +163,23 @@ impl GridState<'_> {
         Self {
             selecting: Some(next_swap),
             field: new_field,
-            phase: match self.phase {
-                StatePhase::_1 { goal } => StatePhase::_1 { goal },
+            phase: match &self.phase {
+                StatePhase::_1 { x_amount, y_amount } => {
+                    let mut x_amount = x_amount.clone();
+                    let mut y_amount = y_amount.clone();
+                    let mov = Movement::between_pos(selecting, next_swap);
+                    match mov {
+                        Movement::Left | Movement::Right => {
+                            y_amount[selecting.x() as usize] +=
+                                if mov == Movement::Left { 1 } else { -1 };
+                        }
+                        Movement::Up | Movement::Down => {
+                            x_amount[selecting.y() as usize] +=
+                                if mov == Movement::Up { 1 } else { -1 };
+                        }
+                    }
+                    StatePhase::_1 { x_amount, y_amount }
+                }
                 StatePhase::_2 { different_cells } => StatePhase::_2 {
                     different_cells: different_cells.on_swap(&self.field, selecting, next_swap),
                 },
@@ -262,7 +284,10 @@ pub(crate) fn resolve(
         GridState {
             field: nodes.clone(),
             selecting: None,
-            phase: StatePhase::_1 { goal: &rotated },
+            phase: StatePhase::_1 {
+                x_amount: vec![x as i8; grid.height() as usize],
+                y_amount: vec![y as i8; grid.width() as usize],
+            },
             swap_cost,
             select_cost,
             remaining_select: select_limit,
