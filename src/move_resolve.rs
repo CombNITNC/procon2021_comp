@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use self::{
     edges_nodes::EdgesNodes,
     ida_star::{ida_star, State},
@@ -254,6 +256,8 @@ pub(crate) fn resolve(
     };
     let different_cells = DifferentCells(lower_bound);
     let mut min = (vec![], 1 << 60);
+    const SEARCH_TIMEOUT: u64 = 10 * 60;
+    let start_instant = Instant::now();
     for (total_path, total_cost) in ida_star(
         GridState {
             field: nodes.clone(),
@@ -297,12 +301,18 @@ pub(crate) fn resolve(
             } else {
                 break;
             }
+            if SEARCH_TIMEOUT <= Instant::now().duration_since(start_instant).as_secs() {
+                break;
+            }
         }
         min
     }) {
         if total_cost < min.1 {
             min = (total_path, total_cost);
         } else {
+            break;
+        }
+        if SEARCH_TIMEOUT <= Instant::now().duration_since(start_instant).as_secs() {
             break;
         }
     }
