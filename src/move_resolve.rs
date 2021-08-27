@@ -94,22 +94,53 @@ impl<'grid> State<u64> for GridState<'grid> {
                 .collect();
         }
         if let StatePhase::_1 {
-            remaining_move: Some((dir, _)),
-            ..
+            x_amount,
+            x_schedule,
+            y_amount,
+            y_schedule,
+            remaining_move,
         } = &self.phase
         {
-            let mut field = self.field.clone();
             let sel = self.selecting.unwrap();
-            match dir {
-                Movement::Up => field.swap(sel, self.field.grid.up_of(sel)),
-                Movement::Right => field.swap(sel, self.field.grid.right_of(sel)),
-                Movement::Down => field.swap(sel, self.field.grid.down_of(sel)),
-                Movement::Left => field.swap(sel, self.field.grid.left_of(sel)),
+            let mut field = self.field.clone();
+            let mut x_schedule = x_schedule.clone();
+            let mut y_schedule = y_schedule.clone();
+            if let Some((mov, remaining)) = *remaining_move {
+                let next_swap = match mov {
+                    Movement::Up => self.field.grid.up_of(sel),
+                    Movement::Right => self.field.grid.right_of(sel),
+                    Movement::Down => self.field.grid.down_of(sel),
+                    Movement::Left => self.field.grid.left_of(sel),
+                };
+                field.swap(sel, next_swap);
+                return vec![Self {
+                    field,
+                    phase: StatePhase::_1 {
+                        x_amount: *x_amount,
+                        x_schedule,
+                        y_amount: *y_amount,
+                        y_schedule,
+                        remaining_move: (1 <= remaining).then(|| (mov, remaining - 1)),
+                    },
+                    ..self.clone()
+                }];
             }
-            return vec![Self {
-                field,
-                ..self.clone()
-            }];
+            if let Some(x) = y_schedule.pop() {
+                return (0..self.field.grid.height())
+                    .map(|y| Self {
+                        selecting: Some(self.field.grid.clamping_pos(x, y)),
+                        ..self.clone()
+                    })
+                    .collect();
+            }
+            if let Some(y) = x_schedule.pop() {
+                return (0..self.field.grid.width())
+                    .map(|x| Self {
+                        selecting: Some(self.field.grid.clamping_pos(x, y)),
+                        ..self.clone()
+                    })
+                    .collect();
+            }
         }
         let selecting = self.selecting.unwrap();
         let prev_prev = &history[history.len() - 2];
@@ -186,45 +217,7 @@ impl GridState<'_> {
             selecting: Some(next_swap),
             field: new_field,
             phase: match &self.phase {
-                StatePhase::_1 {
-                    x_amount,
-                    x_schedule,
-                    y_amount,
-                    y_schedule,
-                    remaining_move,
-                } => {
-                    let mut x_schedule = x_schedule.clone();
-                    let mut y_schedule = y_schedule.clone();
-                    if let Some((mov, remaining)) = *remaining_move {
-                        StatePhase::_1 {
-                            remaining_move: (1 <= remaining).then(|| (mov, remaining - 1)),
-                            x_amount: *x_amount,
-                            x_schedule,
-                            y_amount: *y_amount,
-                            y_schedule,
-                        }
-                    } else if let Some(x) = y_schedule.pop() {
-                        let mov = Movement::between_pos(selecting, next_swap);
-                        StatePhase::_1 {
-                            remaining_move: Some((mov, *x_amount as u8)),
-                            x_amount: *x_amount,
-                            x_schedule,
-                            y_amount: *y_amount,
-                            y_schedule,
-                        }
-                    } else if let Some(y) = x_schedule.pop() {
-                        let mov = Movement::between_pos(selecting, next_swap);
-                        StatePhase::_1 {
-                            remaining_move: Some((mov, *y_amount as u8)),
-                            x_amount: *x_amount,
-                            x_schedule,
-                            y_amount: *y_amount,
-                            y_schedule,
-                        }
-                    } else {
-                        self.phase.clone()
-                    }
-                }
+                StatePhase::_1 { .. } => unreachable!(),
                 StatePhase::_2 { different_cells } => StatePhase::_2 {
                     different_cells: different_cells.on_swap(&self.field, selecting, next_swap),
                 },
