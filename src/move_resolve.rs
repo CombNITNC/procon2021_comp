@@ -249,18 +249,19 @@ pub(crate) fn resolve(
     };
     let different_cells = DifferentCells(lower_bound);
     let mut min_cost = 1u64 << 60;
-    let path = loop {
-        let (mut phase1_path, phase1_cost) = ida_star(
-            GridState {
-                field: nodes.clone(),
-                selecting: None,
-                phase: StatePhase::_1 { goal: &nodes },
-                swap_cost,
-                select_cost,
-                remaining_select: select_limit.min(maximum_select),
-            },
-            lower_bound,
-        );
+    let mut min_path = vec![];
+    for (total_path, total_cost) in ida_star(
+        GridState {
+            field: nodes.clone(),
+            selecting: None,
+            phase: StatePhase::_1 { goal: &nodes },
+            swap_cost,
+            select_cost,
+            remaining_select: select_limit.min(maximum_select),
+        },
+        lower_bound,
+    )
+    .flat_map(|(mut phase1_path, phase1_cost)| {
         let selected1 = phase1_path
             .windows(2)
             .filter(|win| {
@@ -268,24 +269,22 @@ pub(crate) fn resolve(
             })
             .count();
         let phase1_last = phase1_path.pop().unwrap();
-        let (mut phase2_path, phase2_cost) = ida_star(
+        ida_star(
             GridState {
                 field: phase1_last.field.clone(),
-                selecting: phase1_last.selecting.clone(),
+                selecting: phase1_last.selecting,
                 phase: StatePhase::_2 { different_cells },
                 swap_cost,
                 select_cost,
                 remaining_select: select_limit - selected1 as u8,
             },
             lower_bound - phase1_cost,
-        );
-        let total_cost = phase1_cost + phase2_cost;
+        )
+    }) {
         if total_cost < min_cost {
             min_cost = total_cost;
-        } else {
-            phase1_path.append(&mut phase2_path);
-            break phase1_path;
+            min_path = total_path;
         }
-    };
-    path_to_operations(path)
+    }
+    path_to_operations(min_path)
 }
