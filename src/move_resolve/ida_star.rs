@@ -21,12 +21,16 @@ enum FindResult<C> {
     None,
 }
 
-fn find<V, N, C>(history: &mut Vec<V>, distance: C, bound: C) -> FindResult<C>
+fn find<V, N, C, F>(history: &mut Vec<V>, distance: C, bound: C, canceler: &F) -> FindResult<C>
 where
     V: PartialEq + Clone + State<C, NextStates = N> + std::fmt::Debug,
     N: IntoIterator<Item = V>,
     C: PartialOrd + Add<Output = C> + Copy + std::fmt::Debug,
+    F: Fn() -> bool,
 {
+    if canceler() {
+        return FindResult::None;
+    }
     let visiting = history.last().cloned().unwrap();
     let total_estimated = distance + visiting.heuristic();
     if bound < total_estimated {
@@ -40,7 +44,7 @@ where
         if !history.contains(&neighbor) {
             history.push(neighbor.clone());
             let next_distance = distance + visiting.cost_between(&neighbor);
-            match find(history, next_distance, bound) {
+            match find(history, next_distance, bound, canceler) {
                 FindResult::Found => return FindResult::Found,
                 FindResult::Deeper(cost) => {
                     if min.map_or(true, |c| cost < c) {
@@ -73,13 +77,10 @@ where
     let mut history = vec![start];
     let mut bound = lower_bound;
     std::iter::from_fn(move || loop {
-        match find(&mut history, C::default(), bound) {
+        match find(&mut history, C::default(), bound, &canceler) {
             FindResult::Found => return Some((history.clone(), bound)),
             FindResult::Deeper(cost) => bound = cost,
             FindResult::None => return None,
-        }
-        if canceler() {
-            return None;
         }
     })
 }
