@@ -386,7 +386,7 @@ pub(crate) fn resolve(
     let start_instant = Instant::now();
     let canceler = || SEARCH_TIMEOUT <= Instant::now().duration_since(start_instant).as_secs();
     for (total_path, total_cost) in ida_star(
-        GridState {
+        vec![GridState {
             field: nodes.clone(),
             selecting: None,
             phase: StatePhase::_1 {
@@ -399,36 +399,12 @@ pub(crate) fn resolve(
             swap_cost,
             select_cost,
             remaining_select: select_limit,
-        },
+        }],
         canceler,
     )
-    .flat_map(|(mut phase1_path, phase1_cost)| {
-        let selected1 = phase1_path
-            .windows(2)
-            .filter(|win| {
-                win[0].selecting.map_or(true, |selecting_0| {
-                    win[0].field[selecting_0] != win[1].field[win[1].selecting.unwrap()]
-                })
-            })
-            .count();
-        let phase1_last = phase1_path.pop().unwrap();
-        ida_star(
-            GridState {
-                field: phase1_last.field.clone(),
-                selecting: phase1_last.selecting,
-                phase: StatePhase::_2 { different_cells },
-                swap_cost,
-                select_cost,
-                remaining_select: select_limit - selected1 as u8,
-            },
-            canceler,
-        )
-        .map(move |(mut phase2_path, phase2_cost)| {
-            let mut path = phase1_path.clone();
-            path.append(&mut phase2_path);
-            (path, phase1_cost + phase2_cost)
-        })
-        .next()
+    .flat_map(|(mut phase1_path, _)| {
+        phase1_path.last_mut().unwrap().phase = StatePhase::_2 { different_cells };
+        ida_star(phase1_path, canceler).next()
     }) {
         if total_cost < min.1 {
             min = (total_path, total_cost);
