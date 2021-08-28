@@ -82,17 +82,6 @@ impl PartialEq for GridState<'_> {
 impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
     fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
-        // 揃っているマスどうしは入れ替えない
-        let different_cells = self
-            .field
-            .iter_with_pos()
-            .filter(|&(pos, &cell)| pos != cell)
-            .map(|(_, &cell)| cell);
-        if history.len() <= 1 {
-            return different_cells
-                .map(|next_select| self.with_next_select(next_select))
-                .collect();
-        }
         if let StatePhase::_1 {
             x_amount,
             x_schedule,
@@ -101,11 +90,11 @@ impl<'grid> State<u64> for GridState<'grid> {
             remaining_move,
         } = &self.phase
         {
-            let sel = self.selecting.unwrap();
             let mut field = self.field.clone();
             let mut x_schedule = x_schedule.clone();
             let mut y_schedule = y_schedule.clone();
             if let Some((mov, remaining)) = *remaining_move {
+                let sel = self.selecting.unwrap();
                 let next_swap = match mov {
                     Movement::Up => self.field.grid.up_of(sel),
                     Movement::Right => self.field.grid.right_of(sel),
@@ -115,6 +104,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                 field.swap(sel, next_swap);
                 return vec![Self {
                     field,
+                    selecting: Some(next_swap),
                     phase: StatePhase::_1 {
                         x_amount: *x_amount,
                         x_schedule,
@@ -129,6 +119,20 @@ impl<'grid> State<u64> for GridState<'grid> {
                 return (0..self.field.grid.height())
                     .map(|y| Self {
                         selecting: Some(self.field.grid.clamping_pos(x, y)),
+                        phase: StatePhase::_1 {
+                            x_amount: *x_amount,
+                            x_schedule: x_schedule.clone(),
+                            y_amount: *y_amount,
+                            y_schedule: y_schedule.clone(),
+                            remaining_move: Some((
+                                if y_amount.is_positive() {
+                                    Movement::Down
+                                } else {
+                                    Movement::Up
+                                },
+                                *y_amount as u8,
+                            )),
+                        },
                         ..self.clone()
                     })
                     .collect();
@@ -137,10 +141,35 @@ impl<'grid> State<u64> for GridState<'grid> {
                 return (0..self.field.grid.width())
                     .map(|x| Self {
                         selecting: Some(self.field.grid.clamping_pos(x, y)),
+                        phase: StatePhase::_1 {
+                            x_amount: *x_amount,
+                            x_schedule: x_schedule.clone(),
+                            y_amount: *y_amount,
+                            y_schedule: y_schedule.clone(),
+                            remaining_move: Some((
+                                if x_amount.is_positive() {
+                                    Movement::Right
+                                } else {
+                                    Movement::Left
+                                },
+                                *x_amount as u8,
+                            )),
+                        },
                         ..self.clone()
                     })
                     .collect();
             }
+        }
+        // 揃っているマスどうしは入れ替えない
+        let different_cells = self
+            .field
+            .iter_with_pos()
+            .filter(|&(pos, &cell)| pos != cell)
+            .map(|(_, &cell)| cell);
+        if history.len() <= 1 {
+            return different_cells
+                .map(|next_select| self.with_next_select(next_select))
+                .collect();
         }
         let selecting = self.selecting.unwrap();
         let prev_prev = &history[history.len() - 2];
@@ -169,8 +198,9 @@ impl<'grid> State<u64> for GridState<'grid> {
             StatePhase::_1 {
                 x_schedule,
                 y_schedule,
+                remaining_move,
                 ..
-            } => x_schedule.is_empty() && y_schedule.is_empty(),
+            } => x_schedule.is_empty() && y_schedule.is_empty() && remaining_move.unwrap().1 == 0,
             StatePhase::_2 { different_cells } => different_cells.0 == 0,
         }
     }
@@ -180,8 +210,12 @@ impl<'grid> State<u64> for GridState<'grid> {
             StatePhase::_1 {
                 x_schedule,
                 y_schedule,
+                remaining_move,
                 ..
-            } => (x_schedule.len() + y_schedule.len()) as _,
+            } => {
+                (x_schedule.len() + y_schedule.len()) as u64
+                    + remaining_move.map_or(0, |rem| rem.1 as u64)
+            }
             StatePhase::_2 { different_cells } => different_cells.0,
         }
     }
@@ -280,10 +314,10 @@ fn min_shift(field: &mut VecOnGrid<Pos>) -> (isize, isize) {
         field.rotate_y(1);
     }
     let (_, (mut x, mut y)) = min;
-    if field.grid.width() as isize / 2 <= x {
+    if field.grid.width() as isize / 2 < x {
         x -= field.grid.width() as isize;
     }
-    if field.grid.height() as isize / 2 <= y {
+    if field.grid.height() as isize / 2 < y {
         y -= field.grid.height() as isize;
     }
     (x, y)
@@ -310,14 +344,26 @@ pub(crate) fn resolve(
         .filter(|&(p, &r)| p != r)
         .map(|(p, _)| p)
         .next();
-    let mut x_schedule: Vec<_> = (0..grid.height()).collect();
-    let mut y_schedule: Vec<_> = (0..grid.width()).collect();
+    let mut x_schedule: Vec<_> = if x == 0 {
+        vec![]
+    } else {
+        (0..grid.height()).collect()
+    };
+    let mut y_schedule: Vec<_> = if y == 0 {
+        vec![]
+    } else {
+        (0..grid.width()).collect()
+    };
     if let Some(hint) = hint {
         // 最後に hint の位置を入れ替えると効率的
-        let move_on_last = x_schedule.remove(hint.y() as usize);
-        x_schedule.insert(0, move_on_last);
-        let move_on_last = y_schedule.remove(hint.x() as usize);
-        y_schedule.insert(0, move_on_last);
+        if let Ok(idx) = x_schedule.binary_search(&hint.y()) {
+            let move_on_last = x_schedule.remove(idx);
+            x_schedule.insert(0, move_on_last);
+        }
+        if let Ok(idx) = y_schedule.binary_search(&hint.x()) {
+            let move_on_last = y_schedule.remove(idx);
+            y_schedule.insert(0, move_on_last);
+        }
     }
     let lower_bound = {
         let distances: Vec<_> = rotated
