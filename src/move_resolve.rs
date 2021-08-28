@@ -304,13 +304,13 @@ fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
 }
 
 fn min_shift(field: &mut VecOnGrid<Pos>) -> (isize, isize) {
-    let mut min = (300, (0, 0));
+    let mut min = (1 << 30, (0, 0));
     for y_shift in 0..field.grid.height() as isize {
         for x_shift in 0..field.grid.width() as isize {
             let count = field
                 .iter_with_pos()
-                .filter(|&(pos, &cell)| pos != cell)
-                .count();
+                .map(|(pos, &cell)| field.grid.looping_manhattan_dist(pos, cell))
+                .sum();
             if count < min.0 {
                 min = (count, (x_shift, y_shift));
             }
