@@ -197,9 +197,10 @@ fn rand_case() {
     }
     case.push((*circular.last().unwrap(), *circular.first().unwrap()));
     let result = resolve(&grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
-    eprintln!("ops: {:#?}", result);
 
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(&grid, &case);
+    eprintln!("fragments: {:#?}", nodes);
+    eprintln!("operations: {:#?}", result);
     for Operation { select, movements } in result {
         let mut current = select;
         for movement in movements {
