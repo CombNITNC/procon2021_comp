@@ -219,9 +219,12 @@ impl<'grid> State<u64> for GridState<'grid> {
                 remaining_move,
                 ..
             } => {
-                (x_schedule.len() + y_schedule.len()) as u64 + remaining_move.map_or(0, |rem| rem.1)
+                (x_schedule.len() + y_schedule.len()) as u64 * self.select_cost as u64
+                    + remaining_move.map_or(0, |rem| rem.1) * self.swap_cost as u64
             }
-            StatePhase::_2 { different_cells } => different_cells.0,
+            StatePhase::_2 { different_cells } => {
+                different_cells.0.saturating_sub(1) * self.swap_cost as u64
+            }
         }
     }
 
