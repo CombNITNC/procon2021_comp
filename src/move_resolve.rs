@@ -309,8 +309,8 @@ fn min_shift(field: &mut VecOnGrid<Pos>) -> (isize, isize) {
         for x_shift in 0..field.grid.width() as isize {
             let count = field
                 .iter_with_pos()
-                .map(|(pos, &cell)| field.grid.looping_manhattan_dist(pos, cell))
-                .sum();
+                .filter(|&(pos, &cell)| pos != cell)
+                .count();
             if count < min.0 {
                 min = (count, (x_shift, y_shift));
             }
