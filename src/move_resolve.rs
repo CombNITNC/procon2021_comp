@@ -384,7 +384,7 @@ pub(crate) fn resolve(
         distances.iter().sum()
     });
     let mut min = (vec![], 1 << 60);
-    const SEARCH_TIMEOUT: u64 = 10 * 60;
+    const SEARCH_TIMEOUT: u64 = 14 * 60;
     let start_instant = Instant::now();
     let canceler = || SEARCH_TIMEOUT <= Instant::now().duration_since(start_instant).as_secs();
     for (total_path, total_cost) in ida_star(
