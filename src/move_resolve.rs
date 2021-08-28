@@ -384,7 +384,7 @@ pub(crate) fn resolve(
     let canceler = || SEARCH_TIMEOUT <= Instant::now().duration_since(start_instant).as_secs();
     for (total_path, total_cost) in ida_star(
         vec![GridState {
-            field: nodes.clone(),
+            field: nodes,
             selecting: None,
             phase: StatePhase::_1 {
                 x_amount: x as i8,
