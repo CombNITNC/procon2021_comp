@@ -369,7 +369,7 @@ pub(crate) fn resolve(
             y_schedule.insert(0, move_on_last);
         }
     }
-    let lower_bound = {
+    let different_cells = DifferentCells({
         let distances: Vec<_> = rotated
             .iter_with_pos()
             .map(|(p, &n)| {
@@ -380,8 +380,7 @@ pub(crate) fn resolve(
             })
             .collect();
         distances.iter().sum()
-    };
-    let different_cells = DifferentCells(lower_bound);
+    });
     let mut min = (vec![], 1 << 60);
     const SEARCH_TIMEOUT: u64 = 10 * 60;
     let start_instant = Instant::now();
@@ -401,7 +400,6 @@ pub(crate) fn resolve(
             select_cost,
             remaining_select: select_limit,
         },
-        lower_bound,
         canceler,
     )
     .flat_map(|(mut phase1_path, phase1_cost)| {
@@ -423,7 +421,6 @@ pub(crate) fn resolve(
                 select_cost,
                 remaining_select: select_limit - selected1 as u8,
             },
-            lower_bound,
             canceler,
         )
         .map(move |(mut phase2_path, phase2_cost)| {
