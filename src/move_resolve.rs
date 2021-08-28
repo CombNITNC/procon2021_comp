@@ -385,6 +385,7 @@ pub(crate) fn resolve(
     let mut min = (vec![], 1 << 60);
     const SEARCH_TIMEOUT: u64 = 10 * 60;
     let start_instant = Instant::now();
+    let canceler = || SEARCH_TIMEOUT <= Instant::now().duration_since(start_instant).as_secs();
     for (total_path, total_cost) in ida_star(
         GridState {
             field: nodes.clone(),
@@ -401,6 +402,7 @@ pub(crate) fn resolve(
             remaining_select: select_limit,
         },
         lower_bound,
+        canceler,
     )
     .map(|(mut phase1_path, phase1_cost)| {
         let selected1 = phase1_path
@@ -422,6 +424,7 @@ pub(crate) fn resolve(
                 remaining_select: select_limit - selected1 as u8,
             },
             lower_bound,
+            canceler,
         )
         .map(move |(mut phase2_path, phase2_cost)| {
             let mut path = phase1_path.clone();
@@ -434,9 +437,6 @@ pub(crate) fn resolve(
         if total_cost < min.1 {
             min = (total_path, total_cost);
         } else {
-            break;
-        }
-        if SEARCH_TIMEOUT <= Instant::now().duration_since(start_instant).as_secs() {
             break;
         }
     }
