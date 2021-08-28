@@ -184,7 +184,7 @@ fn rand_case() {
     }
     const WIDTH: u8 = 5;
     const HEIGHT: u8 = 5;
-    const SELECT_LIMIT: u8 = 3;
+    const SELECT_LIMIT: u8 = 4;
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
     let mut rng = rand::thread_rng();
