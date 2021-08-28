@@ -199,7 +199,7 @@ fn rand_case() {
     let result = resolve(&grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(&grid, &case);
-    eprintln!("fragments: {:#?}", nodes);
+    eprintln!("before: {:#?}", nodes);
     eprintln!("operations: {:#?}", result);
     for Operation { select, movements } in result {
         let mut current = select;
@@ -214,5 +214,6 @@ fn rand_case() {
             current = to_swap;
         }
     }
+    eprintln!("after: {:#?}", nodes);
     assert!(grid.all_pos().zip(nodes.into_iter()).all(|(p, n)| p == n));
 }
