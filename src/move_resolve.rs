@@ -370,18 +370,22 @@ pub(crate) fn resolve(
             y_schedule.insert(0, move_on_last);
         }
     }
-    let different_cells = DifferentCells({
-        let distances: Vec<_> = rotated
+    let different_cells = DifferentCells(
+        rotated
             .iter_with_pos()
             .map(|(p, &n)| {
-                (p.manhattan_distance(n) as u64).min(
-                    (p.x() as i64 + grid.width() as i64 - n.x() as i64).unsigned_abs()
-                        + (p.y() as i64 + grid.height() as i64 - n.y() as i64).unsigned_abs(),
-                )
+                (p.manhattan_distance(n) as u64)
+                    .min(
+                        (p.x() as i64 + grid.width() as i64 - n.x() as i64).abs() as u64
+                            + (p.y() as i64 + grid.height() as i64 - n.y() as i64).abs() as u64,
+                    )
+                    .min(
+                        (p.x() as i64 - grid.width() as i64 - n.x() as i64).abs() as u64
+                            + (p.y() as i64 - grid.height() as i64 - n.y() as i64).abs() as u64,
+                    )
             })
-            .collect();
-        distances.iter().sum()
-    });
+            .sum(),
+    );
     let mut min = (vec![], 1 << 60);
     const SEARCH_TIMEOUT: u64 = 14 * 60;
     let start_instant = Instant::now();
