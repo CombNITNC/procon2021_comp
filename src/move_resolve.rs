@@ -130,7 +130,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                                 } else {
                                     Movement::Up
                                 },
-                                *y_amount as u32 * (self.field.grid.height() - 1) as u32,
+                                y_amount.abs() as u32 * (self.field.grid.height() - 1) as u32,
                             )),
                         },
                         ..self.clone()
@@ -152,7 +152,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                                 } else {
                                     Movement::Left
                                 },
-                                *x_amount as u32 * (self.field.grid.width() - 1) as u32,
+                                x_amount.abs() as u32 * (self.field.grid.width() - 1) as u32,
                             )),
                         },
                         ..self.clone()
