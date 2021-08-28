@@ -128,9 +128,9 @@ impl<'grid> State<u64> for GridState<'grid> {
                             y_schedule: y_schedule.clone(),
                             remaining_move: Some((
                                 if y_amount.is_positive() {
-                                    Movement::Down
-                                } else {
                                     Movement::Up
+                                } else {
+                                    Movement::Down
                                 },
                                 (self.field.grid.height() - 1) as u64,
                             )),
@@ -150,9 +150,9 @@ impl<'grid> State<u64> for GridState<'grid> {
                             y_schedule: y_schedule.clone(),
                             remaining_move: Some((
                                 if x_amount.is_positive() {
-                                    Movement::Right
-                                } else {
                                     Movement::Left
+                                } else {
+                                    Movement::Right
                                 },
                                 (self.field.grid.width() - 1) as u64,
                             )),
