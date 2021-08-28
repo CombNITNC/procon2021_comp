@@ -41,7 +41,7 @@ enum StatePhase {
         x_schedule: Vec<u8>,
         y_amount: i8,
         y_schedule: Vec<u8>,
-        remaining_move: Option<(Movement, u32)>,
+        remaining_move: Option<(Movement, u64)>,
     },
     _2 {
         different_cells: DifferentCells,
@@ -130,7 +130,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                                 } else {
                                     Movement::Up
                                 },
-                                y_amount.abs() as u32 * (self.field.grid.height() - 1) as u32,
+                                (self.field.grid.height() - 1) as u64,
                             )),
                         },
                         ..self.clone()
@@ -152,7 +152,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                                 } else {
                                     Movement::Left
                                 },
-                                x_amount.abs() as u32 * (self.field.grid.width() - 1) as u32,
+                                (self.field.grid.width() - 1) as u64,
                             )),
                         },
                         ..self.clone()
@@ -217,8 +217,7 @@ impl<'grid> State<u64> for GridState<'grid> {
                 remaining_move,
                 ..
             } => {
-                (x_schedule.len() + y_schedule.len()) as u64
-                    + remaining_move.map_or(0, |rem| rem.1 as u64)
+                (x_schedule.len() + y_schedule.len()) as u64 + remaining_move.map_or(0, |rem| rem.1)
             }
             StatePhase::_2 { different_cells } => different_cells.0,
         }
