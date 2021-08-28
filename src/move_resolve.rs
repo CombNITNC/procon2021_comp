@@ -404,7 +404,7 @@ pub(crate) fn resolve(
         lower_bound,
         canceler,
     )
-    .map(|(mut phase1_path, phase1_cost)| {
+    .flat_map(|(mut phase1_path, phase1_cost)| {
         let selected1 = phase1_path
             .windows(2)
             .filter(|win| {
@@ -432,7 +432,6 @@ pub(crate) fn resolve(
             (path, phase1_cost + phase2_cost)
         })
         .next()
-        .unwrap()
     }) {
         if total_cost < min.1 {
             min = (total_path, total_cost);
