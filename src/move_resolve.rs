@@ -336,7 +336,9 @@ pub(crate) fn resolve(
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
-    let (x, y) = min_shift(&mut nodes);
+    let shift = min_shift(&mut nodes);
+    eprintln!("shifts: {:?}", shift);
+    let (x, y) = shift;
     let rotated = {
         let mut ns = nodes.clone();
         ns.rotate_x(x);
