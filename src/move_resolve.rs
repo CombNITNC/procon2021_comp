@@ -200,7 +200,11 @@ impl<'grid> State<u64> for GridState<'grid> {
                 y_schedule,
                 remaining_move,
                 ..
-            } => x_schedule.is_empty() && y_schedule.is_empty() && remaining_move.unwrap().1 == 0,
+            } => {
+                x_schedule.is_empty()
+                    && y_schedule.is_empty()
+                    && remaining_move.map_or(true, |rem| rem.1 == 0)
+            }
             StatePhase::_2 { different_cells } => different_cells.0 == 0,
         }
     }
