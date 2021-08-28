@@ -399,9 +399,11 @@ pub(crate) fn resolve(
         }],
         canceler,
     )
-    .flat_map(|(mut phase1_path, _)| {
+    .flat_map(|(mut phase1_path, phase1_cost)| {
         phase1_path.last_mut().unwrap().phase = StatePhase::_2 { different_cells };
-        ida_star(phase1_path, canceler).next()
+        ida_star(phase1_path, canceler)
+            .next()
+            .map(|(path, phase2_cost)| (path, phase1_cost + phase2_cost))
     }) {
         if total_cost < min.1 {
             min = (total_path, total_cost);
