@@ -373,17 +373,7 @@ pub(crate) fn resolve(
     let different_cells = DifferentCells(
         rotated
             .iter_with_pos()
-            .map(|(p, &n)| {
-                (p.manhattan_distance(n) as u64)
-                    .min(
-                        (p.x() as i64 + grid.width() as i64 - n.x() as i64).abs() as u64
-                            + (p.y() as i64 + grid.height() as i64 - n.y() as i64).abs() as u64,
-                    )
-                    .min(
-                        (p.x() as i64 - grid.width() as i64 - n.x() as i64).abs() as u64
-                            + (p.y() as i64 - grid.height() as i64 - n.y() as i64).abs() as u64,
-                    )
-            })
+            .map(|(p, &n)| grid.looping_manhattan_dist(p, n) as u64)
             .sum(),
     );
     let mut min = (vec![], 1 << 60);

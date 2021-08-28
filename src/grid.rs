@@ -156,4 +156,22 @@ impl Grid {
     fn pos_as_index(&self, pos: Pos) -> usize {
         pos.y() as usize * self.width as usize + pos.x() as usize
     }
+
+    pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
+        let width = self.width as i32;
+        let height = self.height as i32;
+        let bx = b.x() as i32;
+        let by = b.y() as i32;
+        let other_points = match (a.x() < self.width, a.y() < self.height) {
+            (true, true) => [(bx - width, by), (bx, by - height)],
+            (true, false) => [(bx - width, by), (bx, by + height)],
+            (false, true) => [(bx + width, by), (bx, by - height)],
+            (false, false) => [(bx + width, by), (bx, by + height)],
+        };
+        std::iter::once(&(bx, by))
+            .chain(other_points.iter())
+            .map(|(bx, by)| (a.x() as i32 - bx).abs() + (a.y() as i32 - by).abs())
+            .min()
+            .unwrap() as u32
+    }
 }
