@@ -32,7 +32,8 @@ impl DifferentCells {
         let after = (field.grid.looping_manhattan_dist(field[a], b)
             + field.grid.looping_manhattan_dist(field[b], a)) as i64;
         let diff = self.0 as i64 - before + after;
-        Self(diff.abs() as _)
+        assert!(0 <= diff);
+        Self(diff as _)
     }
 }
 
