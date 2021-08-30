@@ -1,10 +1,7 @@
-use self::{
-    edges_nodes::EdgesNodes,
-    ida_star::{ida_star, State},
-};
+use self::ida_star::{ida_star, State};
 use crate::{
     basis::{Movement, Operation},
-    grid::{Grid, Pos, VecOnGrid},
+    grid::{Cycles, Grid, Pos},
 };
 
 pub mod edges_nodes;
@@ -12,34 +9,10 @@ pub mod ida_star;
 #[cfg(test)]
 mod tests;
 
-/// フィールドにあるマスのゴール位置までの距離の合計.
-#[derive(Clone, Copy)]
-struct DifferentCells(u64);
-
-impl std::fmt::Debug for DifferentCells {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl DifferentCells {
-    /// a の位置と b の位置のマスを入れ替えた場合を計算する.
-    fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
-        let before = (field.grid.looping_manhattan_dist(field[a], a)
-            + field.grid.looping_manhattan_dist(field[b], b)) as i64;
-        let after = (field.grid.looping_manhattan_dist(field[a], b)
-            + field.grid.looping_manhattan_dist(field[b], a)) as i64;
-        let diff = self.0 as i64 - before + after;
-        assert!(0 <= diff);
-        Self(diff as _)
-    }
-}
-
 #[derive(Clone)]
 struct GridState<'grid> {
-    field: VecOnGrid<'grid, Pos>,
+    cycles: Cycles<'grid>,
     selecting: Option<Pos>,
-    different_cells: DifferentCells,
     swap_cost: u16,
     select_cost: u16,
     remaining_select: u8,
@@ -48,9 +21,8 @@ struct GridState<'grid> {
 impl std::fmt::Debug for GridState<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridState")
-            .field("field", &self.field)
+            .field("cycles", &self.cycles)
             .field("selecting", &self.selecting)
-            .field("different_cells", &self.different_cells)
             .field("remaining_select", &self.remaining_select)
             .finish()
     }
@@ -58,11 +30,7 @@ impl std::fmt::Debug for GridState<'_> {
 
 impl PartialEq for GridState<'_> {
     fn eq(&self, other: &Self) -> bool {
-        (&self.field)
-            .into_iter()
-            .zip(&other.field)
-            .all(|(a, b)| a == b)
-            && self.selecting == other.selecting
+        self.cycles == other.cycles && self.selecting == other.selecting
     }
 }
 
@@ -70,11 +38,7 @@ impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
     fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
         // 揃っているマスどうしは入れ替えない
-        let different_cells = self
-            .field
-            .iter_with_pos()
-            .filter(|&(pos, &cell)| pos != cell)
-            .map(|(_, &cell)| cell);
+        let different_cells = self.cycles.different_cells();
         if history.len() <= 1 {
             return different_cells
                 .map(|next_select| self.with_next_select(next_select))
@@ -82,7 +46,7 @@ impl<'grid> State<u64> for GridState<'grid> {
         }
         let selecting = self.selecting.unwrap();
         let prev_prev = &history[history.len() - 2];
-        let around = self.field.grid.around_of(selecting);
+        let around = self.cycles.grid().around_of(selecting);
         let swapping_states = around
             .iter()
             .cloned()
@@ -103,11 +67,11 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn is_goal(&self) -> bool {
-        self.different_cells.0 == 0
+        self.cycles.scatter_amount() == 0
     }
 
     fn heuristic(&self) -> u64 {
-        self.different_cells.0.saturating_sub(1) * self.swap_cost as u64
+        self.cycles.scatter_amount()
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
@@ -135,23 +99,18 @@ impl GridState<'_> {
     #[inline]
     fn with_next_swap(&self, next_swap: Pos) -> Self {
         let selecting = self.selecting.unwrap();
-        let mut new_field = self.field.clone();
-        new_field.swap(selecting, next_swap);
+        let mut new_cycles = self.cycles.clone();
+        new_cycles.on_swap(selecting, next_swap);
         Self {
             selecting: Some(next_swap),
-            field: new_field,
-            different_cells: self
-                .different_cells
-                .on_swap(&self.field, selecting, next_swap),
+            cycles: new_cycles,
             ..self.clone()
         }
     }
 
     #[inline]
     fn is_moved_from(&self, prev: &Self) -> bool {
-        prev.selecting.map_or(true, |prev_selecting| {
-            prev.field[prev_selecting] == self.field[self.selecting.unwrap()]
-        })
+        prev.cycles.tree_count() != self.cycles.tree_count()
     }
 }
 
@@ -164,10 +123,7 @@ fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
     let mut operations = vec![];
     let mut prev = &path[0];
     for state in &path[1..] {
-        let is_swapped = (&prev.field)
-            .into_iter()
-            .zip(&state.field)
-            .any(|(a, b)| a != b);
+        let is_swapped = prev.cycles != state.cycles;
         if is_swapped {
             let movement = Movement::between_pos(prev.selecting.unwrap(), state.selecting.unwrap());
             current_operation.as_mut().unwrap().movements.push(movement);
@@ -193,18 +149,10 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
-    let different_cells = DifferentCells(
-        nodes
-            .iter_with_pos()
-            .map(|(p, &n)| grid.looping_manhattan_dist(p, n) as u64)
-            .sum(),
-    );
     let mut min = (vec![], 1 << 60);
     for (total_path, total_cost) in ida_star(vec![GridState {
-        field: nodes,
+        cycles: Cycles::new(grid, movements),
         selecting: None,
-        different_cells,
         swap_cost,
         select_cost,
         remaining_select: select_limit,

@@ -1,5 +1,7 @@
+pub(crate) use cycles::*;
 pub(crate) use vec_on_grid::*;
 
+mod cycles;
 mod vec_on_grid;
 
 /// `Pos` は `Grid` に存在する座標を表す.
