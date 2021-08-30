@@ -1,4 +1,4 @@
-use super::{edges_nodes::EdgesNodes, min_shift, resolve, DifferentCells};
+use super::{edges_nodes::EdgesNodes, resolve, DifferentCells};
 use crate::{
     basis::{Movement::*, Operation},
     grid::{Grid, Pos, VecOnGrid},
@@ -22,27 +22,6 @@ fn test_different_cells() {
 }
 
 #[test]
-fn test_min_shift() {
-    // 20 01 10
-    // 21 00 11
-    let grid = Grid::new(3, 2);
-    let mut field = VecOnGrid::with_init(&grid, grid.pos(0, 0));
-    field[grid.pos(0, 0)] = grid.pos(2, 0);
-    field[grid.pos(1, 0)] = grid.pos(0, 1);
-    field[grid.pos(2, 0)] = grid.pos(1, 0);
-    field[grid.pos(0, 1)] = grid.pos(2, 1);
-    field[grid.pos(1, 1)] = grid.pos(0, 0);
-    field[grid.pos(2, 1)] = grid.pos(1, 1);
-
-    // 01 10 20
-    // 00 11 21
-    let expected = (-1, 0);
-    let actual = min_shift(&mut field);
-
-    assert_eq!(expected, actual);
-}
-
-#[test]
 fn smallest_case() {
     // 10 00
     let grid = Grid::new(2, 1);
@@ -63,8 +42,8 @@ fn smallest_case() {
     assert_eq!(path.len(), 1);
     assert_eq!(
         Operation {
-            select: grid.pos(0, 0),
-            movements: vec![Right],
+            select: grid.pos(1, 0),
+            movements: vec![Left],
         },
         path[0]
     );
@@ -132,11 +111,11 @@ fn case1() {
     ];
     let expected = vec![
         Operation {
-            select: grid.pos(0, 1),
-            movements: vec![Left, Up, Left, Left],
+            select: grid.pos(2, 0),
+            movements: vec![Left, Down, Left, Left],
         },
         Operation {
-            select: grid.pos(3, 1),
+            select: grid.pos(1, 1),
             movements: vec![Up],
         },
     ];
@@ -184,12 +163,12 @@ fn case3() {
     ];
     let expected = vec![
         Operation {
-            select: grid.pos(0, 1),
-            movements: vec![Right, Right],
+            select: grid.pos(1, 0),
+            movements: vec![Down, Right, Right],
         },
         Operation {
-            select: grid.pos(1, 0),
-            movements: vec![Right, Right, Down],
+            select: grid.pos(2, 0),
+            movements: vec![Right, Right],
         },
     ];
     let actual = resolve(&grid, case, 2, 1, 2);
