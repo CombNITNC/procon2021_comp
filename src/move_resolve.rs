@@ -37,25 +37,11 @@ impl DifferentCells {
     }
 }
 
-#[derive(Debug, Clone)]
-enum StatePhase {
-    _1 {
-        x_amount: i8,
-        x_schedule: Vec<u8>,
-        y_amount: i8,
-        y_schedule: Vec<u8>,
-        remaining_move: Option<(Movement, u64)>,
-    },
-    _2 {
-        different_cells: DifferentCells,
-    },
-}
-
 #[derive(Clone)]
 struct GridState<'grid> {
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
-    phase: StatePhase,
+    different_cells: DifferentCells,
     swap_cost: u16,
     select_cost: u16,
     remaining_select: u8,
@@ -66,7 +52,7 @@ impl std::fmt::Debug for GridState<'_> {
         f.debug_struct("GridState")
             .field("field", &self.field)
             .field("selecting", &self.selecting)
-            .field("phase", &self.phase)
+            .field("different_cells", &self.different_cells)
             .field("remaining_select", &self.remaining_select)
             .finish()
     }
@@ -85,84 +71,6 @@ impl PartialEq for GridState<'_> {
 impl<'grid> State<u64> for GridState<'grid> {
     type NextStates = Vec<GridState<'grid>>;
     fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
-        if let StatePhase::_1 {
-            x_amount,
-            x_schedule,
-            y_amount,
-            y_schedule,
-            remaining_move,
-        } = &self.phase
-        {
-            let mut field = self.field.clone();
-            let mut x_schedule = x_schedule.clone();
-            let mut y_schedule = y_schedule.clone();
-            if let Some((mov, remaining)) = *remaining_move {
-                let sel = self.selecting.unwrap();
-                let next_swap = match mov {
-                    Movement::Up => self.field.grid.up_of(sel),
-                    Movement::Right => self.field.grid.right_of(sel),
-                    Movement::Down => self.field.grid.down_of(sel),
-                    Movement::Left => self.field.grid.left_of(sel),
-                };
-                field.swap(sel, next_swap);
-                return vec![Self {
-                    field,
-                    selecting: Some(next_swap),
-                    phase: StatePhase::_1 {
-                        x_amount: *x_amount,
-                        x_schedule,
-                        y_amount: *y_amount,
-                        y_schedule,
-                        remaining_move: (1 <= remaining).then(|| (mov, remaining - 1)),
-                    },
-                    ..self.clone()
-                }];
-            }
-            if let Some(x) = y_schedule.pop() {
-                return (0..self.field.grid.height())
-                    .map(|y| Self {
-                        selecting: Some(self.field.grid.clamping_pos(x, y)),
-                        phase: StatePhase::_1 {
-                            x_amount: *x_amount,
-                            x_schedule: x_schedule.clone(),
-                            y_amount: *y_amount,
-                            y_schedule: y_schedule.clone(),
-                            remaining_move: Some((
-                                if y_amount.is_positive() {
-                                    Movement::Up
-                                } else {
-                                    Movement::Down
-                                },
-                                (self.field.grid.height() - 1) as u64,
-                            )),
-                        },
-                        ..self.clone()
-                    })
-                    .collect();
-            }
-            if let Some(y) = x_schedule.pop() {
-                return (0..self.field.grid.width())
-                    .map(|x| Self {
-                        selecting: Some(self.field.grid.clamping_pos(x, y)),
-                        phase: StatePhase::_1 {
-                            x_amount: *x_amount,
-                            x_schedule: x_schedule.clone(),
-                            y_amount: *y_amount,
-                            y_schedule: y_schedule.clone(),
-                            remaining_move: Some((
-                                if x_amount.is_positive() {
-                                    Movement::Left
-                                } else {
-                                    Movement::Right
-                                },
-                                (self.field.grid.width() - 1) as u64,
-                            )),
-                        },
-                        ..self.clone()
-                    })
-                    .collect();
-            }
-        }
         // 揃っているマスどうしは入れ替えない
         let different_cells = self
             .field
@@ -197,36 +105,11 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn is_goal(&self) -> bool {
-        match &self.phase {
-            StatePhase::_1 {
-                x_schedule,
-                y_schedule,
-                remaining_move,
-                ..
-            } => {
-                x_schedule.is_empty()
-                    && y_schedule.is_empty()
-                    && remaining_move.map_or(true, |rem| rem.1 == 0)
-            }
-            StatePhase::_2 { different_cells } => different_cells.0 == 0,
-        }
+        self.different_cells.0 == 0
     }
 
     fn heuristic(&self) -> u64 {
-        match &self.phase {
-            StatePhase::_1 {
-                x_schedule,
-                y_schedule,
-                remaining_move,
-                ..
-            } => {
-                (x_schedule.len() + y_schedule.len()) as u64 * self.select_cost as u64
-                    + remaining_move.map_or(0, |rem| rem.1) * self.swap_cost as u64
-            }
-            StatePhase::_2 { different_cells } => {
-                different_cells.0.saturating_sub(1) * self.swap_cost as u64
-            }
-        }
+        self.different_cells.0.saturating_sub(1) * self.swap_cost as u64
     }
 
     fn cost_between(&self, next: &Self) -> u64 {
@@ -259,12 +142,9 @@ impl GridState<'_> {
         Self {
             selecting: Some(next_swap),
             field: new_field,
-            phase: match &self.phase {
-                StatePhase::_1 { .. } => unreachable!(),
-                StatePhase::_2 { different_cells } => StatePhase::_2 {
-                    different_cells: different_cells.on_swap(&self.field, selecting, next_swap),
-                },
-            },
+            different_cells: self
+                .different_cells
+                .on_swap(&self.field, selecting, next_swap),
             ..self.clone()
         }
     }
@@ -307,31 +187,6 @@ fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
     operations
 }
 
-fn min_shift(field: &mut VecOnGrid<Pos>) -> (isize, isize) {
-    let mut min = (1 << 30, (0, 0));
-    for y_shift in 0..field.grid.height() as isize {
-        for x_shift in 0..field.grid.width() as isize {
-            let count = field
-                .iter_with_pos()
-                .filter(|&(pos, &cell)| pos != cell)
-                .count();
-            if count < min.0 {
-                min = (count, (x_shift, y_shift));
-            }
-            field.rotate_x(1);
-        }
-        field.rotate_y(1);
-    }
-    let (_, (mut x, mut y)) = min;
-    if field.grid.width() as isize / 2 < x {
-        x -= field.grid.width() as isize;
-    }
-    if field.grid.height() as isize / 2 < y {
-        y -= field.grid.height() as isize;
-    }
-    (x, y)
-}
-
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順を求める.
 pub(crate) fn resolve(
     grid: &Grid,
@@ -340,44 +195,9 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
-    let shift = min_shift(&mut nodes);
-    eprintln!("shifts: {:?}", shift);
-    let (x, y) = shift;
-    let rotated = {
-        let mut ns = nodes.clone();
-        ns.rotate_x(x);
-        ns.rotate_y(y);
-        ns
-    };
-    let hint = rotated
-        .iter_with_pos()
-        .filter(|&(p, &r)| p != r)
-        .map(|(p, _)| p)
-        .next();
-    let mut x_schedule: Vec<_> = if x == 0 {
-        vec![]
-    } else {
-        (0..grid.height()).collect()
-    };
-    let mut y_schedule: Vec<_> = if y == 0 {
-        vec![]
-    } else {
-        (0..grid.width()).collect()
-    };
-    if let Some(hint) = hint {
-        // 最後に hint の位置を入れ替えると効率的
-        if let Ok(idx) = x_schedule.binary_search(&hint.y()) {
-            let move_on_last = x_schedule.remove(idx);
-            x_schedule.insert(0, move_on_last);
-        }
-        if let Ok(idx) = y_schedule.binary_search(&hint.x()) {
-            let move_on_last = y_schedule.remove(idx);
-            y_schedule.insert(0, move_on_last);
-        }
-    }
+    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
     let different_cells = DifferentCells(
-        rotated
+        nodes
             .iter_with_pos()
             .map(|(p, &n)| grid.looping_manhattan_dist(p, n) as u64)
             .sum(),
@@ -390,26 +210,14 @@ pub(crate) fn resolve(
         vec![GridState {
             field: nodes,
             selecting: None,
-            phase: StatePhase::_1 {
-                x_amount: x as i8,
-                x_schedule,
-                y_amount: y as i8,
-                y_schedule,
-                remaining_move: None,
-            },
+            different_cells,
             swap_cost,
             select_cost,
             remaining_select: select_limit,
         }],
         canceler,
-    )
-    .flat_map(|(mut phase1_path, phase1_cost)| {
-        phase1_path.last_mut().unwrap().phase = StatePhase::_2 { different_cells };
-        ida_star(phase1_path, canceler)
-            .next()
-            .map(|(path, phase2_cost)| (path, phase1_cost + phase2_cost))
-    }) {
-        if total_cost < min.1 {
+    ) {
+        if !total_path.is_empty() && total_cost < min.1 {
             min = (total_path, total_cost);
         } else {
             break;
