@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use self::{
     edges_nodes::EdgesNodes,
     ida_star::{ida_star, State},
@@ -203,20 +201,14 @@ pub(crate) fn resolve(
             .sum(),
     );
     let mut min = (vec![], 1 << 60);
-    const SEARCH_TIMEOUT: u64 = 14 * 60;
-    let start_instant = Instant::now();
-    let canceler = || SEARCH_TIMEOUT <= Instant::now().duration_since(start_instant).as_secs();
-    for (total_path, total_cost) in ida_star(
-        vec![GridState {
-            field: nodes,
-            selecting: None,
-            different_cells,
-            swap_cost,
-            select_cost,
-            remaining_select: select_limit,
-        }],
-        canceler,
-    ) {
+    for (total_path, total_cost) in ida_star(vec![GridState {
+        field: nodes,
+        selecting: None,
+        different_cells,
+        swap_cost,
+        select_cost,
+        remaining_select: select_limit,
+    }]) {
         if !total_path.is_empty() && total_cost < min.1 {
             min = (total_path, total_cost);
         } else {

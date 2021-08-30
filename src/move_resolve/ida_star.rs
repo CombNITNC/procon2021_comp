@@ -21,16 +21,12 @@ enum FindResult<C> {
     None,
 }
 
-fn find<V, N, C, F>(history: &mut Vec<V>, distance: C, bound: C, canceler: &F) -> FindResult<C>
+fn find<V, N, C>(history: &mut Vec<V>, distance: C, bound: C) -> FindResult<C>
 where
     V: PartialEq + Clone + State<C, NextStates = N> + std::fmt::Debug,
     N: IntoIterator<Item = V>,
     C: PartialOrd + Add<Output = C> + Copy + std::fmt::Debug,
-    F: Fn() -> bool,
 {
-    if canceler() {
-        return FindResult::None;
-    }
     let visiting = history.last().cloned().unwrap();
     let total_estimated = distance + visiting.heuristic();
     if bound < total_estimated {
@@ -44,7 +40,7 @@ where
         if !history.contains(&neighbor) {
             history.push(neighbor.clone());
             let next_distance = distance + visiting.cost_between(&neighbor);
-            match find(history, next_distance, bound, canceler) {
+            match find(history, next_distance, bound) {
                 FindResult::Found => return FindResult::Found,
                 FindResult::Deeper(cost) => {
                     if min.map_or(true, |c| cost < c) {
@@ -63,17 +59,16 @@ where
 }
 
 /// 反復深化 A* アルゴリズムの実装.
-pub fn ida_star<V, N, C, F>(start: Vec<V>, canceler: F) -> impl Iterator<Item = (Vec<V>, C)>
+pub fn ida_star<V, N, C>(start: Vec<V>) -> impl Iterator<Item = (Vec<V>, C)>
 where
     V: PartialEq + Clone + State<C, NextStates = N> + std::fmt::Debug,
     N: IntoIterator<Item = V>,
     C: PartialOrd + Default + Add<Output = C> + Copy + std::fmt::Debug,
-    F: Fn() -> bool,
 {
     let mut history = start;
     let mut bound = C::default();
     std::iter::from_fn(move || loop {
-        match find(&mut history, C::default(), bound, &canceler) {
+        match find(&mut history, C::default(), bound) {
             FindResult::Found => return Some((history.clone(), bound)),
             FindResult::Deeper(cost) => bound = cost,
             FindResult::None => return None,
