@@ -162,11 +162,27 @@ impl Grid {
         let height = self.height as i32;
         let bx = b.x() as i32;
         let by = b.y() as i32;
-        let other_points = match (a.x() < self.width, a.y() < self.height) {
-            (true, true) => [(bx - width, by), (bx, by - height)],
-            (true, false) => [(bx - width, by), (bx, by + height)],
-            (false, true) => [(bx + width, by), (bx, by - height)],
-            (false, false) => [(bx + width, by), (bx, by + height)],
+        let other_points = match (a.x() < self.width / 2, a.y() < self.height / 2) {
+            (true, true) => [
+                (bx - width, by),
+                (bx, by - height),
+                (bx - width, by - height),
+            ],
+            (true, false) => [
+                (bx - width, by),
+                (bx, by + height),
+                (bx - width, by + height),
+            ],
+            (false, true) => [
+                (bx + width, by),
+                (bx, by - height),
+                (bx + width, by - height),
+            ],
+            (false, false) => [
+                (bx + width, by),
+                (bx, by + height),
+                (bx + width, by + height),
+            ],
         };
         std::iter::once(&(bx, by))
             .chain(other_points.iter())
