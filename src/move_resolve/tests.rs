@@ -202,10 +202,12 @@ fn rand_case() {
         case.push((pair[0], pair[1]));
     }
     case.push((*circular.last().unwrap(), *circular.first().unwrap()));
-    let result = resolve(&grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(&grid, &case);
     eprintln!("before: {:#?}", nodes);
+
+    let result = resolve(&grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
+
     eprintln!("operations: {:#?}", result);
     for Operation { select, movements } in result {
         let mut current = select;
