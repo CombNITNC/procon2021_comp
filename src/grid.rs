@@ -159,6 +159,11 @@ impl Grid {
         pos.y() as usize * self.width as usize + pos.x() as usize
     }
 
+    fn index_as_pos(&self, idx: usize) -> Pos {
+        assert!(idx < self.width as usize * self.height as usize);
+        Pos::new(idx as u8 % self.width, idx as u8 / self.width)
+    }
+
     pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
         let width = self.width as i32;
         let height = self.height as i32;
