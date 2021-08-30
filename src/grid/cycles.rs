@@ -58,12 +58,14 @@ impl<'grid> Cycles<'grid> {
         self.map.iter().filter(|&&i| i < 0).count()
     }
 
-    pub(crate) fn on_swap(&mut self, a: Pos, b: Pos) {}
+    pub(crate) fn on_swap(&mut self, a: Pos, b: Pos) {
+        todo!()
+    }
 
     pub(crate) fn scatter_amount(&self) -> u64 {
         self.map
             .iter_with_pos()
-            .filter(|&(_, &i)| 0 < i)
+            .filter(|&(_, &i)| 0 <= i)
             .map(|(p, &i)| self.grid().looping_manhattan_dist(p, self.pos(i as usize)) as u64)
             .sum()
     }
