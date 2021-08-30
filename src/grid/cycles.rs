@@ -63,12 +63,8 @@ impl<'grid> Cycles<'grid> {
     pub(crate) fn scatter_amount(&self) -> u64 {
         self.map
             .iter_with_pos()
-            .filter(|&(_, &i)| i < -1)
-            .map(|(p, _)| {
-                self.grid()
-                    .looping_manhattan_dist(p, self.pos(self.map[p] as usize))
-                    as u64
-            })
+            .filter(|&(_, &i)| 0 < i)
+            .map(|(p, &i)| self.grid().looping_manhattan_dist(p, self.pos(i as usize)) as u64)
             .sum()
     }
 
