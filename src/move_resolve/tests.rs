@@ -25,8 +25,8 @@ fn smallest_case() {
     assert_eq!(path.len(), 1);
     assert_eq!(
         Operation {
-            select: grid.pos(1, 0),
-            movements: vec![Left],
+            select: grid.pos(0, 0),
+            movements: vec![Right],
         },
         path[0]
     );
