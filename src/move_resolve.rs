@@ -68,7 +68,8 @@ impl<'grid> State<u64> for GridState<'grid> {
     }
 
     fn is_goal(&self) -> bool {
-        self.cycles.scatter_amount() == 0
+        self.cycles.tree_count()
+            == self.cycles.grid().width() as usize * self.cycles.grid().height() as usize
     }
 
     fn heuristic(&self) -> u64 {
