@@ -48,7 +48,8 @@ impl<'grid> Cycles<'grid> {
         }
         if let ((Root { len: a_len }, _), (Root { len: b_len }, _)) = self.map.pick_two(a, b) {
             if a_len < b_len {
-                self.map.swap(a, b);
+                let (node_a, node_b) = self.map.pick_two_mut(a, b);
+                std::mem::swap(&mut node_a.0, &mut node_b.0);
             }
             if let ((Root { len: a_len }, _), (Root { len: b_len }, _)) =
                 self.map.pick_two_mut(a, b)
