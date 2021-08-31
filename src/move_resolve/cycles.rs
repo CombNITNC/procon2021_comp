@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use super::{Grid, Pos, VecOnGrid};
+use crate::grid::{Grid, Pos, VecOnGrid};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CyclesNode {

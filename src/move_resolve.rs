@@ -1,9 +1,11 @@
 use self::ida_star::{ida_star, State};
 use crate::{
     basis::{Movement, Operation},
-    grid::{Cycles, Grid, Pos},
+    grid::{Grid, Pos},
+    move_resolve::cycles::Cycles,
 };
 
+mod cycles;
 pub mod edges_nodes;
 pub mod ida_star;
 #[cfg(test)]
