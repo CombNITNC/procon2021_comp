@@ -151,19 +151,12 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    let mut min = (vec![], 1 << 60);
-    for (total_path, total_cost) in ida_star(vec![GridState {
+    let (path, _cost) = ida_star(vec![GridState {
         cycles: Cycles::new(grid, movements),
         selecting: None,
         swap_cost,
         select_cost,
         remaining_select: select_limit,
-    }]) {
-        if !total_path.is_empty() && total_cost < min.1 {
-            min = (total_path, total_cost);
-        } else {
-            break;
-        }
-    }
-    path_to_operations(min.0)
+    }]);
+    path_to_operations(path)
 }
