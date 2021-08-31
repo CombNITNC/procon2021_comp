@@ -67,9 +67,19 @@ impl<'grid, T> VecOnGrid<'grid, T> {
         self.into_iter()
     }
 
+    /// 可変借用のイテレータを作る.
+    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.into_iter()
+    }
+
     /// 各 Pos のタプルとなるイテレータを作る.
     pub(crate) fn iter_with_pos(&self) -> impl Iterator<Item = (Pos, &T)> {
         self.grid.all_pos().zip(self.iter())
+    }
+
+    /// 各 Pos のタプルとなる可変借用のイテレータを作る.
+    pub(crate) fn iter_mut_with_pos(&mut self) -> impl Iterator<Item = (Pos, &mut T)> {
+        self.grid.all_pos().zip(self.iter_mut())
     }
 
     /// アサーションなしで要素にアクセスする.
@@ -139,6 +149,16 @@ impl<'a, 'grid, T> std::iter::IntoIterator for &'a VecOnGrid<'grid, T> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.vec.iter()
+    }
+}
+
+impl<'a, 'grid, T> std::iter::IntoIterator for &'a mut VecOnGrid<'grid, T> {
+    type Item = &'a mut T;
+
+    type IntoIter = std::slice::IterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.iter_mut()
     }
 }
 
