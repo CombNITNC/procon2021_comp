@@ -19,6 +19,9 @@ impl<'grid> Cycles<'grid> {
         let mut c = Self {
             map: VecOnGrid::with_init(grid, (Root { len: 1 }, grid.clamping_pos(0, 0))),
         };
+        for p in grid.all_pos() {
+            c.map[p].1 = p;
+        }
         for &(a, b) in cycles {
             c.map[b].1 = a;
             c.union(a, b);
