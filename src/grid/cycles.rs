@@ -100,15 +100,6 @@ impl<'grid> Cycles<'grid> {
             .sum()
     }
 
-    pub(crate) fn cycle_size(&mut self, belonged: Pos) -> u64 {
-        assert!(self.map.grid.is_pos_valid(belonged));
-        let repr = self.repr(belonged);
-        match self.map[repr].0 {
-            Child { .. } => unreachable!(),
-            Root { len } => len as u64,
-        }
-    }
-
     pub(crate) fn different_cells(&'grid self) -> impl Iterator<Item = Pos> + 'grid {
         self.map
             .iter_with_pos()
