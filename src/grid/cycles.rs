@@ -71,13 +71,13 @@ impl<'grid> Cycles<'grid> {
     }
 
     pub(crate) fn on_swap(&mut self, a: Pos, b: Pos) {
+        let (a_node, b_node) = self.map.pick_two_mut(a, b);
+        std::mem::swap(&mut a_node.1, &mut b_node.1);
         if self.map[a].1 == b && self.map[b].1 == a {
             self.map[a].0 = Root { len: 1 };
             self.map[b].0 = Root { len: 1 };
             return;
         }
-        let (a_node, b_node) = self.map.pick_two_mut(a, b);
-        std::mem::swap(&mut a_node.1, &mut b_node.1);
         if self.repr(a) == self.repr(b) {
             if self.map[a].1 == a {
                 self.map[a].0 = Root { len: 1 };
