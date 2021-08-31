@@ -122,3 +122,40 @@ impl PartialEq for Cycles<'_> {
         self.map.iter().zip(other.map.iter()).all(|(a, b)| a == b)
     }
 }
+
+#[test]
+fn test_cycles() {
+    // 00 11
+    // 10 01
+    let grid = Grid::new(2, 2);
+    let mut cycles = Cycles::new(
+        &grid,
+        &[
+            (grid.pos(1, 0), grid.pos(0, 1)),
+            (grid.pos(0, 1), grid.pos(1, 1)),
+            (grid.pos(1, 1), grid.pos(1, 0)),
+        ],
+    );
+
+    cycles.on_swap(grid.pos(0, 1), grid.pos(1, 1));
+
+    assert_eq!(
+        cycles.map[grid.pos(0, 1)],
+        (CyclesNode::Root { len: 1 }, grid.pos(0, 1))
+    );
+    assert_eq!(
+        cycles.map[grid.pos(1, 1)],
+        (
+            CyclesNode::Child {
+                parent: grid.pos(1, 0)
+            },
+            grid.pos(1, 0)
+        )
+    );
+
+    cycles.on_swap(grid.pos(1, 0), grid.pos(1, 1));
+
+    grid.all_pos().for_each(|p| {
+        assert_eq!(cycles.map[p], (CyclesNode::Root { len: 1 }, p));
+    });
+}
