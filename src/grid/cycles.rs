@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::{Grid, Pos, VecOnGrid};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,6 +28,13 @@ impl<'grid> Cycles<'grid> {
             c.map[b].1 = a;
             c.union(a, b);
         }
+        let set: HashSet<_> = c.map.iter().map(|(_, goal)| goal).collect();
+        assert_eq!(
+            set.len(),
+            grid.width() as usize * grid.height() as usize,
+            "goal pos must be different but map is: {:#?}",
+            c.map
+        );
         c
     }
 
