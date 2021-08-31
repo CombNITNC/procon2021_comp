@@ -51,9 +51,10 @@ impl<'grid> State<u64> for GridState<'grid> {
             .iter()
             .cloned()
             .filter(|&around| {
-                prev_prev
-                    .selecting
-                    .map_or(true, |selected| around != selected)
+                selecting != around
+                    && prev_prev
+                        .selecting
+                        .map_or(true, |selected| around != selected)
             })
             .map(|next_swap| self.with_next_swap(next_swap));
         if self.is_moved_from(prev_prev) && 1 <= self.remaining_select {
