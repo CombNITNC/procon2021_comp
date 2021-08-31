@@ -71,15 +71,31 @@ impl<'grid> Cycles<'grid> {
     }
 
     pub(crate) fn on_swap(&mut self, a: Pos, b: Pos) {
-        todo!()
+        if self.map[a].1 == b && self.map[b].1 == a {
+            self.map[a].0 = Root { len: 1 };
+            self.map[b].0 = Root { len: 1 };
+            return;
+        }
+        let (a_node, b_node) = self.map.pick_two_mut(a, b);
+        std::mem::swap(&mut a_node.1, &mut b_node.1);
+        if self.repr(a) == self.repr(b) {
+            if self.map[a].1 == a {
+                self.map[a].0 = Root { len: 1 };
+            }
+            if self.map[b].1 == b {
+                self.map[b].0 = Root { len: 1 };
+            }
+        } else if self.map[a].1 == b || self.map[b].1 == a {
+            self.union(a, b);
+        }
     }
 
     pub(crate) fn scatter_amount(&self) -> u64 {
         self.map
             .iter_with_pos()
-            .map(|(pos, &i)| match i.0 {
+            .map(|(pos, &(n, goal))| match n {
                 Child { parent } => self.grid().looping_manhattan_dist(pos, parent) as u64,
-                Root { .. } => 0,
+                Root { .. } => self.grid().looping_manhattan_dist(pos, goal) as u64,
             })
             .sum()
     }
