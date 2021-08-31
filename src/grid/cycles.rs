@@ -1,16 +1,23 @@
 use super::{Grid, Pos, VecOnGrid};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CyclesNode {
+    Child { parent: Pos },
+    Root { len: u8 },
+}
+
+use CyclesNode::*;
+
 /// 入れ替える頂点の互換を Union-Find で管理する.
 #[derive(Debug, Clone)]
 pub(crate) struct Cycles<'grid> {
-    // 正の場合は親要素のインデックス, 負の場合は木のサイズ
-    map: VecOnGrid<'grid, isize>,
+    map: VecOnGrid<'grid, CyclesNode>,
 }
 
 impl<'grid> Cycles<'grid> {
     pub(crate) fn new(grid: &'grid Grid, cycles: &[(Pos, Pos)]) -> Self {
         let mut c = Self {
-            map: VecOnGrid::with_init(grid, -1),
+            map: VecOnGrid::with_init(grid, Root { len: 1 }),
         };
         for &(a, b) in cycles {
             c.union(a, b);
@@ -26,28 +33,27 @@ impl<'grid> Cycles<'grid> {
         if a == b {
             return;
         }
-        let pos_a = self.pos(a);
-        let pos_b = self.pos(b);
-        if self.map[pos_a] > self.map[pos_b] {
-            self.map.swap(pos_a, pos_b);
+        if let (Root { len: a_len }, Root { len: b_len }) = self.map.pick_two(a, b) {
+            if a_len < b_len {
+                self.map.swap(a, b);
+            }
+            if let (Root { len: a_len }, Root { len: b_len }) = self.map.pick_two_mut(a, b) {
+                *a_len += *b_len;
+            }
+            self.map[b] = Child { parent: a };
         }
-        self.map[pos_a] += self.map[pos_b];
-        self.map[pos_b] = a as isize;
     }
 
-    fn repr(&mut self, x: Pos) -> usize {
+    fn repr(&mut self, x: Pos) -> Pos {
         assert!(self.map.grid.is_pos_valid(x));
-        if self.map[x].is_negative() {
-            return self.map.grid.pos_as_index(x);
+        match self.map[x] {
+            Root { .. } => x,
+            Child { parent } => {
+                let parent = self.repr(parent);
+                self.map[x] = Child { parent };
+                parent
+            }
         }
-        let parent = self.map[x] as usize;
-        let parent = self.repr(self.pos(parent));
-        self.map[x] = parent as isize;
-        parent
-    }
-
-    fn pos(&self, index: usize) -> Pos {
-        self.map.grid.index_as_pos(index)
     }
 
     pub(crate) fn grid(&self) -> &Grid {
@@ -55,7 +61,7 @@ impl<'grid> Cycles<'grid> {
     }
 
     pub(crate) fn tree_count(&self) -> usize {
-        self.map.iter().filter(|&&i| i < 0).count()
+        self.map.iter().filter(|n| matches!(n, Root { .. })).count()
     }
 
     pub(crate) fn on_swap(&mut self, a: Pos, b: Pos) {
@@ -65,21 +71,26 @@ impl<'grid> Cycles<'grid> {
     pub(crate) fn scatter_amount(&self) -> u64 {
         self.map
             .iter_with_pos()
-            .filter(|&(_, &i)| 0 <= i)
-            .map(|(p, &i)| self.grid().looping_manhattan_dist(p, self.pos(i as usize)) as u64)
+            .map(|(pos, &i)| match i {
+                Child { parent } => self.grid().looping_manhattan_dist(pos, parent) as u64,
+                Root { .. } => 0,
+            })
             .sum()
     }
 
     pub(crate) fn cycle_size(&mut self, belonged: Pos) -> u64 {
         assert!(self.map.grid.is_pos_valid(belonged));
         let repr = self.repr(belonged);
-        -self.map[self.pos(repr)] as u64
+        match self.map[repr] {
+            Child { .. } => unreachable!(),
+            Root { len } => len as u64,
+        }
     }
 
     pub(crate) fn different_cells(&'grid self) -> impl Iterator<Item = Pos> + 'grid {
         self.map
             .iter_with_pos()
-            .filter(|&(_, &i)| i != -1)
+            .filter(|&(_, &i)| !matches!(i, Root { len: 1 }))
             .map(|(p, _)| p)
     }
 }
