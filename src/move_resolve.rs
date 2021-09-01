@@ -23,6 +23,15 @@ impl std::fmt::Debug for DifferentCells {
 }
 
 impl DifferentCells {
+    fn new(nodes: &VecOnGrid<Pos>) -> Self {
+        let mut distances: Vec<_> = nodes
+            .iter_with_pos()
+            .map(|(p, &n)| nodes.grid.looping_manhattan_dist(p, n) as u64)
+            .collect();
+        distances.sort_unstable();
+        Self(distances.iter().sum())
+    }
+
     /// a の位置と b の位置のマスを入れ替えた場合を計算する.
     fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
         let before = (field.grid.looping_manhattan_dist(field[a], a)
@@ -191,15 +200,8 @@ pub(crate) fn resolve(
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
-    let lower_bound = {
-        let mut distances: Vec<_> = nodes
-            .iter_with_pos()
-            .map(|(p, &n)| grid.looping_manhattan_dist(p, n) as u64)
-            .collect();
-        distances.sort_unstable();
-        distances.iter().sum()
-    };
-    let different_cells = DifferentCells(lower_bound);
+    let different_cells = DifferentCells::new(&nodes);
+    let lower_bound = different_cells.0;
     // 600e8 = (WH)^select => select = 10 log 6 / log WH
     let maximum_select =
         (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
