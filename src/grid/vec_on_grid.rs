@@ -6,7 +6,7 @@ use super::{Grid, Pos};
 #[derive(Clone)]
 pub(crate) struct VecOnGrid<'grid, T> {
     vec: Vec<T>,
-    grid: &'grid Grid,
+    pub(crate) grid: &'grid Grid,
 }
 
 impl<'grid, T> VecOnGrid<'grid, T> {
@@ -38,14 +38,48 @@ impl<'grid, T> VecOnGrid<'grid, T> {
             .swap(self.grid.pos_as_index(a), self.grid.pos_as_index(b))
     }
 
+    pub(crate) fn pick_two(&self, a: Pos, b: Pos) -> (&T, &T) {
+        assert!(self.grid.is_pos_valid(a));
+        assert!(self.grid.is_pos_valid(b));
+        let (a, b) = if self.grid.pos_as_index(b) < self.grid.pos_as_index(a) {
+            (b, a)
+        } else {
+            (a, b)
+        };
+        let (a_seg, b_seg) = self.vec.split_at(self.grid.pos_as_index(b));
+        (&a_seg[self.grid.pos_as_index(a)], &b_seg[0])
+    }
+
+    pub(crate) fn pick_two_mut(&mut self, a: Pos, b: Pos) -> (&mut T, &mut T) {
+        assert!(self.grid.is_pos_valid(a));
+        assert!(self.grid.is_pos_valid(b));
+        let (a, b) = if self.grid.pos_as_index(b) < self.grid.pos_as_index(a) {
+            (b, a)
+        } else {
+            (a, b)
+        };
+        let (a_seg, b_seg) = self.vec.split_at_mut(self.grid.pos_as_index(b));
+        (&mut a_seg[self.grid.pos_as_index(a)], &mut b_seg[0])
+    }
+
     /// 借用のイテレータを作る.
     pub(crate) fn iter(&self) -> impl Iterator<Item = &T> {
+        self.into_iter()
+    }
+
+    /// 可変借用のイテレータを作る.
+    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
         self.into_iter()
     }
 
     /// 各 Pos のタプルとなるイテレータを作る.
     pub(crate) fn iter_with_pos(&self) -> impl Iterator<Item = (Pos, &T)> {
         self.grid.all_pos().zip(self.iter())
+    }
+
+    /// 各 Pos のタプルとなる可変借用のイテレータを作る.
+    pub(crate) fn iter_mut_with_pos(&mut self) -> impl Iterator<Item = (Pos, &mut T)> {
+        self.grid.all_pos().zip(self.iter_mut())
     }
 
     /// アサーションなしで要素にアクセスする.
@@ -115,6 +149,16 @@ impl<'a, 'grid, T> std::iter::IntoIterator for &'a VecOnGrid<'grid, T> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.vec.iter()
+    }
+}
+
+impl<'a, 'grid, T> std::iter::IntoIterator for &'a mut VecOnGrid<'grid, T> {
+    type Item = &'a mut T;
+
+    type IntoIter = std::slice::IterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.iter_mut()
     }
 }
 
