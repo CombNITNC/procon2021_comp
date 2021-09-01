@@ -156,4 +156,61 @@ impl Grid {
     fn pos_as_index(&self, pos: Pos) -> usize {
         pos.y() as usize * self.width as usize + pos.x() as usize
     }
+
+    pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
+        let width = self.width as i32;
+        let height = self.height as i32;
+        let bx = b.x() as i32;
+        let by = b.y() as i32;
+        let other_points = match (a.x() < self.width / 2, a.y() < self.height / 2) {
+            (true, true) => [
+                (bx - width, by),
+                (bx, by - height),
+                (bx - width, by - height),
+            ],
+            (true, false) => [
+                (bx - width, by),
+                (bx, by + height),
+                (bx - width, by + height),
+            ],
+            (false, true) => [
+                (bx + width, by),
+                (bx, by - height),
+                (bx + width, by - height),
+            ],
+            (false, false) => [
+                (bx + width, by),
+                (bx, by + height),
+                (bx + width, by + height),
+            ],
+        };
+        std::iter::once(&(bx, by))
+            .chain(other_points.iter())
+            .map(|(bx, by)| (a.x() as i32 - bx).abs() + (a.y() as i32 - by).abs())
+            .min()
+            .unwrap() as u32
+    }
+}
+
+#[test]
+fn test_looping_manhattan_dist() {
+    let grid = Grid::new(4, 4);
+    let pos1 = grid.pos(0, 0);
+    let pos2 = grid.pos(1, 1);
+    let pos3 = grid.pos(2, 2);
+    let pos4 = grid.pos(3, 3);
+    let dist2_pos = [(pos1, pos2), (pos2, pos3), (pos3, pos4), (pos4, pos1)];
+    for (a, b) in dist2_pos {
+        assert_eq!(0, grid.looping_manhattan_dist(a, a), "{:?} {:?}", a, b);
+        assert_eq!(0, grid.looping_manhattan_dist(b, b), "{:?} {:?}", a, b);
+        assert_eq!(2, grid.looping_manhattan_dist(a, b), "{:?} {:?}", a, b);
+        assert_eq!(2, grid.looping_manhattan_dist(b, a), "{:?} {:?}", a, b);
+    }
+    let dist4_pos = [(pos1, pos3), (pos2, pos4)];
+    for (a, b) in dist4_pos {
+        assert_eq!(0, grid.looping_manhattan_dist(a, a), "{:?} {:?}", a, b);
+        assert_eq!(0, grid.looping_manhattan_dist(b, b), "{:?} {:?}", a, b);
+        assert_eq!(4, grid.looping_manhattan_dist(a, b), "{:?} {:?}", a, b);
+        assert_eq!(4, grid.looping_manhattan_dist(b, a), "{:?} {:?}", a, b);
+    }
 }
