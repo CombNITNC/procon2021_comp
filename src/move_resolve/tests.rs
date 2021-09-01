@@ -149,6 +149,33 @@ fn case2() {
 }
 
 #[test]
+fn case3() {
+    // (2, 0) (0, 1) (1, 0)
+    // (2, 1) (0, 0) (1, 1)
+    let grid = Grid::new(3, 2);
+    let case = &[
+        (grid.pos(0, 0), grid.pos(1, 1)),
+        (grid.pos(1, 0), grid.pos(2, 0)),
+        (grid.pos(2, 0), grid.pos(0, 0)),
+        (grid.pos(0, 1), grid.pos(1, 0)),
+        (grid.pos(1, 1), grid.pos(2, 1)),
+        (grid.pos(2, 1), grid.pos(0, 1)),
+    ];
+    let expected = vec![
+        Operation {
+            select: grid.pos(1, 0),
+            movements: vec![Down, Right, Right],
+        },
+        Operation {
+            select: grid.pos(2, 0),
+            movements: vec![Right, Right],
+        },
+    ];
+    let actual = resolve(&grid, case, 2, 2, 3);
+    test_vec(expected, actual);
+}
+
+#[test]
 fn rand_case() {
     fn gen_circular(grid: &Grid, rng: &mut rand::rngs::ThreadRng) -> Vec<Pos> {
         use rand::{
