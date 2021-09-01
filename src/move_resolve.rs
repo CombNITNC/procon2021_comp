@@ -25,8 +25,10 @@ impl std::fmt::Debug for DifferentCells {
 impl DifferentCells {
     /// a の位置と b の位置のマスを入れ替えた場合を計算する.
     fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
-        let before = (field[a].manhattan_distance(a) + field[b].manhattan_distance(b)) as i64;
-        let after = (field[a].manhattan_distance(b) + field[b].manhattan_distance(a)) as i64;
+        let before = (field.grid.looping_manhattan_dist(field[a], a)
+            + field.grid.looping_manhattan_dist(field[b], b)) as i64;
+        let after = (field.grid.looping_manhattan_dist(field[a], b)
+            + field.grid.looping_manhattan_dist(field[b], a)) as i64;
         let diff = self.0 as i64 - before + after;
         Self(diff as _)
     }
@@ -192,12 +194,7 @@ pub(crate) fn resolve(
     let lower_bound = {
         let mut distances: Vec<_> = nodes
             .iter_with_pos()
-            .map(|(p, &n)| {
-                (p.manhattan_distance(n) as u64).min(
-                    (p.x() as i64 + grid.width() as i64 - n.x() as i64).unsigned_abs()
-                        + (p.y() as i64 + grid.height() as i64 - n.y() as i64).unsigned_abs(),
-                )
-            })
+            .map(|(p, &n)| grid.looping_manhattan_dist(p, n) as u64)
             .collect();
         distances.sort_unstable();
         distances.iter().sum()
