@@ -38,6 +38,30 @@ impl<'grid, T> VecOnGrid<'grid, T> {
             .swap(self.grid.pos_as_index(a), self.grid.pos_as_index(b))
     }
 
+    pub(crate) fn pick_two(&self, a: Pos, b: Pos) -> (&T, &T) {
+        assert!(self.grid.is_pos_valid(a));
+        assert!(self.grid.is_pos_valid(b));
+        let (a, b) = if self.grid.pos_as_index(b) < self.grid.pos_as_index(a) {
+            (b, a)
+        } else {
+            (a, b)
+        };
+        let (a_seg, b_seg) = self.vec.split_at(self.grid.pos_as_index(b));
+        (&a_seg[self.grid.pos_as_index(a)], &b_seg[0])
+    }
+
+    pub(crate) fn pick_two_mut(&mut self, a: Pos, b: Pos) -> (&mut T, &mut T) {
+        assert!(self.grid.is_pos_valid(a));
+        assert!(self.grid.is_pos_valid(b));
+        let (a, b) = if self.grid.pos_as_index(b) < self.grid.pos_as_index(a) {
+            (b, a)
+        } else {
+            (a, b)
+        };
+        let (a_seg, b_seg) = self.vec.split_at_mut(self.grid.pos_as_index(b));
+        (&mut a_seg[self.grid.pos_as_index(a)], &mut b_seg[0])
+    }
+
     /// 借用のイテレータを作る.
     pub(crate) fn iter(&self) -> impl Iterator<Item = &T> {
         self.into_iter()
