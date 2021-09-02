@@ -195,7 +195,7 @@ fn rand_case() {
         points.into_iter().take(taking).collect()
     }
     const WIDTH: u8 = 5;
-    const HEIGHT: u8 = 5;
+    const HEIGHT: u8 = 6;
     const SELECT_LIMIT: u8 = 3;
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
