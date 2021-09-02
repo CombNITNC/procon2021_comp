@@ -86,12 +86,18 @@ where
     E: IntoIterator<Item = T>,
     A: IntoIterator<Item = T>,
     T: PartialEq + std::fmt::Debug,
-    E::IntoIter: ExactSizeIterator,
-    A::IntoIter: ExactSizeIterator,
+    E::IntoIter: ExactSizeIterator + std::fmt::Debug,
+    A::IntoIter: ExactSizeIterator + std::fmt::Debug,
 {
     let expected = expected.into_iter();
     let actual = actual.into_iter();
-    assert_eq!(expected.len(), actual.len());
+    assert_eq!(
+        expected.len(),
+        actual.len(),
+        "expected: {:?}\nactual: {:?}",
+        expected,
+        actual
+    );
     expected
         .zip(actual)
         .enumerate()
