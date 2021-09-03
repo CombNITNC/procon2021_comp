@@ -321,6 +321,7 @@ impl IdaStarState for GridRowCompleter<'_> {
         let grid = self.field.grid;
         let different = (0..grid.width())
             .map(|x| grid.clamping_pos(x, self.target_row))
+            .filter(|pos| self.target_row < pos.y())
             .filter(|&pos| pos != self.field[pos]);
         if self.prev_action.is_none() {
             return different.map(GridAction::Select).collect();
