@@ -192,6 +192,7 @@ fn rand_case() {
         points.shuffle(rng);
         let between = Uniform::from(2..points.len());
         let taking = between.sample(rng);
+        eprintln!("taking: {}", taking);
         points.into_iter().take(taking).collect()
     }
     const WIDTH: u8 = 6;
