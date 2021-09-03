@@ -218,12 +218,7 @@ fn rand_case() {
     for Operation { select, movements } in result {
         let mut current = select;
         for movement in movements {
-            let to_swap = match movement {
-                Up => grid.up_of(current),
-                Right => grid.right_of(current),
-                Down => grid.down_of(current),
-                Left => grid.left_of(current),
-            };
+            let to_swap = grid.move_pos_to(current, movement);
             nodes.swap(current, to_swap);
             current = to_swap;
         }
