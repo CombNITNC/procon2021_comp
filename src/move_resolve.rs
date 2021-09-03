@@ -193,7 +193,33 @@ fn actions_to_operations(actions: Vec<GridAction>) -> Vec<Operation> {
     operations
 }
 
-/// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順を求める.
+/// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の最適解を求める.
+///
+/// ```
+/// // 10 00
+/// let grid = Grid::new(2, 1);
+/// let mut field = VecOnGrid::with_init(&grid, grid.pos(0, 0));
+/// field[grid.pos(0, 0)] = grid.pos(1, 0);
+/// field[grid.pos(1, 0)] = grid.pos(0, 0);
+/// let path = resolve(
+///     &grid,
+///     &[
+///         (grid.pos(0, 0), grid.pos(1, 0)),
+///         (grid.pos(1, 0), grid.pos(0, 0)),
+///     ],
+///     1,
+///     1,
+///     1,
+/// );
+/// assert_eq!(path.len(), 1);
+/// assert_eq!(
+///     Operation {
+///         select: grid.pos(1, 0),
+///         movements: vec![Right],
+///     },
+///     path[0]
+/// );
+/// ```
 pub(crate) fn resolve(
     grid: &Grid,
     movements: &[(Pos, Pos)],
