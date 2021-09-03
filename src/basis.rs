@@ -22,7 +22,7 @@ impl std::fmt::Debug for Color {
 }
 
 /// `Movement` はある断片画像を動かして入れ替える向きを表す.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Movement {
     Up,
     Right,
@@ -55,6 +55,15 @@ impl Movement {
             }
         } else {
             unreachable!()
+        }
+    }
+
+    pub(crate) fn opposite(self) -> Self {
+        match self {
+            Movement::Up => Movement::Down,
+            Movement::Right => Movement::Left,
+            Movement::Down => Movement::Up,
+            Movement::Left => Movement::Right,
         }
     }
 }
