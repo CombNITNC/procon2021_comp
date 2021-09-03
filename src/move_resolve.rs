@@ -229,6 +229,9 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
+    if 36 <= grid.width() * grid.height() {
+        return resolve_approximately(grid, movements, select_limit, swap_cost, select_cost);
+    }
     let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
     let different_cells = DifferentCells::new(&nodes);
     let lower_bound = different_cells.0;
@@ -373,7 +376,7 @@ impl IdaStarState for GridRowCompleter<'_> {
 }
 
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の近似解を求める.
-pub(crate) fn resolve_approximately(
+fn resolve_approximately(
     grid: &Grid,
     movements: &[(Pos, Pos)],
     mut select_limit: u8,
