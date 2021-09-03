@@ -2,6 +2,7 @@ use crate::basis::{Color, Dir, Rot};
 use crate::fragment::Fragment;
 use crate::grid::{Pos, VecOnGrid};
 
+mod double_side;
 mod shaker;
 
 #[derive(Debug)]
