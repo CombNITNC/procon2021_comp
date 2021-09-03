@@ -248,15 +248,117 @@ pub(crate) fn resolve(
     actions_to_operations(path)
 }
 
+#[derive(Clone)]
+struct GridRowCompleter<'grid> {
+    grid: &'grid Grid,
+    field: VecOnGrid<'grid, Pos>,
+    selecting: Option<Pos>,
+    target_row: u8,
+    swap_cost: u16,
+    select_cost: u16,
+    remaining_select: u8,
+}
+
+impl std::fmt::Debug for GridRowCompleter<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GridState")
+            .field("field", &self.field)
+            .field("selecting", &self.selecting)
+            .field("target_row", &self.target_row)
+            .field("remaining_select", &self.remaining_select)
+            .finish()
+    }
+}
+
+impl PartialEq for GridRowCompleter<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.target_row != other.target_row {
+            return false;
+        }
+        let grid = self.field.grid;
+        for x in 0..grid.width() {
+            let pos = grid.clamping_pos(x, self.target_row);
+            if self.field[pos] != other.field[pos] {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl IdaStarState for GridRowCompleter<'_> {
+    type A = GridAction;
+    fn apply(&self, action: Self::A) -> Self {
+        todo!()
+    }
+
+    type AS = Vec<Self::A>;
+    fn next_actions(&self, history: &[Self::A]) -> Self::AS {
+        todo!()
+    }
+    fn is_goal(&self) -> bool {
+        todo!()
+    }
+
+    type C = u64;
+    fn heuristic(&self) -> Self::C {
+        todo!()
+    }
+    fn cost_on(&self, action: Self::A) -> Self::C {
+        todo!()
+    }
+}
+
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の近似解を求める.
 pub(crate) fn resolve_approximately(
     grid: &Grid,
     movements: &[(Pos, Pos)],
-    select_limit: u8,
+    mut select_limit: u8,
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
+    let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
     let different_cells = DifferentCells::new(&nodes);
-    todo!()
+    let mut all_actions = vec![];
+    let mut selection = None;
+    for y in 0..grid.height() - 1 {
+        let row_completer = GridRowCompleter {
+            grid,
+            field: nodes.clone(),
+            selecting: selection,
+            target_row: y,
+            swap_cost,
+            select_cost,
+            remaining_select: select_limit,
+        };
+        let (mut actions, _cost) = ida_star(row_completer, 0);
+        for &action in &actions {
+            match action {
+                GridAction::Swap(mov) => {
+                    let sel = selection.unwrap();
+                    let swap_to = grid.move_pos_to(sel, mov);
+                    nodes.swap(sel, swap_to);
+                }
+                GridAction::Select(sel) => {
+                    selection = Some(sel);
+                    select_limit -= 1;
+                }
+            }
+        }
+        all_actions.append(&mut actions);
+    }
+    let (mut actions, _total_cost) = ida_star(
+        GridCompleter {
+            grid,
+            field: nodes.clone(),
+            selecting: selection,
+            different_cells,
+            swap_cost,
+            select_cost,
+            remaining_select: select_limit,
+        },
+        0,
+    );
+    all_actions.append(&mut actions);
+    actions_to_operations(all_actions)
 }
