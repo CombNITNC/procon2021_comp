@@ -1,4 +1,4 @@
-use super::{edges_nodes::EdgesNodes, resolve, DifferentCells};
+use super::{edges_nodes::EdgesNodes, resolve, resolve_approximately, DifferentCells};
 use crate::{
     basis::{Movement::*, Operation},
     grid::{Grid, Pos, VecOnGrid},
@@ -212,7 +212,7 @@ fn rand_case() {
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(&grid, &case);
     eprintln!("before: {:#?}", nodes);
 
-    let result = resolve(&grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
+    let result = resolve_approximately(&grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
     eprintln!("operations: {:#?}", result);
     for Operation { select, movements } in result {
