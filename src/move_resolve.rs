@@ -1,6 +1,6 @@
 use self::{
     edges_nodes::EdgesNodes,
-    ida_star::{ida_star, State},
+    ida_star::{ida_star, IdaStarState},
 };
 use crate::{
     basis::{Movement, Operation},
@@ -75,36 +75,73 @@ impl PartialEq for GridState<'_> {
     }
 }
 
-impl<'grid> State<u64> for GridState<'grid> {
-    type NextStates = Vec<GridState<'grid>>;
-    fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GridAction {
+    Swap(Movement),
+    Select(Pos),
+}
+
+impl<'grid> IdaStarState for GridState<'grid> {
+    type A = GridAction;
+    fn apply(&self, action: Self::A) -> Self {
+        match action {
+            GridAction::Swap(mov) => {
+                let selecting = self.selecting.unwrap();
+                let next_swap = self.field.grid.move_pos_to(selecting, mov);
+                let mut new_field = self.field.clone();
+                new_field.swap(selecting, next_swap);
+                Self {
+                    selecting: Some(next_swap),
+                    field: new_field,
+                    different_cells: self.different_cells.on_swap(
+                        &self.field,
+                        selecting,
+                        next_swap,
+                    ),
+                    ..self.clone()
+                }
+            }
+            GridAction::Select(sel) => Self {
+                selecting: Some(sel),
+                remaining_select: self.remaining_select - 1,
+                ..self.clone()
+            },
+        }
+    }
+
+    type AS = Vec<GridAction>;
+    fn next_actions(&self, history: &[Self::A]) -> Self::AS {
         // 揃っているマスどうしは入れ替えない
         let different_cells = self
             .field
             .iter_with_pos()
             .filter(|&(pos, &cell)| pos != cell)
             .map(|(_, &cell)| cell);
-        if history.len() <= 1 {
-            return different_cells
-                .map(|next_select| self.with_next_select(next_select))
-                .collect();
+        if history.is_empty() {
+            return different_cells.map(GridAction::Select).collect();
         }
         let selecting = self.selecting.unwrap();
-        let prev_prev = &history[history.len() - 2];
-        let around = self.grid.around_of(selecting);
-        let swapping_states = around
-            .iter()
-            .cloned()
-            .filter(|&around| {
-                prev_prev
-                    .selecting
-                    .map_or(true, |selected| around != selected)
-            })
-            .map(|next_swap| self.with_next_swap(next_swap));
-        if self.is_moved_from(prev_prev) && 1 <= self.remaining_select {
+        let prev = history.last().unwrap();
+        let swapping_states = [
+            Movement::Up,
+            Movement::Right,
+            Movement::Down,
+            Movement::Left,
+        ]
+        .iter()
+        .cloned()
+        .filter(|&around| {
+            if let GridAction::Swap(dir) = prev {
+                around != dir.opposite()
+            } else {
+                true
+            }
+        })
+        .map(GridAction::Swap);
+        if matches!(prev, GridAction::Swap(_)) && 1 <= self.remaining_select {
             let selecting_states = different_cells
                 .filter(|&p| p != selecting)
-                .map(|next_select| self.with_next_select(next_select));
+                .map(GridAction::Select);
             swapping_states.chain(selecting_states).collect()
         } else {
             swapping_states.collect()
@@ -115,19 +152,16 @@ impl<'grid> State<u64> for GridState<'grid> {
         self.different_cells.0 == 0
     }
 
-    fn heuristic(&self) -> u64 {
+    type C = u64;
+    fn heuristic(&self) -> Self::C {
         (self.different_cells.0 as f64).powf(1.0 + 41.0 / 256.0) as u64
     }
 
-    fn cost_between(&self, next: &Self) -> u64 {
-        if self.selecting.is_none() {
-            return self.swap_cost as u64;
+    fn cost_on(&self, action: Self::A) -> Self::C {
+        match action {
+            GridAction::Swap(_) => self.swap_cost as u64,
+            GridAction::Select(_) => self.select_cost as u64,
         }
-        (if next.is_moved_from(self) {
-            self.swap_cost
-        } else {
-            self.select_cost
-        }) as u64
     }
 }
 
@@ -164,29 +198,27 @@ impl GridState<'_> {
     }
 }
 
-/// 状態の履歴 Vec<GridState> を Vec<Operation> に変換する.
-fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
-    if path.is_empty() {
+/// 操作の履歴 Vec<GridAction> を Vec<Operation> に変換する.
+fn actions_to_operations(actions: Vec<GridAction>) -> Vec<Operation> {
+    if actions.is_empty() {
         return vec![];
     }
     let mut current_operation: Option<Operation> = None;
     let mut operations = vec![];
-    let mut prev = &path[0];
-    for state in &path[1..] {
-        let is_swapped = (&prev.field)
-            .into_iter()
-            .zip(&state.field)
-            .any(|(a, b)| a != b);
-        if is_swapped {
-            let movement = Movement::between_pos(prev.selecting.unwrap(), state.selecting.unwrap());
-            current_operation.as_mut().unwrap().movements.push(movement);
-        } else if let Some(op) = current_operation.replace(Operation {
-            select: state.selecting.unwrap(),
-            movements: vec![],
-        }) {
-            operations.push(op);
+    for state in actions {
+        match state {
+            GridAction::Swap(mov) => {
+                current_operation.as_mut().unwrap().movements.push(mov);
+            }
+            GridAction::Select(select) => {
+                if let Some(op) = current_operation.replace(Operation {
+                    select,
+                    movements: vec![],
+                }) {
+                    operations.push(op);
+                }
+            }
         }
-        prev = state;
     }
     if let Some(op) = current_operation {
         operations.push(op);
@@ -220,5 +252,5 @@ pub(crate) fn resolve(
         },
         lower_bound,
     );
-    path_to_operations(path)
+    actions_to_operations(path)
 }
