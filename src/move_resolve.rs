@@ -45,7 +45,6 @@ impl DifferentCells {
 
 #[derive(Clone)]
 struct GridCompleter<'grid> {
-    grid: &'grid Grid,
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
     different_cells: DifferentCells,
@@ -235,7 +234,6 @@ pub(crate) fn resolve(
         (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
     let (path, _total_cost) = ida_star(
         GridCompleter {
-            grid,
             field: nodes.clone(),
             selecting: None,
             different_cells,
@@ -406,7 +404,6 @@ pub(crate) fn resolve_approximately(
     }
     let (mut actions, _total_cost) = ida_star(
         GridCompleter {
-            grid,
             field: nodes.clone(),
             selecting: selection,
             different_cells,
