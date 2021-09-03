@@ -1,6 +1,6 @@
 use self::{
     edges_nodes::EdgesNodes,
-    ida_star::{ida_star, State},
+    ida_star::{ida_star, IdaStarState},
 };
 use crate::{
     basis::{Movement, Operation},
@@ -23,10 +23,21 @@ impl std::fmt::Debug for DifferentCells {
 }
 
 impl DifferentCells {
+    fn new(nodes: &VecOnGrid<Pos>) -> Self {
+        let mut distances: Vec<_> = nodes
+            .iter_with_pos()
+            .map(|(p, &n)| nodes.grid.looping_manhattan_dist(p, n) as u64)
+            .collect();
+        distances.sort_unstable();
+        Self(distances.iter().sum())
+    }
+
     /// a の位置と b の位置のマスを入れ替えた場合を計算する.
     fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
-        let before = (field[a].manhattan_distance(a) + field[b].manhattan_distance(b)) as i64;
-        let after = (field[a].manhattan_distance(b) + field[b].manhattan_distance(a)) as i64;
+        let before = (field.grid.looping_manhattan_dist(field[a], a)
+            + field.grid.looping_manhattan_dist(field[b], b)) as i64;
+        let after = (field.grid.looping_manhattan_dist(field[a], b)
+            + field.grid.looping_manhattan_dist(field[b], a)) as i64;
         let diff = self.0 as i64 - before + after;
         Self(diff as _)
     }
@@ -64,36 +75,73 @@ impl PartialEq for GridState<'_> {
     }
 }
 
-impl<'grid> State<u64> for GridState<'grid> {
-    type NextStates = Vec<GridState<'grid>>;
-    fn next_states(&self, history: &[Self]) -> Vec<GridState<'grid>> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GridAction {
+    Swap(Movement),
+    Select(Pos),
+}
+
+impl<'grid> IdaStarState for GridState<'grid> {
+    type A = GridAction;
+    fn apply(&self, action: Self::A) -> Self {
+        match action {
+            GridAction::Swap(mov) => {
+                let selecting = self.selecting.unwrap();
+                let next_swap = self.field.grid.move_pos_to(selecting, mov);
+                let mut new_field = self.field.clone();
+                new_field.swap(selecting, next_swap);
+                Self {
+                    selecting: Some(next_swap),
+                    field: new_field,
+                    different_cells: self.different_cells.on_swap(
+                        &self.field,
+                        selecting,
+                        next_swap,
+                    ),
+                    ..self.clone()
+                }
+            }
+            GridAction::Select(sel) => Self {
+                selecting: Some(sel),
+                remaining_select: self.remaining_select - 1,
+                ..self.clone()
+            },
+        }
+    }
+
+    type AS = Vec<GridAction>;
+    fn next_actions(&self, history: &[Self::A]) -> Self::AS {
         // 揃っているマスどうしは入れ替えない
         let different_cells = self
             .field
             .iter_with_pos()
             .filter(|&(pos, &cell)| pos != cell)
             .map(|(_, &cell)| cell);
-        if history.len() <= 1 {
-            return different_cells
-                .map(|next_select| self.with_next_select(next_select))
-                .collect();
+        if history.is_empty() {
+            return different_cells.map(GridAction::Select).collect();
         }
         let selecting = self.selecting.unwrap();
-        let prev_prev = &history[history.len() - 2];
-        let around = self.grid.around_of(selecting);
-        let swapping_states = around
-            .iter()
-            .cloned()
-            .filter(|&around| {
-                prev_prev
-                    .selecting
-                    .map_or(true, |selected| around != selected)
-            })
-            .map(|next_swap| self.with_next_swap(next_swap));
-        if self.is_moved_from(prev_prev) && 1 <= self.remaining_select {
+        let prev = history.last().unwrap();
+        let swapping_states = [
+            Movement::Up,
+            Movement::Right,
+            Movement::Down,
+            Movement::Left,
+        ]
+        .iter()
+        .cloned()
+        .filter(|&around| {
+            if let GridAction::Swap(dir) = prev {
+                around != dir.opposite()
+            } else {
+                true
+            }
+        })
+        .map(GridAction::Swap);
+        if matches!(prev, GridAction::Swap(_)) && 1 <= self.remaining_select {
             let selecting_states = different_cells
                 .filter(|&p| p != selecting)
-                .map(|next_select| self.with_next_select(next_select));
+                .map(GridAction::Select);
             swapping_states.chain(selecting_states).collect()
         } else {
             swapping_states.collect()
@@ -104,75 +152,40 @@ impl<'grid> State<u64> for GridState<'grid> {
         self.different_cells.0 == 0
     }
 
-    fn heuristic(&self) -> u64 {
-        self.different_cells.0
+    type C = u64;
+    fn heuristic(&self) -> Self::C {
+        (self.different_cells.0 as f64).powf(1.0 + 41.0 / 256.0) as u64
     }
 
-    fn cost_between(&self, next: &Self) -> u64 {
-        if self.selecting.is_none() {
-            return self.swap_cost as u64;
+    fn cost_on(&self, action: Self::A) -> Self::C {
+        match action {
+            GridAction::Swap(_) => self.swap_cost as u64,
+            GridAction::Select(_) => self.select_cost as u64,
         }
-        (if next.is_moved_from(self) {
-            self.swap_cost
-        } else {
-            self.select_cost
-        }) as u64
     }
 }
 
-impl GridState<'_> {
-    #[inline]
-    fn with_next_select(&self, next_select: Pos) -> Self {
-        Self {
-            selecting: Some(next_select),
-            remaining_select: self.remaining_select - 1,
-            ..self.clone()
-        }
+/// 操作の履歴 Vec<GridAction> を Vec<Operation> に変換する.
+fn actions_to_operations(actions: Vec<GridAction>) -> Vec<Operation> {
+    if actions.is_empty() {
+        return vec![];
     }
-
-    #[inline]
-    fn with_next_swap(&self, next_swap: Pos) -> Self {
-        let selecting = self.selecting.unwrap();
-        let mut new_field = self.field.clone();
-        new_field.swap(selecting, next_swap);
-        Self {
-            selecting: Some(next_swap),
-            field: new_field,
-            different_cells: self
-                .different_cells
-                .on_swap(&self.field, selecting, next_swap),
-            ..self.clone()
-        }
-    }
-
-    #[inline]
-    fn is_moved_from(&self, prev: &Self) -> bool {
-        prev.selecting.map_or(true, |prev_selecting| {
-            prev.field[prev_selecting] == self.field[self.selecting.unwrap()]
-        })
-    }
-}
-
-/// 状態の履歴 Vec<GridState> を Vec<Operation> に変換する.
-fn path_to_operations(path: Vec<GridState>) -> Vec<Operation> {
     let mut current_operation: Option<Operation> = None;
     let mut operations = vec![];
-    let mut prev = &path[0];
-    for state in &path[1..] {
-        let is_swapped = (&prev.field)
-            .into_iter()
-            .zip(&state.field)
-            .any(|(a, b)| a != b);
-        if is_swapped {
-            let movement = Movement::between_pos(prev.selecting.unwrap(), state.selecting.unwrap());
-            current_operation.as_mut().unwrap().movements.push(movement);
-        } else if let Some(op) = current_operation.replace(Operation {
-            select: state.selecting.unwrap(),
-            movements: vec![],
-        }) {
-            operations.push(op);
+    for state in actions {
+        match state {
+            GridAction::Swap(mov) => {
+                current_operation.as_mut().unwrap().movements.push(mov);
+            }
+            GridAction::Select(select) => {
+                if let Some(op) = current_operation.replace(Operation {
+                    select,
+                    movements: vec![],
+                }) {
+                    operations.push(op);
+                }
+            }
         }
-        prev = state;
     }
     if let Some(op) = current_operation {
         operations.push(op);
@@ -189,20 +202,8 @@ pub(crate) fn resolve(
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
-    let lower_bound = {
-        let mut distances: Vec<_> = nodes
-            .iter_with_pos()
-            .map(|(p, &n)| {
-                (p.manhattan_distance(n) as u64).min(
-                    (p.x() as i64 + grid.width() as i64 - n.x() as i64).unsigned_abs()
-                        + (p.y() as i64 + grid.height() as i64 - n.y() as i64).unsigned_abs(),
-                )
-            })
-            .collect();
-        distances.sort_unstable();
-        distances.iter().sum()
-    };
-    let different_cells = DifferentCells(lower_bound);
+    let different_cells = DifferentCells::new(&nodes);
+    let lower_bound = different_cells.0;
     // 600e8 = (WH)^select => select = 10 log 6 / log WH
     let maximum_select =
         (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
@@ -218,5 +219,5 @@ pub(crate) fn resolve(
         },
         lower_bound,
     );
-    path_to_operations(path)
+    actions_to_operations(path)
 }
