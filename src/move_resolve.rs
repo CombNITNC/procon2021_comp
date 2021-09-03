@@ -165,39 +165,6 @@ impl<'grid> IdaStarState for GridState<'grid> {
     }
 }
 
-impl GridState<'_> {
-    #[inline]
-    fn with_next_select(&self, next_select: Pos) -> Self {
-        Self {
-            selecting: Some(next_select),
-            remaining_select: self.remaining_select - 1,
-            ..self.clone()
-        }
-    }
-
-    #[inline]
-    fn with_next_swap(&self, next_swap: Pos) -> Self {
-        let selecting = self.selecting.unwrap();
-        let mut new_field = self.field.clone();
-        new_field.swap(selecting, next_swap);
-        Self {
-            selecting: Some(next_swap),
-            field: new_field,
-            different_cells: self
-                .different_cells
-                .on_swap(&self.field, selecting, next_swap),
-            ..self.clone()
-        }
-    }
-
-    #[inline]
-    fn is_moved_from(&self, prev: &Self) -> bool {
-        prev.selecting.map_or(true, |prev_selecting| {
-            prev.field[prev_selecting] == self.field[self.selecting.unwrap()]
-        })
-    }
-}
-
 /// 操作の履歴 Vec<GridAction> を Vec<Operation> に変換する.
 fn actions_to_operations(actions: Vec<GridAction>) -> Vec<Operation> {
     if actions.is_empty() {
