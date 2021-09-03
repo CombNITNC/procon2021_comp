@@ -333,7 +333,7 @@ impl IdaStarState for GridRowCompleter<'_> {
             }
         })
         .map(GridAction::Swap);
-        if matches!(prev, GridAction::Swap(_)) && 1 <= self.remaining_select {
+        if matches!(prev, GridAction::Swap(_)) && 2 < self.remaining_select {
             let selecting_states = different
                 .filter(|&p| p != selecting)
                 .map(GridAction::Select);
