@@ -1,5 +1,7 @@
 pub(crate) use vec_on_grid::*;
 
+use crate::basis::Movement;
+
 mod vec_on_grid;
 
 /// `Pos` は `Grid` に存在する座標を表す.
@@ -131,6 +133,15 @@ impl Grid {
             self.down_of(pos),
             self.left_of(pos),
         ]
+    }
+
+    pub(crate) fn move_pos_to(&self, pos: Pos, to: Movement) -> Pos {
+        match to {
+            Movement::Up => self.up_of(pos),
+            Movement::Right => self.right_of(pos),
+            Movement::Down => self.down_of(pos),
+            Movement::Left => self.left_of(pos),
+        }
     }
 
     pub(crate) fn range(&self, up_left: Pos, down_right: Pos) -> RangePos {
