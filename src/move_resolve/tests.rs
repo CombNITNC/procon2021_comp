@@ -194,9 +194,9 @@ fn rand_case() {
         let taking = between.sample(rng);
         points.into_iter().take(taking).collect()
     }
-    const WIDTH: u8 = 5;
+    const WIDTH: u8 = 6;
     const HEIGHT: u8 = 6;
-    const SELECT_LIMIT: u8 = 3;
+    const SELECT_LIMIT: u8 = 6;
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
     let mut rng = rand::thread_rng();
