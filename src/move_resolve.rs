@@ -247,3 +247,16 @@ pub(crate) fn resolve(
     );
     actions_to_operations(path)
 }
+
+/// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の近似解を求める.
+pub(crate) fn resolve_approximately(
+    grid: &Grid,
+    movements: &[(Pos, Pos)],
+    select_limit: u8,
+    swap_cost: u16,
+    select_cost: u16,
+) -> Vec<Operation> {
+    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
+    let different_cells = DifferentCells::new(&nodes);
+    todo!()
+}
