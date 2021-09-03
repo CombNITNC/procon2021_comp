@@ -250,7 +250,6 @@ pub(crate) fn resolve(
 
 #[derive(Clone)]
 struct GridRowCompleter<'grid> {
-    grid: &'grid Grid,
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
     target_row: u8,
@@ -289,23 +288,82 @@ impl PartialEq for GridRowCompleter<'_> {
 impl IdaStarState for GridRowCompleter<'_> {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
-        todo!()
+        match action {
+            GridAction::Swap(mov) => {
+                let selecting = self.selecting.unwrap();
+                let next_swap = self.field.grid.move_pos_to(selecting, mov);
+                let mut new_field = self.field.clone();
+                new_field.swap(selecting, next_swap);
+                Self {
+                    selecting: Some(next_swap),
+                    field: new_field,
+                    ..self.clone()
+                }
+            }
+            GridAction::Select(sel) => Self {
+                selecting: Some(sel),
+                remaining_select: self.remaining_select - 1,
+                ..self.clone()
+            },
+        }
     }
 
     type AS = Vec<Self::A>;
     fn next_actions(&self, history: &[Self::A]) -> Self::AS {
-        todo!()
+        let grid = self.field.grid;
+        let different = (0..grid.width())
+            .map(|x| grid.clamping_pos(x, self.target_row))
+            .filter(|&pos| pos != self.field[pos]);
+        if history.is_empty() {
+            return different.map(GridAction::Select).collect();
+        }
+        let selecting = self.selecting.unwrap();
+        let prev = history.last().unwrap();
+        let swapping_states = [
+            Movement::Up,
+            Movement::Right,
+            Movement::Down,
+            Movement::Left,
+        ]
+        .iter()
+        .cloned()
+        .filter(|&around| {
+            if let GridAction::Swap(dir) = prev {
+                around != dir.opposite()
+            } else {
+                true
+            }
+        })
+        .map(GridAction::Swap);
+        if matches!(prev, GridAction::Swap(_)) && 1 <= self.remaining_select {
+            let selecting_states = different
+                .filter(|&p| p != selecting)
+                .map(GridAction::Select);
+            swapping_states.chain(selecting_states).collect()
+        } else {
+            swapping_states.collect()
+        }
     }
     fn is_goal(&self) -> bool {
-        todo!()
+        let grid = self.field.grid;
+        (0..grid.width())
+            .map(|x| grid.clamping_pos(x, self.target_row))
+            .all(|pos| pos == self.field[pos])
     }
 
     type C = u64;
     fn heuristic(&self) -> Self::C {
-        todo!()
+        let grid = self.field.grid;
+        (0..grid.width())
+            .map(|x| grid.clamping_pos(x, self.target_row))
+            .filter(|&pos| pos != self.field[pos])
+            .count() as u64
     }
     fn cost_on(&self, action: Self::A) -> Self::C {
-        todo!()
+        match action {
+            GridAction::Swap(_) => self.swap_cost as u64,
+            GridAction::Select(_) => self.select_cost as u64,
+        }
     }
 }
 
@@ -323,7 +381,6 @@ pub(crate) fn resolve_approximately(
     let mut selection = None;
     for y in 0..grid.height() - 1 {
         let row_completer = GridRowCompleter {
-            grid,
             field: nodes.clone(),
             selecting: selection,
             target_row: y,
