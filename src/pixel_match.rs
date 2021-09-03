@@ -2,6 +2,8 @@ use crate::basis::{Color, Dir, Rot};
 use crate::fragment::Fragment;
 use crate::grid::{Pos, VecOnGrid};
 
+mod shaker;
+
 #[derive(Debug)]
 struct DiffEntry {
     pos: Pos,
