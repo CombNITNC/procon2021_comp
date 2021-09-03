@@ -43,7 +43,7 @@ fn smallest_case() {
     assert_eq!(
         Operation {
             select: grid.pos(1, 0),
-            movements: vec![Left],
+            movements: vec![Right],
         },
         path[0]
     );
@@ -86,12 +86,18 @@ where
     E: IntoIterator<Item = T>,
     A: IntoIterator<Item = T>,
     T: PartialEq + std::fmt::Debug,
-    E::IntoIter: ExactSizeIterator,
-    A::IntoIter: ExactSizeIterator,
+    E::IntoIter: ExactSizeIterator + std::fmt::Debug,
+    A::IntoIter: ExactSizeIterator + std::fmt::Debug,
 {
     let expected = expected.into_iter();
     let actual = actual.into_iter();
-    assert_eq!(expected.len(), actual.len());
+    assert_eq!(
+        expected.len(),
+        actual.len(),
+        "expected: {:?}\nactual: {:?}",
+        expected,
+        actual
+    );
     expected
         .zip(actual)
         .enumerate()
@@ -112,7 +118,7 @@ fn case1() {
     let expected = vec![
         Operation {
             select: grid.pos(2, 0),
-            movements: vec![Left, Down, Left, Left],
+            movements: vec![Left, Up, Left, Left],
         },
         Operation {
             select: grid.pos(1, 1),
@@ -189,7 +195,7 @@ fn rand_case() {
         points.into_iter().take(taking).collect()
     }
     const WIDTH: u8 = 5;
-    const HEIGHT: u8 = 5;
+    const HEIGHT: u8 = 6;
     const SELECT_LIMIT: u8 = 3;
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
@@ -212,12 +218,7 @@ fn rand_case() {
     for Operation { select, movements } in result {
         let mut current = select;
         for movement in movements {
-            let to_swap = match movement {
-                Up => grid.up_of(current),
-                Right => grid.right_of(current),
-                Down => grid.down_of(current),
-                Left => grid.left_of(current),
-            };
+            let to_swap = grid.move_pos_to(current, movement);
             nodes.swap(current, to_swap);
             current = to_swap;
         }

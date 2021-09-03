@@ -1,5 +1,7 @@
 pub(crate) use vec_on_grid::*;
 
+use crate::basis::Movement;
+
 mod vec_on_grid;
 
 /// `Pos` は `Grid` に存在する座標を表す.
@@ -133,6 +135,15 @@ impl Grid {
         ]
     }
 
+    pub(crate) fn move_pos_to(&self, pos: Pos, to: Movement) -> Pos {
+        match to {
+            Movement::Up => self.up_of(pos),
+            Movement::Right => self.right_of(pos),
+            Movement::Down => self.down_of(pos),
+            Movement::Left => self.left_of(pos),
+        }
+    }
+
     pub(crate) fn range(&self, up_left: Pos, down_right: Pos) -> RangePos {
         assert!(up_left.x() <= down_right.x());
         assert!(up_left.y() <= down_right.y());
@@ -158,6 +169,11 @@ impl Grid {
     }
 
     pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
+        let (x, y) = self.looping_min_vec(a, b);
+        manhattan_dist(a, x, y) as u32
+    }
+
+    pub(crate) fn looping_min_vec(&self, a: Pos, b: Pos) -> (i32, i32) {
         let width = self.width as i32;
         let height = self.height as i32;
         let bx = b.x() as i32;
@@ -186,10 +202,16 @@ impl Grid {
         };
         std::iter::once(&(bx, by))
             .chain(other_points.iter())
-            .map(|(bx, by)| (a.x() as i32 - bx).abs() + (a.y() as i32 - by).abs())
-            .min()
-            .unwrap() as u32
+            .cloned()
+            .min_by(|&(ax, ay), &(bx, by)| {
+                manhattan_dist(a, ax, ay).cmp(&manhattan_dist(a, bx, by))
+            })
+            .unwrap()
     }
+}
+
+fn manhattan_dist(a: Pos, bx: i32, by: i32) -> i32 {
+    (a.x() as i32 - bx).abs() + (a.y() as i32 - by).abs()
 }
 
 #[test]
