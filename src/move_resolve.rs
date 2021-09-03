@@ -47,6 +47,7 @@ impl DifferentCells {
 struct GridCompleter<'grid> {
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
+    prev_action: Option<GridAction>,
     different_cells: DifferentCells,
     swap_cost: u16,
     select_cost: u16,
@@ -97,30 +98,32 @@ impl<'grid> IdaStarState for GridCompleter<'grid> {
                         selecting,
                         next_swap,
                     ),
+                    prev_action: Some(action),
                     ..self.clone()
                 }
             }
             GridAction::Select(sel) => Self {
                 selecting: Some(sel),
                 remaining_select: self.remaining_select - 1,
+                prev_action: Some(action),
                 ..self.clone()
             },
         }
     }
 
     type AS = Vec<GridAction>;
-    fn next_actions(&self, history: &[Self::A]) -> Self::AS {
+    fn next_actions(&self) -> Self::AS {
         // 揃っているマスどうしは入れ替えない
         let different_cells = self
             .field
             .iter_with_pos()
             .filter(|&(pos, &cell)| pos != cell)
             .map(|(_, &cell)| cell);
-        if history.is_empty() {
+        if self.selecting.is_none() {
             return different_cells.map(GridAction::Select).collect();
         }
         let selecting = self.selecting.unwrap();
-        let prev = history.last().unwrap();
+        let prev = self.prev_action.unwrap();
         let swapping_states = [
             Movement::Up,
             Movement::Right,
@@ -236,6 +239,7 @@ pub(crate) fn resolve(
         GridCompleter {
             field: nodes.clone(),
             selecting: None,
+            prev_action: None,
             different_cells,
             swap_cost,
             select_cost,
@@ -250,6 +254,7 @@ pub(crate) fn resolve(
 struct GridRowCompleter<'grid> {
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
+    prev_action: Option<GridAction>,
     target_row: u8,
     swap_cost: u16,
     select_cost: u16,
@@ -295,28 +300,30 @@ impl IdaStarState for GridRowCompleter<'_> {
                 Self {
                     selecting: Some(next_swap),
                     field: new_field,
+                    prev_action: Some(action),
                     ..self.clone()
                 }
             }
             GridAction::Select(sel) => Self {
                 selecting: Some(sel),
                 remaining_select: self.remaining_select - 1,
+                prev_action: Some(action),
                 ..self.clone()
             },
         }
     }
 
     type AS = Vec<Self::A>;
-    fn next_actions(&self, history: &[Self::A]) -> Self::AS {
+    fn next_actions(&self) -> Self::AS {
         let grid = self.field.grid;
         let different = (0..grid.width())
             .map(|x| grid.clamping_pos(x, self.target_row))
             .filter(|&pos| pos != self.field[pos]);
-        if history.is_empty() {
+        if self.prev_action.is_none() {
             return different.map(GridAction::Select).collect();
         }
         let selecting = self.selecting.unwrap();
-        let prev = history.last().unwrap();
+        let prev = self.prev_action.unwrap();
         let swapping_states = [
             Movement::Up,
             Movement::Right,
@@ -382,6 +389,7 @@ pub(crate) fn resolve_approximately(
             field: nodes.clone(),
             selecting: selection,
             target_row: y,
+            prev_action: all_actions.last().cloned(),
             swap_cost,
             select_cost,
             remaining_select: select_limit,
@@ -406,6 +414,7 @@ pub(crate) fn resolve_approximately(
         GridCompleter {
             field: nodes.clone(),
             selecting: selection,
+            prev_action: all_actions.last().cloned(),
             different_cells,
             swap_cost,
             select_cost,

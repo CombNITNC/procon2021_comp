@@ -6,7 +6,7 @@ pub trait IdaStarState: PartialEq + Clone + std::fmt::Debug {
     fn apply(&self, action: Self::A) -> Self;
 
     type AS: IntoIterator<Item = Self::A>;
-    fn next_actions(&self, history: &[Self::A]) -> Self::AS;
+    fn next_actions(&self) -> Self::AS;
 
     fn is_goal(&self) -> bool;
 
@@ -36,7 +36,7 @@ where
         return FindResult::Found;
     }
     let mut min = None;
-    for action in node.next_actions(history) {
+    for action in node.next_actions() {
         history.push(action);
         let next_distance = distance + node.cost_on(action);
         match find(node.apply(action), history, next_distance, bound) {
