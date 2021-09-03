@@ -44,7 +44,7 @@ impl DifferentCells {
 }
 
 #[derive(Clone)]
-struct GridState<'grid> {
+struct GridCompleter<'grid> {
     grid: &'grid Grid,
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
@@ -54,7 +54,7 @@ struct GridState<'grid> {
     remaining_select: u8,
 }
 
-impl std::fmt::Debug for GridState<'_> {
+impl std::fmt::Debug for GridCompleter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridState")
             .field("field", &self.field)
@@ -65,7 +65,7 @@ impl std::fmt::Debug for GridState<'_> {
     }
 }
 
-impl PartialEq for GridState<'_> {
+impl PartialEq for GridCompleter<'_> {
     fn eq(&self, other: &Self) -> bool {
         (&self.field)
             .into_iter()
@@ -81,7 +81,7 @@ enum GridAction {
     Select(Pos),
 }
 
-impl<'grid> IdaStarState for GridState<'grid> {
+impl<'grid> IdaStarState for GridCompleter<'grid> {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
         match action {
@@ -234,7 +234,7 @@ pub(crate) fn resolve(
     let maximum_select =
         (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
     let (path, _total_cost) = ida_star(
-        GridState {
+        GridCompleter {
             grid,
             field: nodes.clone(),
             selecting: None,
