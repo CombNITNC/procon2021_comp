@@ -13,6 +13,7 @@ pub(crate) struct Color {
 }
 
 impl Color {
+    /// RGB色空間での色同士の距離を求める
     #[inline]
     pub(crate) fn euclidean_distance(&self, c: Color) -> f64 {
         let r = (self.r as i16 - c.r as i16) as f64;

@@ -14,29 +14,31 @@ fn find_by_single_side(fragments: &[Fragment], reference_edge: &Edge) -> DiffEnt
     })
 }
 
-#[allow(clippy::type_complexity)]
+/// root_ref から left_dir と left_dir.opposite() 方向に探索して、スコアが良い順に採用する。
 pub(super) fn shaker_fill(
     num_fragment: u8,
     fragments: &mut Vec<Fragment>,
-    (mut left_dir, mut right_dir): (Dir, Dir),
-    (mut left_fragment_ref, mut right_fragment_ref): (&Fragment, &Fragment),
-) -> (Vec<(Fragment, DiffEntry)>, Vec<(Fragment, DiffEntry)>) {
+    left_dir: Dir,
+    root_ref: &Fragment,
+) -> (Vec<Fragment>, Vec<Fragment>) {
+    let right_dir = left_dir.opposite();
     let (mut left, mut right) = (vec![], vec![]);
+    let (mut left_fragment_ref, mut right_fragment_ref) = (root_ref, root_ref);
 
     while right.len() + left.len() + 1 != num_fragment as usize {
         let right_score = find_by_single_side(fragments, right_fragment_ref.edges.edge(right_dir));
         let left_score = find_by_single_side(fragments, left_fragment_ref.edges.edge(left_dir));
 
         if right_score.score < left_score.score {
-            let fragment = find_and_remove(fragments, right_score.pos).unwrap();
-            right_dir = right_score.dir.opposite();
-            right.push((fragment, right_score));
-            right_fragment_ref = &right.last().unwrap().0;
+            let mut fragment = find_and_remove(fragments, right_score.pos).unwrap();
+            fragment.rotate(right_dir.calc_rot(right_score.dir));
+            right.push(fragment);
+            right_fragment_ref = right.last().unwrap();
         } else {
-            let fragment = find_and_remove(fragments, left_score.pos).unwrap();
-            left_dir = left_score.dir.opposite();
-            left.push((fragment, left_score));
-            left_fragment_ref = &left.last().unwrap().0;
+            let mut fragment = find_and_remove(fragments, left_score.pos).unwrap();
+            fragment.rotate(left_dir.calc_rot(left_score.dir));
+            left.push(fragment);
+            left_fragment_ref = left.last().unwrap();
         }
     }
 

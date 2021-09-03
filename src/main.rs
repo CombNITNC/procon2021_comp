@@ -21,7 +21,7 @@ use crate::{
 };
 
 fn main() {
-    let file = File::open("problem.ppm").unwrap();
+    let file = File::open("problem.ppm").expect("failed to open problem file");
     let reader = BufReader::new(file);
     let problem = image::read_problem(reader).unwrap();
     let grid = Grid::new(problem.rows, problem.cols);

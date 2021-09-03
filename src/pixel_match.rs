@@ -1,4 +1,4 @@
-use crate::basis::{Color, Dir, Problem, Rot};
+use crate::basis::{Color, Dir, Problem};
 use crate::fragment::Fragment;
 use crate::grid::{Grid, Pos, VecOnGrid};
 
@@ -16,25 +16,15 @@ pub(crate) fn resolve<'g>(problem: &Problem, grid: &'g Grid) -> VecOnGrid<'g, Op
     let root = find_and_remove(&mut fragments, Pos::new(0, 0)).unwrap();
 
     // そこから上下左右に伸ばす形で探索
-    let (up, down) = shaker_fill(
-        grid.height(),
-        &mut fragments,
-        (Dir::North, Dir::South),
-        (&root, &root),
-    );
-    let (left, right) = shaker_fill(
-        grid.width(),
-        &mut fragments,
-        (Dir::West, Dir::East),
-        (&root, &root),
-    );
+    let (up, down) = shaker_fill(grid.height(), &mut fragments, Dir::North, &root);
+    let (left, right) = shaker_fill(grid.width(), &mut fragments, Dir::West, &root);
 
     // root から上下左右に何個断片が有るかわかったので、rootのあるべき座標が分かる
     let root_pos = Pos::new(left.len() as _, up.len() as _);
 
-    place_initial_result_on_grid(&mut fragment_grid, root, [up, down, left, right]);
+    place_shaker_result_on_grid(&mut fragment_grid, root, [up, down, left, right]);
 
-    // r = root, x = すでにわかった断片 としたとき、今以下のような状態になっている。
+    // r = root, x = すでにわかった断片 としたとき、今 fragment_grid は以下のような状態になっている。
     // ------------
     //    2    x  1
     //         x
@@ -99,6 +89,40 @@ pub(crate) fn resolve<'g>(problem: &Problem, grid: &'g Grid) -> VecOnGrid<'g, Op
     fragment_grid
 }
 
+#[inline]
+fn place_shaker_result_on_grid(
+    fragment_grid: &mut VecOnGrid<Option<Fragment>>,
+    root: Fragment,
+    [up, down, left, right]: [Vec<Fragment>; 4],
+) {
+    let root_pos = Pos::new(left.len() as _, up.len() as _);
+
+    let mut place =
+        |x, y, cell| *fragment_grid.get_mut(Pos::new(x as _, y as _)).unwrap() = Some(cell);
+
+    place(left.len() as u8, up.len() as u8, root);
+
+    // North
+    for (i, v) in up.into_iter().enumerate() {
+        place(root_pos.x(), root_pos.y() - 1 - i as u8, v);
+    }
+
+    // South
+    for (i, v) in down.into_iter().enumerate() {
+        place(root_pos.x(), root_pos.y() + 1 + i as u8, v);
+    }
+
+    // West
+    for (i, v) in left.into_iter().enumerate() {
+        place(root_pos.x() - 1 - i as u8, root_pos.y(), v);
+    }
+
+    // East
+    for (i, v) in right.into_iter().enumerate() {
+        place(root_pos.x() + 1 + i as u8, root_pos.y(), v);
+    }
+}
+
 #[derive(Debug)]
 struct DiffEntry {
     pos: Pos,
@@ -106,6 +130,7 @@ struct DiffEntry {
     score: f64,
 }
 
+/// f から返される DiffEntry たちから最も最適なものを返す
 #[inline]
 fn find_with<'a, F, I>(fragments: &'a [Fragment], f: F) -> DiffEntry
 where
@@ -119,6 +144,7 @@ where
         .expect("there were no fragments")
 }
 
+/// reference と challenge 間の色距離の平均を求める
 #[inline]
 fn average_distance<'a>(
     reference: impl Iterator<Item = &'a Color>,
@@ -136,107 +162,8 @@ fn average_distance<'a>(
     sum_of_distance / count as f64
 }
 
+/// vec から pos を持つ Fragment の所有権を取得する
+#[inline]
 fn find_and_remove(vec: &mut Vec<Fragment>, pos: Pos) -> Option<Fragment> {
     Some(vec.remove(vec.iter().position(|x| x.pos == pos)?))
-}
-
-fn get_edge_pixels<'a>(
-    vec: &'a VecOnGrid<Option<Fragment>>,
-    pos: Pos,
-    dir: Dir,
-) -> Option<&'a Vec<Color>> {
-    Some(&vec.get(pos)?.as_ref()?.edges.edge(dir).pixels)
-}
-
-fn place_initial_result_on_grid(
-    fragment_grid: &mut VecOnGrid<Option<Fragment>>,
-    root: Fragment,
-    [up, down, left, right]: [Vec<(Fragment, DiffEntry)>; 4],
-) {
-    let root_pos = Pos::new(left.len() as _, up.len() as _);
-
-    *fragment_grid.get_mut(root_pos).unwrap() = Some(root);
-
-    let mut place = |dir, data: Vec<(Fragment, DiffEntry)>| {
-        place_for_direction(
-            fragment_grid,
-            root_pos,
-            dir,
-            data.into_iter().map(|(mut fragment, diffentry)| {
-                fragment.rotate(rotate_count(dir, diffentry.dir));
-                fragment
-            }),
-        )
-    };
-
-    place(Dir::North, up);
-    place(Dir::South, down);
-    place(Dir::West, left);
-    place(Dir::East, right);
-}
-
-fn place_for_direction<T>(
-    grid: &mut VecOnGrid<Option<T>>,
-    from: Pos,
-    dir: Dir,
-    data: impl Iterator<Item = T>,
-) {
-    let mut place = |x, y, cell| *grid.get_mut(Pos::new(x as _, y as _)).unwrap() = Some(cell);
-
-    match dir {
-        Dir::North => {
-            for (i, v) in data.enumerate() {
-                place(from.x(), from.y() - 1 - i as u8, v);
-            }
-        }
-
-        Dir::South => {
-            for (i, v) in data.enumerate() {
-                place(from.x(), from.y() + 1 + i as u8, v);
-            }
-        }
-
-        Dir::West => {
-            for (i, v) in data.enumerate() {
-                place(from.x() - 1 - i as u8, from.y(), v);
-            }
-        }
-
-        Dir::East => {
-            for (i, v) in data.enumerate() {
-                place(from.x() + 1 + i as u8, from.y(), v);
-            }
-        }
-    }
-}
-
-#[inline]
-fn rotate_count(from: Dir, to: Dir) -> Rot {
-    use Rot::*;
-    match from {
-        Dir::North => match to {
-            Dir::South => R0,
-            Dir::East => R90,
-            Dir::North => R180,
-            Dir::West => R270,
-        },
-        Dir::East => match to {
-            Dir::West => R0,
-            Dir::South => R90,
-            Dir::East => R180,
-            Dir::North => R270,
-        },
-        Dir::South => match to {
-            Dir::North => R0,
-            Dir::West => R90,
-            Dir::South => R180,
-            Dir::East => R270,
-        },
-        Dir::West => match to {
-            Dir::East => R0,
-            Dir::North => R90,
-            Dir::West => R180,
-            Dir::South => R270,
-        },
-    }
 }

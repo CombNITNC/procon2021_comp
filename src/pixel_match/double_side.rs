@@ -4,9 +4,15 @@ use crate::{
     grid::{Pos, VecOnGrid},
 };
 
-use super::{
-    average_distance, find_and_remove, find_with, get_edge_pixels, rotate_count, DiffEntry,
-};
+use super::{average_distance, find_and_remove, find_with, DiffEntry};
+
+fn get_edge_pixels<'a>(
+    grid: &'a VecOnGrid<Option<Fragment>>,
+    pos: Pos,
+    dir: Dir,
+) -> Option<&'a Vec<Color>> {
+    Some(&grid.get(pos)?.as_ref()?.edges.edge(dir).pixels)
+}
 
 fn find_by_double_side<'a, I>(fragments: &'a [Fragment], reference_iter: I) -> DiffEntry
 where
@@ -33,6 +39,7 @@ where
     })
 }
 
+/// 2辺から最も合う断片を探して fragment_grid に入れる
 pub(super) fn fill_by_double_side(
     fragments: &mut Vec<Fragment>,
     fragment_grid: &mut VecOnGrid<Option<Fragment>>,
@@ -54,7 +61,7 @@ pub(super) fn fill_by_double_side(
     let min = find_by_double_side(fragments, reference_iter);
 
     let mut fragment = find_and_remove(fragments, min.pos).unwrap();
-    fragment.rotate(rotate_count(ref1_dir, min.dir));
+    fragment.rotate(ref1_dir.calc_rot(min.dir));
 
     *fragment_grid.get_mut(pos).unwrap() = Some(fragment);
 }
