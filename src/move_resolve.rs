@@ -121,7 +121,7 @@ impl<'grid> IdaStarState for GridCompleter<'grid> {
             Movement::Left,
         ]
         .iter()
-        .cloned()
+        .copied()
         .filter(|&around| {
             if let GridAction::Swap(dir) = prev {
                 around != dir.opposite()
@@ -309,7 +309,7 @@ impl IdaStarState for RowCompleter<'_> {
             Movement::Left,
         ]
         .iter()
-        .cloned()
+        .copied()
         .filter(|&around| {
             if let GridAction::Swap(dir) = prev {
                 around != dir.opposite()
@@ -394,7 +394,7 @@ fn resolve_approximately(
             field: nodes.clone(),
             selecting: selection,
             target_row: y,
-            prev_action: all_actions.last().cloned(),
+            prev_action: all_actions.last().copied(),
             swap_cost,
             select_cost,
             remaining_select: select_limit,
@@ -421,7 +421,7 @@ fn resolve_approximately(
         GridCompleter {
             field: nodes.clone(),
             selecting: selection,
-            prev_action: all_actions.last().cloned(),
+            prev_action: all_actions.last().copied(),
             different_cells,
             swap_cost,
             select_cost,
