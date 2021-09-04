@@ -316,14 +316,21 @@ impl IdaStarState for RowCompleter<'_> {
             }
         })
         .filter(|&mov| {
-            let min_vec = grid.looping_min_vec(selecting, self.field[selecting]);
+            let next_to_swap = grid.move_pos_to(selecting, mov);
+            if self.field[next_to_swap].y() != self.target_row {
+                return true;
+            }
+            // 入れ替え対象が target_row に属する場合
+            // next_to_swap がマンハッタン経路を辿るようにする
+            let min_vec = grid.looping_min_vec(next_to_swap, self.field[next_to_swap]);
             let preferred_dir = match min_vec {
                 (min_x, min_y) if 0 < min_x && 0 < min_y => [Movement::Right, Movement::Down],
                 (min_x, min_y) if 0 < min_x && min_y < 0 => [Movement::Right, Movement::Up],
                 (min_x, min_y) if min_x < 0 && 0 < min_y => [Movement::Left, Movement::Down],
                 _ => [Movement::Left, Movement::Up],
             };
-            preferred_dir.iter().any(|&preferred| preferred == mov)
+            let dir = Movement::between_pos(next_to_swap, selecting);
+            preferred_dir.iter().any(|&preferred| preferred == dir)
         })
         .map(GridAction::Swap);
         if matches!(prev, GridAction::Swap(_)) && 2 < self.remaining_select {
