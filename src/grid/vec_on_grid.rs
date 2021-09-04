@@ -128,7 +128,22 @@ impl<'grid, T> VecOnGrid<'grid, T> {
 
 impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.vec.fmt(f)
+        if f.alternate() {
+            writeln!(f, "[")?;
+            for y in 0..self.grid.height() as usize {
+                write!(f, "    ")?;
+                for x in 0..self.grid.width() as usize {
+                    if x != 0 {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "{:?}", self.vec[y * self.grid.width() as usize + x])?;
+                }
+                writeln!(f)?;
+            }
+            writeln!(f, "]")
+        } else {
+            self.vec.fmt(f)
+        }
     }
 }
 
