@@ -293,12 +293,10 @@ impl IdaStarState for RowCompleter<'_> {
     type AS = Vec<Self::A>;
     fn next_actions(&self) -> Self::AS {
         let grid = self.field.grid;
-        let different = (0..grid.width())
-            .flat_map(|x| {
-                (0..grid.height())
-                    .map(move |y| self.field[grid.clamping_pos(x, y)])
-                    .filter(|&pos| pos.y() != self.target_row)
-            })
+        let different = grid
+            .all_pos()
+            .map(|pos| self.field[pos])
+            .filter(|&pos| pos.y() != self.target_row)
             .filter(|&pos| pos != self.field[pos]);
         if self.prev_action.is_none() {
             return different.map(GridAction::Select).collect();
