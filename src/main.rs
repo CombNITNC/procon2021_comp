@@ -41,7 +41,7 @@ fn debug_image_output(name: &str, grid: &Grid, fragment_grid: VecOnGrid<Option<F
         .side_length();
 
     for (pos, data) in fragment_grid.into_iter_with_pos() {
-        *colors_grid.get_mut(pos).unwrap() = Some(data.unwrap().pixels);
+        colors_grid[pos] = Some(data.unwrap().pixels);
     }
 
     let f = File::create(name).unwrap();
@@ -65,7 +65,7 @@ fn debug_image_output(name: &str, grid: &Grid, fragment_grid: VecOnGrid<Option<F
     for y in 0..grid.height() {
         for py in 0..side_length {
             for x in 0..grid.width() {
-                if let Some(t) = colors_grid.get(grid.pos(x, y)).unwrap() {
+                if let Some(t) = &colors_grid[(grid.pos(x, y))] {
                     data.extend_from_slice(
                         &t[(py * side_length) as usize..((py + 1) * side_length) as usize],
                     );

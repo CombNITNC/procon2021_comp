@@ -98,9 +98,8 @@ fn place_shaker_result_on_grid(
     let root_pos = fragment_grid.grid.pos(left.len() as _, up.len() as _);
 
     let mut place = |x, y, cell| {
-        *fragment_grid
-            .get_mut(fragment_grid.grid.pos(x as _, y as _))
-            .unwrap() = Some(cell)
+        let pos = fragment_grid.grid.pos(x as _, y as _);
+        fragment_grid[pos] = Some(cell)
     };
 
     place(left.len() as u8, up.len() as u8, root);

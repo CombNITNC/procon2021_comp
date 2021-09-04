@@ -11,7 +11,7 @@ fn get_edge_pixels<'a>(
     pos: Pos,
     dir: Dir,
 ) -> Option<&'a Vec<Color>> {
-    Some(&grid.get(pos)?.as_ref()?.edges.edge(dir).pixels)
+    Some(&grid[pos].as_ref()?.edges.edge(dir).pixels)
 }
 
 fn find_by_double_side<'a, I>(fragments: &'a [Fragment], reference_iter: I) -> DiffEntry
@@ -63,5 +63,5 @@ pub(super) fn fill_by_double_side(
     let mut fragment = find_and_remove(fragments, min.pos).unwrap();
     fragment.rotate(ref1_dir.calc_rot(min.dir));
 
-    *fragment_grid.get_mut(pos).unwrap() = Some(fragment);
+    fragment_grid[pos] = Some(fragment);
 }
