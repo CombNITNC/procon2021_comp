@@ -16,7 +16,6 @@ mod submit;
 use crate::{
     basis::Color,
     fragment::Fragment,
-    grid::Pos,
     grid::{Grid, VecOnGrid},
 };
 
@@ -66,7 +65,7 @@ fn debug_image_output(name: &str, grid: &Grid, fragment_grid: VecOnGrid<Option<F
     for y in 0..grid.height() {
         for py in 0..side_length {
             for x in 0..grid.width() {
-                if let Some(t) = colors_grid.get(Pos::new(x, y)).unwrap() {
+                if let Some(t) = colors_grid.get(grid.pos(x, y)).unwrap() {
                     data.extend_from_slice(
                         &t[(py * side_length) as usize..((py + 1) * side_length) as usize],
                     );

@@ -13,14 +13,14 @@ pub(crate) fn resolve<'g>(problem: &Problem, grid: &'g Grid) -> VecOnGrid<'g, Op
     let mut fragment_grid = VecOnGrid::<Option<Fragment>>::with_default(grid);
 
     // 必ず向きの正しい左上の断片を取得
-    let root = find_and_remove(&mut fragments, Pos::new(0, 0)).unwrap();
+    let root = find_and_remove(&mut fragments, grid.pos(0, 0)).unwrap();
 
     // そこから上下左右に伸ばす形で探索
     let (up, down) = shaker_fill(grid.height(), &mut fragments, Dir::North, &root);
     let (left, right) = shaker_fill(grid.width(), &mut fragments, Dir::West, &root);
 
     // root から上下左右に何個断片が有るかわかったので、rootのあるべき座標が分かる
-    let root_pos = Pos::new(left.len() as _, up.len() as _);
+    let root_pos = grid.pos(left.len() as _, up.len() as _);
 
     place_shaker_result_on_grid(&mut fragment_grid, root, [up, down, left, right]);
 
@@ -40,9 +40,9 @@ pub(crate) fn resolve<'g>(problem: &Problem, grid: &'g Grid) -> VecOnGrid<'g, Op
             fill_by_double_side(
                 &mut fragments,
                 &mut fragment_grid,
-                Pos::new(x, y),
-                (Pos::new(x, y + 1), Dir::North),
-                (Pos::new(x - 1, y), Dir::East),
+                grid.pos(x, y),
+                (grid.pos(x, y + 1), Dir::North),
+                (grid.pos(x - 1, y), Dir::East),
             );
         }
     }
@@ -53,9 +53,9 @@ pub(crate) fn resolve<'g>(problem: &Problem, grid: &'g Grid) -> VecOnGrid<'g, Op
             fill_by_double_side(
                 &mut fragments,
                 &mut fragment_grid,
-                Pos::new(x, y),
-                (Pos::new(x + 1, y), Dir::West),
-                (Pos::new(x, y + 1), Dir::North),
+                grid.pos(x, y),
+                (grid.pos(x + 1, y), Dir::West),
+                (grid.pos(x, y + 1), Dir::North),
             );
         }
     }
@@ -66,9 +66,9 @@ pub(crate) fn resolve<'g>(problem: &Problem, grid: &'g Grid) -> VecOnGrid<'g, Op
             fill_by_double_side(
                 &mut fragments,
                 &mut fragment_grid,
-                Pos::new(x, y),
-                (Pos::new(x, y - 1), Dir::South),
-                (Pos::new(x + 1, y), Dir::West),
+                grid.pos(x, y),
+                (grid.pos(x, y - 1), Dir::South),
+                (grid.pos(x + 1, y), Dir::West),
             );
         }
     }
@@ -79,9 +79,9 @@ pub(crate) fn resolve<'g>(problem: &Problem, grid: &'g Grid) -> VecOnGrid<'g, Op
             fill_by_double_side(
                 &mut fragments,
                 &mut fragment_grid,
-                Pos::new(x, y),
-                (Pos::new(x - 1, y), Dir::East),
-                (Pos::new(x, y - 1), Dir::South),
+                grid.pos(x, y),
+                (grid.pos(x - 1, y), Dir::East),
+                (grid.pos(x, y - 1), Dir::South),
             );
         }
     }
@@ -95,10 +95,13 @@ fn place_shaker_result_on_grid(
     root: Fragment,
     [up, down, left, right]: [Vec<Fragment>; 4],
 ) {
-    let root_pos = Pos::new(left.len() as _, up.len() as _);
+    let root_pos = fragment_grid.grid.pos(left.len() as _, up.len() as _);
 
-    let mut place =
-        |x, y, cell| *fragment_grid.get_mut(Pos::new(x as _, y as _)).unwrap() = Some(cell);
+    let mut place = |x, y, cell| {
+        *fragment_grid
+            .get_mut(fragment_grid.grid.pos(x as _, y as _))
+            .unwrap() = Some(cell)
+    };
 
     place(left.len() as u8, up.len() as u8, root);
 
