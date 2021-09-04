@@ -1,7 +1,7 @@
 use std::ops::Add;
 
 /// A* で探索する状態が実装するべき trait.
-pub trait IdaStarState: PartialEq + Clone + std::fmt::Debug {
+pub trait IdaStarState: Clone + std::fmt::Debug {
     type A: Copy + std::fmt::Debug;
     fn apply(&self, action: Self::A) -> Self;
 

@@ -65,16 +65,6 @@ impl std::fmt::Debug for GridCompleter<'_> {
     }
 }
 
-impl PartialEq for GridCompleter<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        (&self.field)
-            .into_iter()
-            .zip(&other.field)
-            .all(|(a, b)| a == b)
-            && self.selecting == other.selecting
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum GridAction {
     Swap(Movement),
@@ -272,22 +262,6 @@ impl std::fmt::Debug for GridRowCompleter<'_> {
             .field("target_row", &self.target_row)
             .field("remaining_select", &self.remaining_select)
             .finish()
-    }
-}
-
-impl PartialEq for GridRowCompleter<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        if self.target_row != other.target_row {
-            return false;
-        }
-        let grid = self.field.grid;
-        for x in 0..grid.width() {
-            let pos = grid.clamping_pos(x, self.target_row);
-            if self.field[pos] != other.field[pos] {
-                return false;
-            }
-        }
-        true
     }
 }
 
