@@ -294,9 +294,7 @@ impl IdaStarState for RowCompleter<'_> {
         let grid = self.field.grid;
         let different = grid
             .all_pos()
-            .map(|pos| self.field[pos])
-            .filter(|&pos| pos.y() != self.target_row)
-            .filter(|&pos| pos != self.field[pos]);
+            .filter(|&pos| self.field[pos].y() != self.target_row);
         if self.prev_action.is_none() {
             return different.map(GridAction::Select).collect();
         }
