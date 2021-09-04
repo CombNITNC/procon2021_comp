@@ -59,7 +59,7 @@ fn debug_image_output(name: &str, grid: &Grid, fragment_grid: VecOnGrid<Option<F
 
     let mut writer = encoder.write_header().unwrap();
 
-    let zeros = vec![Color { r: 0, g: 0, b: 0 }; side_length as usize];
+    let zeros = vec![Color { r: 0, g: 0, b: 0 }; side_length];
     let mut data = vec![];
 
     for y in 0..grid.height() {
