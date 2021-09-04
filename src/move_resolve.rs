@@ -225,9 +225,6 @@ pub(crate) fn resolve(
     let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
     let different_cells = DifferentCells::new(&nodes);
     let lower_bound = different_cells.0;
-    // 600e8 = (WH)^select => select = 10 log 6 / log WH
-    let maximum_select =
-        (10.0 * 6.0f64.log2() / (grid.width() as f64 + grid.height() as f64).log2()).ceil() as u8;
     let (path, _total_cost) = ida_star(
         GridCompleter {
             field: nodes.clone(),
@@ -236,7 +233,7 @@ pub(crate) fn resolve(
             different_cells,
             swap_cost,
             select_cost,
-            remaining_select: select_limit.min(maximum_select),
+            remaining_select: select_limit,
         },
         lower_bound,
     );
