@@ -295,7 +295,9 @@ impl IdaStarState for RowCompleter<'_> {
         let grid = self.field.grid;
         let different = (0..grid.width())
             .flat_map(|x| {
-                (self.target_row + 1..grid.height()).map(move |y| grid.clamping_pos(x, y))
+                (0..grid.height())
+                    .map(move |y| self.field[grid.clamping_pos(x, y)])
+                    .filter(|&pos| pos.y() != self.target_row)
             })
             .filter(|&pos| pos != self.field[pos]);
         if self.prev_action.is_none() {
@@ -372,7 +374,18 @@ fn resolve_approximately(
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
     let mut all_actions = vec![];
     let mut selection = None;
-    for y in 0..grid.height().saturating_sub(5) {
+
+    let mut row_to_sort: Vec<_> = (0..grid.height()).collect();
+    for _ in 0..grid.height() - 1 {
+        let cost_to_sort_row = |y: u8| -> u32 {
+            (0..grid.width())
+                .map(move |x| grid.clamping_pos(x, y))
+                .map(|pos| grid.looping_manhattan_dist(pos, nodes[pos]))
+                .sum()
+        };
+        row_to_sort.sort_by(|&a, &b| cost_to_sort_row(b).cmp(&cost_to_sort_row(a)));
+        let y = row_to_sort.pop().unwrap();
+        eprintln!("start to sort the row: {}", y);
         let row_completer = RowCompleter {
             field: nodes.clone(),
             selecting: selection,
@@ -396,7 +409,7 @@ fn resolve_approximately(
                 }
             }
         }
-        eprintln!("row {}: {:?}", y, actions);
+        eprintln!("sort result: {:?}", actions);
         all_actions.append(&mut actions);
     }
     let different_cells = DifferentCells::new(&nodes);
