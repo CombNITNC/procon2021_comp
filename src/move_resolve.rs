@@ -289,6 +289,8 @@ impl IdaStarState for RowCompleter<'_> {
 
     type AS = Vec<Self::A>;
     fn next_actions(&self) -> Self::AS {
+        // Y 座標が target_row であるマスを揃える
+        // Y が target_row でないマスを選択して, Y が target_row であるマスを揃えていく
         let grid = self.field.grid;
         let different = grid
             .all_pos()
