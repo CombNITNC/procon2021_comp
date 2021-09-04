@@ -294,8 +294,9 @@ impl IdaStarState for RowCompleter<'_> {
     fn next_actions(&self) -> Self::AS {
         let grid = self.field.grid;
         let different = (0..grid.width())
-            .map(|x| grid.clamping_pos(x, self.target_row))
-            .filter(|pos| self.target_row < pos.y())
+            .flat_map(|x| {
+                (self.target_row + 1..grid.height()).map(move |y| grid.clamping_pos(x, y))
+            })
             .filter(|&pos| pos != self.field[pos]);
         if self.prev_action.is_none() {
             return different.map(GridAction::Select).collect();
@@ -316,6 +317,16 @@ impl IdaStarState for RowCompleter<'_> {
             } else {
                 true
             }
+        })
+        .filter(|&mov| {
+            let min_vec = grid.looping_min_vec(selecting, self.field[selecting]);
+            let preferred_dir = match min_vec {
+                (min_x, min_y) if 0 < min_x && 0 < min_y => [Movement::Right, Movement::Down],
+                (min_x, min_y) if 0 < min_x && min_y < 0 => [Movement::Right, Movement::Up],
+                (min_x, min_y) if min_x < 0 && 0 < min_y => [Movement::Left, Movement::Down],
+                _ => [Movement::Left, Movement::Up],
+            };
+            preferred_dir.iter().any(|&preferred| preferred == mov)
         })
         .map(GridAction::Swap);
         if matches!(prev, GridAction::Swap(_)) && 2 < self.remaining_select {
@@ -359,10 +370,9 @@ fn resolve_approximately(
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
-    let different_cells = DifferentCells::new(&nodes);
     let mut all_actions = vec![];
     let mut selection = None;
-    for y in 0..grid.height() - 1 {
+    for y in 0..grid.height().saturating_sub(5) {
         let row_completer = RowCompleter {
             field: nodes.clone(),
             selecting: selection,
@@ -386,8 +396,10 @@ fn resolve_approximately(
                 }
             }
         }
+        eprintln!("row {}: {:?}", y, actions);
         all_actions.append(&mut actions);
     }
+    let different_cells = DifferentCells::new(&nodes);
     let (mut actions, _total_cost) = ida_star(
         GridCompleter {
             field: nodes.clone(),
@@ -398,7 +410,7 @@ fn resolve_approximately(
             select_cost,
             remaining_select: select_limit,
         },
-        0,
+        different_cells.0,
     );
     all_actions.append(&mut actions);
     actions_to_operations(all_actions)
