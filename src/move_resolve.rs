@@ -387,7 +387,7 @@ fn resolve_approximately(
                 .map(|pos| grid.looping_manhattan_dist(pos, nodes[pos]))
                 .sum()
         };
-        row_to_sort.sort_by(|&a, &b| cost_to_sort_row(b).cmp(&cost_to_sort_row(a)));
+        row_to_sort.sort_by(|&a, &b| cost_to_sort_row(a).cmp(&cost_to_sort_row(b)));
         let y = row_to_sort.pop().unwrap();
         eprintln!("start to sort the row: {}", y);
         let row_completer = RowCompleter {
