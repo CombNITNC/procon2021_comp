@@ -12,7 +12,7 @@ pub(crate) struct Pos(u8);
 
 impl std::fmt::Debug for Pos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {})", self.x(), self.y())
+        write!(f, "({:X}{:X})", self.x(), self.y())
     }
 }
 
