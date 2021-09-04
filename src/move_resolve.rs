@@ -244,7 +244,7 @@ pub(crate) fn resolve(
 }
 
 #[derive(Clone)]
-struct GridRowCompleter<'grid> {
+struct RowCompleter<'grid> {
     field: VecOnGrid<'grid, Pos>,
     selecting: Option<Pos>,
     prev_action: Option<GridAction>,
@@ -254,7 +254,7 @@ struct GridRowCompleter<'grid> {
     remaining_select: u8,
 }
 
-impl std::fmt::Debug for GridRowCompleter<'_> {
+impl std::fmt::Debug for RowCompleter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridState")
             .field("field", &self.field)
@@ -265,7 +265,7 @@ impl std::fmt::Debug for GridRowCompleter<'_> {
     }
 }
 
-impl IdaStarState for GridRowCompleter<'_> {
+impl IdaStarState for RowCompleter<'_> {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
         match action {
@@ -363,7 +363,7 @@ fn resolve_approximately(
     let mut all_actions = vec![];
     let mut selection = None;
     for y in 0..grid.height() - 1 {
-        let row_completer = GridRowCompleter {
+        let row_completer = RowCompleter {
             field: nodes.clone(),
             selecting: selection,
             target_row: y,
