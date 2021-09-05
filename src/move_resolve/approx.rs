@@ -1,4 +1,7 @@
-use std::{collections::BinaryHeap, ops};
+use std::{
+    collections::{BinaryHeap, HashSet},
+    ops,
+};
 
 use crate::grid::{Grid, Pos, RangePos, VecOnGrid};
 
@@ -6,6 +9,7 @@ use crate::grid::{Grid, Pos, RangePos, VecOnGrid};
 struct Board<'grid> {
     select: Pos,
     field: VecOnGrid<'grid, Pos>,
+    locked: HashSet<Pos>,
 }
 
 impl Board<'_> {
@@ -14,8 +18,28 @@ impl Board<'_> {
     }
 
     fn swap_to(&mut self, to_swap: Pos) {
+        if self.locked.contains(&to_swap) || self.locked.contains(&self.select) {
+            return;
+        }
         self.field.swap(self.select, to_swap);
         self.select = to_swap;
+    }
+
+    fn around_of(&self, pos: Pos) -> Vec<Pos> {
+        self.grid()
+            .around_of(pos)
+            .iter()
+            .copied()
+            .filter(|pos| !self.locked.contains(&pos))
+            .collect()
+    }
+
+    fn lock(&mut self, pos: Pos) -> bool {
+        self.locked.insert(pos)
+    }
+
+    fn unlock(&mut self, pos: Pos) -> bool {
+        self.locked.remove(&pos)
     }
 }
 
@@ -103,7 +127,7 @@ fn path_to_swap_into_range(board: &Board, target: Pos, range: RangePos) -> Vec<P
         if range.is_in(pick.target) {
             return extract_back_path(pick.target, back_path);
         }
-        for next in board.grid().around_of(pick.target) {
+        for next in board.around_of(pick.target) {
             let next_cost = pick.cost.swap_on(&board.field, pick.target, next) + LeastMovements(1);
             if shortest_cost[next] <= next_cost {
                 continue;
@@ -137,7 +161,7 @@ fn path_to_swap_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
         if pick.target == target {
             return extract_back_path(pick.target, back_path);
         }
-        for next in board.grid().around_of(pick.target) {
+        for next in board.around_of(pick.target) {
             let next_cost = pick.cost.swap_on(&board.field, pick.target, next);
             if shortest_cost[next] <= next_cost {
                 continue;
@@ -174,7 +198,7 @@ fn shortest_path_to_swap_select_around_target(
         if board.grid().looping_manhattan_dist(pick.target, target) == 1 {
             return (extract_back_path(pick.target, back_path), pick.cost);
         }
-        for next in board.grid().around_of(pick.target) {
+        for next in board.around_of(pick.target) {
             // target とは入れ替えない
             if next == target {
                 continue;
@@ -236,7 +260,7 @@ fn shortest_path_to_swap_target_to_goal(board: &Board, target: Pos, range: Range
         if range.is_in(pick.target) {
             return extract_back_path(pick.target, back_path);
         }
-        for next_pos in board.grid().around_of(pick.target) {
+        for next_pos in board.around_of(pick.target) {
             if shortest_cost[next_pos] <= pick.cost {
                 continue;
             }
@@ -268,8 +292,7 @@ fn shortest_path_to_swap_target_to_goal(board: &Board, target: Pos, range: Range
             }
             // この手順がより短かったので適用
             shortest_cost[next_pos] = next_node.cost;
-            next_node.board.field.swap(next_pos, next_node.board.select);
-            next_node.board.select = next_pos;
+            next_node.board.swap_to(next_pos);
             back_path[next_pos] = Some(pick.target);
             heap.push(next_node);
         }
