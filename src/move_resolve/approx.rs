@@ -117,7 +117,7 @@ fn moves_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> 
 }
 
 /// target 位置のマスを range の範囲内に収める最短経路を求める.
-fn path_to_swap_into_range(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
+fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -151,7 +151,7 @@ fn path_to_swap_into_range(board: &Board, target: Pos, range: RangePos) -> Vec<P
 }
 
 /// select を target へ動かす最短経路を決定する.
-fn path_to_swap_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
+fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -185,10 +185,7 @@ fn path_to_swap_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
 }
 
 /// board が選択しているマスを target の隣へ動かす最短経路を決定する.
-fn shortest_path_to_swap_select_around_target(
-    board: &Board,
-    target: Pos,
-) -> (Vec<Pos>, LeastMovements) {
+fn route_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, LeastMovements) {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -226,7 +223,7 @@ fn shortest_path_to_swap_select_around_target(
 }
 
 /// target 位置のマスをそのゴール位置へ動かす最短経路を決定する.
-fn shortest_path_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
+fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -273,8 +270,7 @@ fn shortest_path_to_swap_target_to_goal(board: &Board, target: Pos, range: Range
             if shortest_cost[next_pos] <= pick.cost {
                 continue;
             }
-            let (moves_to_around, cost) =
-                shortest_path_to_swap_select_around_target(&pick.board, pick.target);
+            let (moves_to_around, cost) = route_select_around_target(&pick.board, pick.target);
             if moves_to_around.is_empty() {
                 continue;
             }
