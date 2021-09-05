@@ -93,7 +93,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
         board: &Board,
         target: Pos,
         pos: Pos,
-    ) -> Option<Vec<Pos>> {
+    ) -> Option<(Vec<Pos>, LeastMovements)> {
         let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
         let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -106,11 +106,11 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
                 continue;
             }
             if pick.target == pos {
-                return Some(extract_back_path(pick.target, back_path));
+                return Some((extract_back_path(pick.target, back_path), pick.cost));
             }
             for next_pos in board.around_of(pick.target) {
                 let next_cost =
-                    pick.cost.swap_on(board.field(), next_pos, pick.target) + LeastMovements(1);
+                    pick.cost.swap_on(board.field(), pick.target, next_pos) + LeastMovements(1);
                 if shortest_cost[next_pos] <= next_cost {
                     continue;
                 }
@@ -152,12 +152,16 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
             if route.is_none() {
                 continue;
             }
-            let route = route.unwrap();
+            let (route, cost) = route.unwrap();
             let mut next_node = pick.clone();
+            for mov in route {
+                next_node.board.swap_to(mov);
+            }
             next_node.cost = next_node
                 .cost
                 .swap_on(next_node.board.field(), pick.target, next_pos)
-                + LeastMovements(1);
+                + LeastMovements(1)
+                + cost;
 
             if shortest_cost[next_pos] <= next_node.cost {
                 continue;
