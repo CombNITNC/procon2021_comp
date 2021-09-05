@@ -42,26 +42,6 @@ impl Ord for RowCompleteNode<'_> {
     }
 }
 
-pub(super) fn moves_to_sort(board: &Board, targets: &[Pos], range: RangePos) -> Option<Vec<Pos>> {
-    let mut board = board.clone();
-    let mut res = vec![];
-    for &target in targets {
-        if range.is_in(target) {
-            board.lock(target);
-            continue;
-        }
-        let mut way = moves_to_swap_target_to_goal(&board, target, range.clone())?;
-        for &mov in &way {
-            board.swap_to(mov);
-        }
-        res.append(&mut way);
-        board.lock(target);
-    }
-    let mut way = route_into_range(&board, board.select(), range)?;
-    res.append(&mut way);
-    Some(res)
-}
-
 /// `target` 位置のマスをそのゴール位置へ動かす実際の手順を決定する.
 pub(super) fn moves_to_swap_target_to_goal(
     board: &Board,
