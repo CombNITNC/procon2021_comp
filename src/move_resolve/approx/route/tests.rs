@@ -7,16 +7,12 @@ use super::route_target_to_goal;
 
 #[test]
 fn test_route_target_to_goal() {
-    // 01 10 20 30 40
-    // 00 21 11 31 41
-    // 12 22 02 32 42
-    // 03 13 23 33 43
-    //       ↓
-    // 00 10 20 30 40
-    // 01 11 21 31 41
+    // 22 10 20 30 40
+    // 01 11 21[32]41
+    // 02 12[00]31 42
     // 02 12 22 32 42
-    // 03 13 23 33 43
-    let grid = Grid::new(5, 4);
+    // 02 12 22 32 42
+    let grid = Grid::new(4, 3);
     let movements = &[(grid.pos(0, 0), grid.pos(2, 2))];
     let EdgesNodes { nodes, .. } = EdgesNodes::new(&grid, movements);
     let board = Board::new(grid.pos(1, 1), nodes);
@@ -24,10 +20,11 @@ fn test_route_target_to_goal() {
     let actual = route_target_to_goal(&board, grid.pos(0, 1), grid.all_pos()).unwrap();
 
     let expected = vec![
-        grid.pos(1, 1),
-        grid.pos(1, 0),
-        grid.pos(0, 0),
+        grid.pos(2, 2),
+        grid.pos(1, 2),
+        grid.pos(0, 2),
         grid.pos(0, 1),
+        grid.pos(0, 0),
     ];
     assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
     expected
