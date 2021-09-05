@@ -114,8 +114,34 @@ impl Ord for TargetNode {
     }
 }
 
+fn moves_to_sort(board: &Board, targets: &[Pos], range: RangePos) -> Vec<Pos> {
+    let mut board = board.clone();
+    let mut res = vec![];
+    for &target in targets {
+        if range.is_in(target) {
+            board.lock(target);
+            continue;
+        }
+        let mut way = moves_to_swap_target_to_goal(&board, target, range.clone());
+        if way.is_empty() {
+            return vec![];
+        }
+        for &mov in &way {
+            board.swap_to(mov);
+        }
+        res.append(&mut way);
+        board.lock(target);
+    }
+    let mut way = route_into_range(&board, board.select, range);
+    if way.is_empty() {
+        return vec![];
+    }
+    res.append(&mut way);
+    res
+}
+
 /// target 位置のマスをそのゴール位置へ動かす実際の手順を決定する.
-fn moves_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<GridAction> {
+fn moves_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
     let route = route_target_to_goal(board, target, range);
     if route.is_empty() {
         return vec![];
@@ -135,10 +161,7 @@ fn moves_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> 
         ret.push(current);
         current = way;
     }
-    ret.windows(2)
-        .map(|win| Movement::between_pos(win[0], win[1]))
-        .map(GridAction::Swap)
-        .collect()
+    ret
 }
 
 /// target 位置のマスを range の範囲内に収める最短経路を求める.
