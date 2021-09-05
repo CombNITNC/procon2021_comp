@@ -74,22 +74,6 @@ impl ops::AddAssign for LeastMovements {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct MoveToAroundNode {
-    target: Pos,
-    cost: LeastMovements,
-}
-impl PartialOrd for MoveToAroundNode {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        other.cost.partial_cmp(&self.cost)
-    }
-}
-impl Ord for MoveToAroundNode {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.cost.cmp(&self.cost)
-    }
-}
-
 fn path_to_move_select_around_target(
     board: &Board,
     target: Pos,
@@ -98,6 +82,22 @@ fn path_to_move_select_around_target(
     // コストは各マスの必要最低手数の合計.
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    struct MoveToAroundNode {
+        target: Pos,
+        cost: LeastMovements,
+    }
+    impl PartialOrd for MoveToAroundNode {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            other.cost.partial_cmp(&self.cost)
+        }
+    }
+    impl Ord for MoveToAroundNode {
+        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            other.cost.cmp(&self.cost)
+        }
+    }
 
     let mut heap = BinaryHeap::new();
     heap.push(MoveToAroundNode {
@@ -132,48 +132,34 @@ fn path_to_move_select_around_target(
     (vec![], LeastMovements(0))
 }
 
-fn extract_back_path(mut pos: Pos, back_path: VecOnGrid<Option<Pos>>) -> Vec<GridAction> {
-    let mut history = vec![pos];
-    while let Some(back) = back_path[pos] {
-        history.push(back);
-        pos = back;
-    }
-    history.reverse();
-    history
-        .windows(2)
-        .map(|mov| Movement::between_pos(mov[0], mov[1]))
-        .map(GridAction::Swap)
-        .collect()
-}
-
-#[derive(Debug, Clone)]
-struct RowCompleteNode<'grid> {
-    target: Pos,
-    cost: LeastMovements,
-    board: Board<'grid>,
-}
-impl PartialEq for RowCompleteNode<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.cost == other.cost
-    }
-}
-impl Eq for RowCompleteNode<'_> {}
-impl PartialOrd for RowCompleteNode<'_> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        other.cost.partial_cmp(&self.cost)
-    }
-}
-impl Ord for RowCompleteNode<'_> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.cost.cmp(&self.cost)
-    }
-}
-
 fn path_to_move_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<GridAction> {
     // ダイクストラ法で target をゴール位置へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
+
+    #[derive(Debug, Clone)]
+    struct RowCompleteNode<'grid> {
+        target: Pos,
+        cost: LeastMovements,
+        board: Board<'grid>,
+    }
+    impl PartialEq for RowCompleteNode<'_> {
+        fn eq(&self, other: &Self) -> bool {
+            self.cost == other.cost
+        }
+    }
+    impl Eq for RowCompleteNode<'_> {}
+    impl PartialOrd for RowCompleteNode<'_> {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            other.cost.partial_cmp(&self.cost)
+        }
+    }
+    impl Ord for RowCompleteNode<'_> {
+        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            other.cost.cmp(&self.cost)
+        }
+    }
 
     let mut heap = BinaryHeap::new();
     heap.push(RowCompleteNode {
@@ -231,4 +217,18 @@ fn path_to_move_target_to_goal(board: &Board, target: Pos, range: RangePos) -> V
         }
     }
     vec![]
+}
+
+fn extract_back_path(mut pos: Pos, back_path: VecOnGrid<Option<Pos>>) -> Vec<GridAction> {
+    let mut history = vec![pos];
+    while let Some(back) = back_path[pos] {
+        history.push(back);
+        pos = back;
+    }
+    history.reverse();
+    history
+        .windows(2)
+        .map(|mov| Movement::between_pos(mov[0], mov[1]))
+        .map(GridAction::Swap)
+        .collect()
 }
