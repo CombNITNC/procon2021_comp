@@ -98,11 +98,9 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
         let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
         let mut heap = BinaryHeap::new();
-        heap.push(TargetNode {
-            target,
-            cost: LeastMovements(0),
-        });
-        shortest_cost[target] = LeastMovements(0);
+        let cost = LeastMovements::new(board.field());
+        heap.push(TargetNode { target, cost });
+        shortest_cost[target] = cost;
         while let Some(pick) = heap.pop() {
             if shortest_cost[pick.target] != pick.cost {
                 continue;
@@ -130,12 +128,13 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
     let mut heap = BinaryHeap::new();
+    let cost = LeastMovements::new(board.field());
     heap.push(RowCompleteNode {
         target,
-        cost: LeastMovements(0),
+        cost,
         board: board.clone(),
     });
-    shortest_cost[target] = LeastMovements(0);
+    shortest_cost[target] = cost;
     while let Some(mut pick) = heap.pop() {
         if shortest_cost[pick.target] != pick.cost {
             continue;
@@ -180,11 +179,9 @@ fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Option<Vec<P
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
     let mut heap = BinaryHeap::new();
-    heap.push(TargetNode {
-        target,
-        cost: LeastMovements(0),
-    });
-    shortest_cost[target] = LeastMovements(0);
+    let cost = LeastMovements::new(board.field());
+    heap.push(TargetNode { target, cost });
+    shortest_cost[target] = cost;
     while let Some(pick) = heap.pop() {
         if shortest_cost[pick.target] != pick.cost {
             continue;
@@ -214,11 +211,12 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
     let mut heap = BinaryHeap::new();
+    let cost = LeastMovements::new(board.field());
     heap.push(TargetNode {
         target: board.select(),
-        cost: LeastMovements(0),
+        cost,
     });
-    shortest_cost[board.select()] = LeastMovements(0);
+    shortest_cost[board.select()] = cost;
     while let Some(pick) = heap.pop() {
         if shortest_cost[pick.target] != pick.cost {
             continue;
@@ -248,11 +246,12 @@ fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, L
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
     let mut heap = BinaryHeap::new();
+    let cost = LeastMovements::new(board.field());
     heap.push(TargetNode {
         target: board.select(),
-        cost: LeastMovements(0),
+        cost,
     });
-    shortest_cost[board.select()] = LeastMovements(0);
+    shortest_cost[board.select()] = cost;
     while let Some(pick) = heap.pop() {
         if shortest_cost[pick.target] != pick.cost {
             continue;
@@ -286,12 +285,13 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
     let mut heap = BinaryHeap::new();
+    let cost = LeastMovements::new(board.field());
     heap.push(RowCompleteNode {
         target,
-        cost: LeastMovements(0),
+        cost,
         board: board.clone(),
     });
-    shortest_cost[target] = LeastMovements(0);
+    shortest_cost[target] = cost;
     while let Some(mut pick) = heap.pop() {
         if shortest_cost[pick.target] != pick.cost {
             continue;
