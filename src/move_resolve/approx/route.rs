@@ -3,6 +3,9 @@ use std::collections::BinaryHeap;
 use super::LeastMovements;
 use crate::grid::{board::Board, Pos, RangePos, VecOnGrid};
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct TargetNode {
     target: Pos,
