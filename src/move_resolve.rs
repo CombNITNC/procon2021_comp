@@ -5,6 +5,7 @@ use self::{
 use crate::{
     basis::{Movement, Operation},
     grid::{Grid, Pos, VecOnGrid},
+    move_resolve::approx::Solver,
 };
 
 pub mod approx;
@@ -250,6 +251,7 @@ fn resolve_approximately(
     select_cost: u16,
 ) -> Vec<Operation> {
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
+    let mut solver = Solver::default();
     let mut all_actions = vec![];
     let mut selection = None;
 
@@ -267,7 +269,18 @@ fn resolve_approximately(
         for x in 0..grid.width() {
             let target = grid.pos(x, y);
             if target != nodes[target] {
-                let mut actions = todo!();
+                let mut actions = solver.solve_row(target, &nodes, y);
+                for &action in &actions {
+                    match action {
+                        GridAction::Swap(mov) => {
+                            let select = selection.unwrap();
+                            let to = grid.move_pos_to(select, mov);
+                            nodes.swap(select, to);
+                            selection = Some(to);
+                        }
+                        GridAction::Select(sel) => selection = Some(sel),
+                    }
+                }
                 all_actions.append(&mut actions);
             }
         }
