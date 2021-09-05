@@ -253,13 +253,15 @@ fn shortest_path_to_swap_target_to_goal(board: &Board, target: Pos, range: Range
         board: board.clone(),
     });
     shortest_cost[target] = LeastMovements(0);
-    while let Some(pick) = heap.pop() {
+    while let Some(mut pick) = heap.pop() {
         if shortest_cost[pick.target] != pick.cost {
             continue;
         }
         if range.is_in(pick.target) {
             return extract_back_path(pick.target, back_path);
         }
+        pick.board.lock(pick.target);
+        let pick = pick;
         for next_pos in board.around_of(pick.target) {
             if shortest_cost[next_pos] <= pick.cost {
                 continue;
@@ -292,6 +294,7 @@ fn shortest_path_to_swap_target_to_goal(board: &Board, target: Pos, range: Range
             }
             // この手順がより短かったので適用
             shortest_cost[next_pos] = next_node.cost;
+            next_node.board.unlock(next_pos);
             next_node.board.swap_to(next_pos);
             back_path[next_pos] = Some(pick.target);
             heap.push(next_node);
