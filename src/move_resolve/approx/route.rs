@@ -19,6 +19,29 @@ impl Ord for TargetNode {
     }
 }
 
+#[derive(Debug, Clone)]
+struct RowCompleteNode<'grid> {
+    target: Pos,
+    cost: LeastMovements,
+    board: Board<'grid>,
+}
+impl PartialEq for RowCompleteNode<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.cost == other.cost
+    }
+}
+impl Eq for RowCompleteNode<'_> {}
+impl PartialOrd for RowCompleteNode<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        other.cost.partial_cmp(&self.cost)
+    }
+}
+impl Ord for RowCompleteNode<'_> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.cost.cmp(&self.cost)
+    }
+}
+
 pub(super) fn moves_to_sort(board: &Board, targets: &[Pos], range: RangePos) -> Option<Vec<Pos>> {
     let mut board = board.clone();
     let mut res = vec![];
@@ -62,6 +85,93 @@ pub(super) fn moves_to_swap_target_to_goal(
         current = way;
     }
     Some(ret)
+}
+
+/// `target` 位置のマスを `pos` の位置へ移動させる最短経路を求める.
+pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Option<Vec<Pos>> {
+    pub(super) fn route_target_around_pos(
+        board: &Board,
+        target: Pos,
+        pos: Pos,
+    ) -> Option<Vec<Pos>> {
+        let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
+        let mut back_path = VecOnGrid::with_init(board.grid(), None);
+
+        let mut heap = BinaryHeap::new();
+        heap.push(TargetNode {
+            target,
+            cost: LeastMovements(0),
+        });
+        shortest_cost[target] = LeastMovements(0);
+        while let Some(pick) = heap.pop() {
+            if shortest_cost[pick.target] != pick.cost {
+                continue;
+            }
+            if pick.target == pos {
+                return Some(extract_back_path(pick.target, back_path));
+            }
+            for next_pos in board.around_of(pick.target) {
+                let next_cost =
+                    pick.cost.swap_on(board.field(), next_pos, pick.target) + LeastMovements(1);
+                if shortest_cost[next_pos] <= next_cost {
+                    continue;
+                }
+                shortest_cost[next_pos] = next_cost;
+                back_path[next_pos] = Some(pick.target);
+                heap.push(TargetNode {
+                    target: next_pos,
+                    cost: next_cost,
+                });
+            }
+        }
+        None
+    }
+    let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
+    let mut back_path = VecOnGrid::with_init(board.grid(), None);
+
+    let mut heap = BinaryHeap::new();
+    heap.push(RowCompleteNode {
+        target,
+        cost: LeastMovements(0),
+        board: board.clone(),
+    });
+    shortest_cost[target] = LeastMovements(0);
+    while let Some(mut pick) = heap.pop() {
+        if shortest_cost[pick.target] != pick.cost {
+            continue;
+        }
+        if pos == pick.target {
+            return Some(extract_back_path(pick.target, back_path));
+        }
+        pick.board.lock(pick.target);
+        let pick = pick;
+        for next_pos in board.around_of(pick.target) {
+            if shortest_cost[next_pos] <= pick.cost {
+                continue;
+            }
+            let route = route_target_around_pos(&pick.board, pick.board.select(), next_pos);
+            if route.is_none() {
+                continue;
+            }
+            let route = route.unwrap();
+            let mut next_node = pick.clone();
+            next_node.cost = next_node
+                .cost
+                .swap_on(next_node.board.field(), pick.target, next_pos)
+                + LeastMovements(1);
+
+            if shortest_cost[next_pos] <= next_node.cost {
+                continue;
+            }
+            shortest_cost[next_pos] = next_node.cost;
+            next_node.board.unlock(pick.target);
+            next_node.board.swap_to(pick.target);
+            next_node.target = next_pos;
+            back_path[next_pos] = Some(pick.target);
+            heap.push(next_node);
+        }
+    }
+    None
 }
 
 /// `target` 位置のマスを `range` の範囲内に収める最短経路を求める.
@@ -174,29 +284,6 @@ fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, L
 fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<Vec<Pos>> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
-
-    #[derive(Debug, Clone)]
-    struct RowCompleteNode<'grid> {
-        target: Pos,
-        cost: LeastMovements,
-        board: Board<'grid>,
-    }
-    impl PartialEq for RowCompleteNode<'_> {
-        fn eq(&self, other: &Self) -> bool {
-            self.cost == other.cost
-        }
-    }
-    impl Eq for RowCompleteNode<'_> {}
-    impl PartialOrd for RowCompleteNode<'_> {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            other.cost.partial_cmp(&self.cost)
-        }
-    }
-    impl Ord for RowCompleteNode<'_> {
-        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-            other.cost.cmp(&self.cost)
-        }
-    }
 
     let mut heap = BinaryHeap::new();
     heap.push(RowCompleteNode {
