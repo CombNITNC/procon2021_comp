@@ -65,7 +65,7 @@ pub(super) fn moves_to_swap_target_to_goal(
 }
 
 /// `target` 位置のマスを `range` の範囲内に収める最短経路を求める.
-pub(super) fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Option<Vec<Pos>> {
+fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Option<Vec<Pos>> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -99,7 +99,7 @@ pub(super) fn route_into_range(board: &Board, target: Pos, range: RangePos) -> O
 }
 
 /// `select` を `target` へ動かす最短経路を決定する.
-pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
+fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -133,10 +133,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
 }
 
 /// `board` が選択しているマスを `target` の隣へ動かす最短経路を決定する.
-pub(super) fn route_select_around_target(
-    board: &Board,
-    target: Pos,
-) -> Option<(Vec<Pos>, LeastMovements)> {
+fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, LeastMovements)> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -174,11 +171,7 @@ pub(super) fn route_select_around_target(
 }
 
 /// `target` 位置のマスをそのゴール位置へ動かす最短経路を決定する.
-pub(super) fn route_target_to_goal(
-    board: &Board,
-    target: Pos,
-    range: RangePos,
-) -> Option<Vec<Pos>> {
+fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<Vec<Pos>> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
