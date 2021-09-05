@@ -85,6 +85,39 @@ impl Ord for TargetNode {
     }
 }
 
+fn path_to_swap_into_range(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
+    let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
+    let mut back_path = VecOnGrid::with_init(board.grid(), None);
+
+    let mut heap = BinaryHeap::new();
+    heap.push(TargetNode {
+        target,
+        cost: LeastMovements(0),
+    });
+    shortest_cost[target] = LeastMovements(0);
+    while let Some(pick) = heap.pop() {
+        if shortest_cost[pick.target] != pick.cost {
+            continue;
+        }
+        if range.is_in(pick.target) {
+            return extract_back_path(pick.target, back_path);
+        }
+        for next in board.grid().around_of(pick.target) {
+            let next_cost = pick.cost.swap_on(&board.field, pick.target, next) + LeastMovements(1);
+            if shortest_cost[next] <= next_cost {
+                continue;
+            }
+            shortest_cost[next] = next_cost;
+            back_path[next] = Some(pick.target);
+            heap.push(TargetNode {
+                target: next,
+                cost: next_cost,
+            });
+        }
+    }
+    vec![]
+}
+
 fn path_to_swap_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
     // ダイクストラ法で select を target へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
