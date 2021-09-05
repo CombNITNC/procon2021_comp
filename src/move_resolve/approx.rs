@@ -114,7 +114,7 @@ impl Ord for TargetNode {
     }
 }
 
-fn moves_to_sort(board: &Board, targets: &[Pos], range: RangePos) -> Vec<Pos> {
+fn moves_to_sort(board: &Board, targets: &[Pos], range: RangePos) -> Option<Vec<Pos>> {
     let mut board = board.clone();
     let mut res = vec![];
     for &target in targets {
@@ -122,30 +122,21 @@ fn moves_to_sort(board: &Board, targets: &[Pos], range: RangePos) -> Vec<Pos> {
             board.lock(target);
             continue;
         }
-        let mut way = moves_to_swap_target_to_goal(&board, target, range.clone());
-        if way.is_empty() {
-            return vec![];
-        }
+        let mut way = moves_to_swap_target_to_goal(&board, target, range.clone())?;
         for &mov in &way {
             board.swap_to(mov);
         }
         res.append(&mut way);
         board.lock(target);
     }
-    let mut way = route_into_range(&board, board.select, range);
-    if way.is_empty() {
-        return vec![];
-    }
+    let mut way = route_into_range(&board, board.select, range)?;
     res.append(&mut way);
-    res
+    Some(res)
 }
 
 /// target 位置のマスをそのゴール位置へ動かす実際の手順を決定する.
-fn moves_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
-    let route = route_target_to_goal(board, target, range);
-    if route.is_empty() {
-        return vec![];
-    }
+fn moves_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<Vec<Pos>> {
+    let route = route_target_to_goal(board, target, range)?;
     let mut board = board.clone();
     let mut current = target;
     let mut ret = vec![board.select];
@@ -161,11 +152,11 @@ fn moves_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> 
         ret.push(current);
         current = way;
     }
-    ret
+    Some(ret)
 }
 
 /// target 位置のマスを range の範囲内に収める最短経路を求める.
-fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
+fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Option<Vec<Pos>> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -180,7 +171,7 @@ fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
             continue;
         }
         if range.is_in(pick.target) {
-            return extract_back_path(pick.target, back_path);
+            return Some(extract_back_path(pick.target, back_path));
         }
         for next in board.around_of(pick.target) {
             let next_cost = pick.cost.swap_on(&board.field, pick.target, next) + LeastMovements(1);
@@ -195,7 +186,7 @@ fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
             });
         }
     }
-    vec![]
+    None
 }
 
 /// select を target へ動かす最短経路を決定する.
@@ -233,7 +224,7 @@ fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
 }
 
 /// board が選択しているマスを target の隣へ動かす最短経路を決定する.
-fn route_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, LeastMovements) {
+fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, LeastMovements)> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -248,7 +239,7 @@ fn route_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, LeastMov
             continue;
         }
         if board.grid().looping_manhattan_dist(pick.target, target) == 1 {
-            return (extract_back_path(pick.target, back_path), pick.cost);
+            return Some((extract_back_path(pick.target, back_path), pick.cost));
         }
         for next in board.around_of(pick.target) {
             // target とは入れ替えない
@@ -267,11 +258,11 @@ fn route_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, LeastMov
             });
         }
     }
-    (vec![], LeastMovements(0))
+    None
 }
 
 /// target 位置のマスをそのゴール位置へ動かす最短経路を決定する.
-fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
+fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<Vec<Pos>> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -310,7 +301,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos>
             continue;
         }
         if range.is_in(pick.target) {
-            return extract_back_path(pick.target, back_path);
+            return Some(extract_back_path(pick.target, back_path));
         }
         pick.board.lock(pick.target);
         let pick = pick;
@@ -318,10 +309,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos>
             if shortest_cost[next_pos] <= pick.cost {
                 continue;
             }
-            let (moves_to_around, cost) = route_select_around_target(&pick.board, pick.target);
-            if moves_to_around.is_empty() {
-                continue;
-            }
+            let (moves_to_around, cost) = route_select_around_target(&pick.board, pick.target)?;
             let mut next_node = pick.clone();
             next_node.cost += cost;
             for to in moves_to_around {
@@ -351,7 +339,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos>
             heap.push(next_node);
         }
     }
-    vec![]
+    None
 }
 
 fn extract_back_path(mut pos: Pos, back_path: VecOnGrid<Option<Pos>>) -> Vec<Pos> {
