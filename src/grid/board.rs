@@ -10,7 +10,20 @@ pub(crate) struct Board<'grid> {
     locked: HashSet<Pos>,
 }
 
-impl Board<'_> {
+impl<'grid> Board<'grid> {
+    pub(crate) fn new(select: Pos, field: VecOnGrid<'grid, Pos>) -> Board<'grid> {
+        let mut reverse = field.clone();
+        for (pos, &elem) in field.iter_with_pos() {
+            reverse[elem] = pos;
+        }
+        Self {
+            select,
+            forward: field,
+            reverse,
+            locked: HashSet::new(),
+        }
+    }
+
     pub(crate) fn grid(&self) -> &Grid {
         self.forward.grid
     }
