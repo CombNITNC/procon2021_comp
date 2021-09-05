@@ -5,6 +5,8 @@ use std::{
 
 use crate::grid::{Grid, Pos, RangePos, VecOnGrid};
 
+use super::GridAction;
+
 #[derive(Debug, Clone)]
 struct Board<'grid> {
     select: Pos,
@@ -107,6 +109,11 @@ impl Ord for TargetNode {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         other.cost.cmp(&self.cost)
     }
+}
+
+/// target 位置のマスをそのゴール位置へ動かす実際の手順を決定する.
+fn moves_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<GridAction> {
+    todo!()
 }
 
 /// target 位置のマスを range の範囲内に収める最短経路を求める.
