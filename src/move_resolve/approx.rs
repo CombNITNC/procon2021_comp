@@ -1,10 +1,7 @@
 use std::{collections::BinaryHeap, ops};
 
 use super::GridAction;
-use crate::{
-    basis::Movement,
-    grid::{Grid, Pos, RangePos, VecOnGrid},
-};
+use crate::grid::{Grid, Pos, RangePos, VecOnGrid};
 
 #[derive(Debug, Clone)]
 struct Board<'grid> {
@@ -17,10 +14,9 @@ impl Board<'_> {
         self.field.grid
     }
 
-    fn move_to(&mut self, mov: Movement) {
-        let next_swap = self.field.grid.move_pos_to(self.select, mov);
-        self.field.swap(self.select, next_swap);
-        self.select = next_swap;
+    fn move_to(&mut self, to_swap: Pos) {
+        self.field.swap(self.select, to_swap);
+        self.select = to_swap;
     }
 }
 
@@ -90,7 +86,7 @@ impl Ord for TargetNode {
     }
 }
 
-fn path_to_move_select_to_target(board: &Board, target: Pos) -> Vec<GridAction> {
+fn path_to_move_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
     // ダイクストラ法で select を target へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
@@ -125,10 +121,7 @@ fn path_to_move_select_to_target(board: &Board, target: Pos) -> Vec<GridAction> 
     vec![]
 }
 
-fn path_to_move_select_around_target(
-    board: &Board,
-    target: Pos,
-) -> (Vec<GridAction>, LeastMovements) {
+fn path_to_move_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, LeastMovements) {
     // ダイクストラ法で select を target の隣へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
@@ -167,7 +160,7 @@ fn path_to_move_select_around_target(
     (vec![], LeastMovements(0))
 }
 
-fn path_to_move_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<GridAction> {
+fn path_to_move_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
     // ダイクストラ法で target をゴール位置へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
@@ -221,11 +214,8 @@ fn path_to_move_target_to_goal(board: &Board, target: Pos, range: RangePos) -> V
             }
             let mut next_node = pick.clone();
             next_node.cost += cost;
-            for swap in moves_to_around {
-                match swap {
-                    GridAction::Swap(mov) => next_node.board.move_to(mov),
-                    GridAction::Select(_) => unreachable!(),
-                }
+            for to in moves_to_around {
+                next_node.board.move_to(to);
             }
             // 隣に移動していなければならない
             assert_eq!(
@@ -254,7 +244,7 @@ fn path_to_move_target_to_goal(board: &Board, target: Pos, range: RangePos) -> V
     vec![]
 }
 
-fn extract_back_path(mut pos: Pos, back_path: VecOnGrid<Option<Pos>>) -> Vec<GridAction> {
+fn extract_back_path(mut pos: Pos, back_path: VecOnGrid<Option<Pos>>) -> Vec<Pos> {
     let mut history = vec![pos];
     while let Some(back) = back_path[pos] {
         history.push(back);
@@ -262,8 +252,4 @@ fn extract_back_path(mut pos: Pos, back_path: VecOnGrid<Option<Pos>>) -> Vec<Gri
     }
     history.reverse();
     history
-        .windows(2)
-        .map(|mov| Movement::between_pos(mov[0], mov[1]))
-        .map(GridAction::Swap)
-        .collect()
 }
