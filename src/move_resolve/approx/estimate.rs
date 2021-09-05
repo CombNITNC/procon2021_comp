@@ -1,8 +1,5 @@
-use super::{
-    route::{route_select_to_target, route_target_to_goal},
-    Board,
-};
-use crate::grid::Pos;
+use super::route::{route_select_to_target, route_target_to_goal};
+use crate::grid::{board::Board, Pos};
 
 #[derive(Debug, Default)]
 pub(super) struct RowSolveEstimate {
@@ -41,7 +38,7 @@ pub(super) fn estimate_solve_row(mut board: Board, targets: &[Pos]) -> RowSolveE
 fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEstimate {
     let mut estimate = RowSolveEstimate::default();
     for &target in &targets[..targets.len() - 2] {
-        let mut pos = board.field[target];
+        let mut pos = board.reverse(target);
         let route = route_target_to_goal(&board, target, board.grid().all_pos())
             .expect("the route must be found");
         let mut route_size = 0;

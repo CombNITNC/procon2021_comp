@@ -1,7 +1,7 @@
 use std::collections::BinaryHeap;
 
-use super::{Board, LeastMovements};
-use crate::grid::{Pos, RangePos, VecOnGrid};
+use super::LeastMovements;
+use crate::grid::{board::Board, Pos, RangePos, VecOnGrid};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct TargetNode {
@@ -34,7 +34,7 @@ pub(super) fn moves_to_sort(board: &Board, targets: &[Pos], range: RangePos) -> 
         res.append(&mut way);
         board.lock(target);
     }
-    let mut way = route_into_range(&board, board.select, range)?;
+    let mut way = route_into_range(&board, board.select(), range)?;
     res.append(&mut way);
     Some(res)
 }
@@ -48,7 +48,7 @@ pub(super) fn moves_to_swap_target_to_goal(
     let route = route_target_to_goal(board, target, range)?;
     let mut board = board.clone();
     let mut current = target;
-    let mut ret = vec![board.select];
+    let mut ret = vec![board.select()];
     for way in route {
         board.lock(current);
         let route_to_arrive = route_select_to_target(&board, way);
@@ -83,7 +83,7 @@ pub(super) fn route_into_range(board: &Board, target: Pos, range: RangePos) -> O
             return Some(extract_back_path(pick.target, back_path));
         }
         for next in board.around_of(pick.target) {
-            let next_cost = pick.cost.swap_on(&board.field, pick.target, next) + LeastMovements(1);
+            let next_cost = pick.cost.swap_on(board.field(), pick.target, next) + LeastMovements(1);
             if shortest_cost[next] <= next_cost {
                 continue;
             }
@@ -105,10 +105,10 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
 
     let mut heap = BinaryHeap::new();
     heap.push(TargetNode {
-        target: board.select,
+        target: board.select(),
         cost: LeastMovements(0),
     });
-    shortest_cost[board.select] = LeastMovements(0);
+    shortest_cost[board.select()] = LeastMovements(0);
     while let Some(pick) = heap.pop() {
         if shortest_cost[pick.target] != pick.cost {
             continue;
@@ -117,7 +117,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
             return extract_back_path(pick.target, back_path);
         }
         for next in board.around_of(pick.target) {
-            let next_cost = pick.cost.swap_on(&board.field, pick.target, next);
+            let next_cost = pick.cost.swap_on(board.field(), pick.target, next);
             if shortest_cost[next] <= next_cost {
                 continue;
             }
@@ -142,10 +142,10 @@ pub(super) fn route_select_around_target(
 
     let mut heap = BinaryHeap::new();
     heap.push(TargetNode {
-        target: board.select,
+        target: board.select(),
         cost: LeastMovements(0),
     });
-    shortest_cost[board.select] = LeastMovements(0);
+    shortest_cost[board.select()] = LeastMovements(0);
     while let Some(pick) = heap.pop() {
         if shortest_cost[pick.target] != pick.cost {
             continue;
@@ -158,7 +158,7 @@ pub(super) fn route_select_around_target(
             if next == target {
                 continue;
             }
-            let next_cost = pick.cost.swap_on(&board.field, pick.target, next) + LeastMovements(1);
+            let next_cost = pick.cost.swap_on(board.field(), pick.target, next) + LeastMovements(1);
             if shortest_cost[next] <= next_cost {
                 continue;
             }
@@ -236,13 +236,13 @@ pub(super) fn route_target_to_goal(
                 next_node
                     .board
                     .grid()
-                    .looping_manhattan_dist(next_pos, next_node.board.select),
+                    .looping_manhattan_dist(next_pos, next_node.board.select()),
                 1
             );
             // コストだけ先に計算
             next_node.cost = next_node
                 .cost
-                .swap_on(&next_node.board.field, pick.target, next_pos)
+                .swap_on(next_node.board.field(), pick.target, next_pos)
                 + LeastMovements(1);
             if shortest_cost[next_pos] <= next_node.cost {
                 continue;

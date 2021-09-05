@@ -1,8 +1,8 @@
-use std::{collections::HashSet, ops};
+use std::ops;
 
 use crate::{
     basis::Movement,
-    grid::{Grid, Pos, VecOnGrid},
+    grid::{Pos, VecOnGrid},
 };
 
 mod estimate;
@@ -10,44 +10,6 @@ mod route;
 
 pub(crate) fn solve_row(field: &VecOnGrid<Pos>, target_row: u8) -> Vec<Movement> {
     todo!()
-}
-
-#[derive(Debug, Clone)]
-struct Board<'grid> {
-    select: Pos,
-    field: VecOnGrid<'grid, Pos>,
-    locked: HashSet<Pos>,
-}
-
-impl Board<'_> {
-    fn grid(&self) -> &Grid {
-        self.field.grid
-    }
-
-    fn swap_to(&mut self, to_swap: Pos) {
-        if self.locked.contains(&to_swap) || self.locked.contains(&self.select) {
-            return;
-        }
-        self.field.swap(self.select, to_swap);
-        self.select = to_swap;
-    }
-
-    fn around_of(&self, pos: Pos) -> Vec<Pos> {
-        self.grid()
-            .around_of(pos)
-            .iter()
-            .copied()
-            .filter(|pos| !self.locked.contains(&pos))
-            .collect()
-    }
-
-    fn lock(&mut self, pos: Pos) -> bool {
-        self.locked.insert(pos)
-    }
-
-    fn unlock(&mut self, pos: Pos) -> bool {
-        self.locked.remove(&pos)
-    }
 }
 
 fn least_movements((dx, dy): (i32, i32)) -> u32 {
