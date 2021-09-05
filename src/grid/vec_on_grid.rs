@@ -77,6 +77,11 @@ impl<'grid, T> VecOnGrid<'grid, T> {
         self.grid.all_pos().zip(self.iter())
     }
 
+    /// 各 Pos のタプルとなる所有権を持つイテレータを作る.
+    pub(crate) fn into_iter_with_pos(self) -> impl Iterator<Item = (Pos, T)> {
+        self.grid.all_pos().zip(self.vec.into_iter())
+    }
+
     /// 各 Pos のタプルとなる可変借用のイテレータを作る.
     pub(crate) fn iter_mut_with_pos(&mut self) -> impl Iterator<Item = (Pos, &mut T)> {
         self.grid.all_pos().zip(self.iter_mut())
@@ -98,6 +103,16 @@ impl<'grid, T> VecOnGrid<'grid, T> {
     /// 範囲外の `Pos` で呼び出すと未定義動作となる.
     pub(crate) unsafe fn get_unchecked_mut(&mut self, pos: Pos) -> &mut T {
         self.vec.get_unchecked_mut(self.grid.pos_as_index(pos))
+    }
+
+    /// 要素にアクセスする.
+    pub(crate) fn get(&self, pos: Pos) -> Option<&T> {
+        self.vec.get(self.grid.pos_as_index(pos))
+    }
+
+    /// 可変要素にアクセスする.
+    pub(crate) fn get_mut(&mut self, pos: Pos) -> Option<&mut T> {
+        self.vec.get_mut(self.grid.pos_as_index(pos))
     }
 
     /// `Grid` の X 方向で全体を巡回させる.

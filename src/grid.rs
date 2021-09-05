@@ -19,8 +19,8 @@ impl std::fmt::Debug for Pos {
 
 impl Pos {
     fn new(x: u8, y: u8) -> Self {
-        debug_assert!(x <= 0xf, "");
-        debug_assert!(y <= 0xf, "");
+        debug_assert!(x <= 0xf, "x coordinate out of range: {}", x);
+        debug_assert!(y <= 0xf, "y coordinate out of range: {}", y);
         Self((x as u8) << 4 | y as u8)
     }
 
@@ -99,7 +99,6 @@ impl Grid {
         Pos::new(x.clamp(0, self.width - 1), y.clamp(0, self.height - 1))
     }
 
-    #[cfg(test)]
     pub(crate) fn pos(&self, x: u8, y: u8) -> Pos {
         debug_assert!(x < self.width);
         debug_assert!(y < self.height);
