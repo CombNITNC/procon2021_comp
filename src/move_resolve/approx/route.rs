@@ -208,8 +208,8 @@ fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Option<Vec<P
     None
 }
 
-/// `select` を `target` へ動かす最短経路を決定する.
-fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
+/// `board` の `select` を `target` へ動かす最短経路を決定する.
+pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
