@@ -66,7 +66,7 @@ pub(crate) struct Fragment {
     pub(crate) pos: Pos,
     pub(crate) rot: Rot,
     pub(crate) edges: Edges,
-    pub(crate) pixels: Vec<Color>,
+    pixels: Vec<Color>,
 }
 
 impl Fragment {
@@ -77,13 +77,13 @@ impl Fragment {
     pub(crate) fn rotate(&mut self, rot: Rot) {
         self.rot += rot;
         self.edges.rotate(rot);
-        self.rotate_pixels(self.side_length(), rot);
     }
 
     #[allow(clippy::needless_range_loop)]
-    fn rotate_pixels(&mut self, row: usize, rot: Rot) {
-        let count = match rot {
-            Rot::R0 => return,
+    pub(crate) fn pixels(&self) -> Vec<Color> {
+        let row = self.side_length();
+        let count = match self.rot {
+            Rot::R0 => return self.pixels.clone(),
             Rot::R90 => 1,
             Rot::R180 => 2,
             Rot::R270 => 3,
@@ -107,7 +107,7 @@ impl Fragment {
             temp = result.clone();
         }
 
-        self.pixels = result.into_iter().flatten().collect();
+        result.into_iter().flatten().collect()
     }
 
     pub(crate) fn new_all(

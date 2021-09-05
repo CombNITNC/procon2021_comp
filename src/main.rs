@@ -41,7 +41,7 @@ fn debug_image_output(name: &str, grid: &Grid, fragment_grid: VecOnGrid<Option<F
         .side_length();
 
     for (pos, data) in fragment_grid.into_iter_with_pos() {
-        colors_grid[pos] = Some(data.unwrap().pixels);
+        colors_grid[pos] = Some(data.unwrap().pixels());
     }
 
     let f = File::create(name).unwrap();
