@@ -1,6 +1,5 @@
 use std::{collections::BinaryHeap, ops};
 
-use super::GridAction;
 use crate::grid::{Grid, Pos, RangePos, VecOnGrid};
 
 #[derive(Debug, Clone)]
