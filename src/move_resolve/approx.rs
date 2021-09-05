@@ -8,8 +8,6 @@ use crate::{
     grid::{Grid, Pos, RangePos, VecOnGrid},
 };
 
-use super::GridAction;
-
 #[derive(Debug, Clone)]
 struct Board<'grid> {
     select: Pos,
@@ -112,6 +110,10 @@ impl Ord for TargetNode {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         other.cost.cmp(&self.cost)
     }
+}
+
+pub(crate) fn solve_row(field: &VecOnGrid<Pos>, target_row: u8) -> Vec<Movement> {
+    todo!()
 }
 
 fn moves_to_sort(board: &Board, targets: &[Pos], range: RangePos) -> Option<Vec<Pos>> {
