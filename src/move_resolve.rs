@@ -286,6 +286,22 @@ impl ops::Add for LeastMovements {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct MoveNode {
+    pos: Pos,
+    cost: LeastMovements,
+}
+impl PartialOrd for MoveNode {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        other.cost.partial_cmp(&self.cost)
+    }
+}
+impl Ord for MoveNode {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.cost.cmp(&self.cost)
+    }
+}
+
 fn path_to_move_select_around_target(
     field: &VecOnGrid<Pos>,
     target: Pos,
@@ -296,24 +312,8 @@ fn path_to_move_select_around_target(
     let mut shortest_cost = VecOnGrid::with_init(field.grid, LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(field.grid, None);
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    struct Node {
-        pos: Pos,
-        cost: LeastMovements,
-    }
-    impl PartialOrd for Node {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            other.cost.partial_cmp(&self.cost)
-        }
-    }
-    impl Ord for Node {
-        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-            other.cost.cmp(&self.cost)
-        }
-    }
-
     let mut heap = BinaryHeap::new();
-    heap.push(Node {
+    heap.push(MoveNode {
         pos: select,
         cost: LeastMovements(0),
     });
@@ -343,7 +343,7 @@ fn path_to_move_select_around_target(
             }
             shortest_cost[next] = next_cost;
             back_path[next] = Some(pick.pos);
-            heap.push(Node {
+            heap.push(MoveNode {
                 pos: next,
                 cost: next_cost,
             });
