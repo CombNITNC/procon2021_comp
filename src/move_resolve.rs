@@ -1,3 +1,5 @@
+use std::collections::BinaryHeap;
+
 use self::{
     edges_nodes::EdgesNodes,
     ida_star::{ida_star, IdaStarState},
@@ -240,7 +242,7 @@ pub(crate) fn resolve(
     actions_to_operations(path)
 }
 
-fn least_movements(x: i32, y: i32) -> u32 {
+fn least_movements((x, y): (i32, i32)) -> u32 {
     if x == 0 && y == 0 {
         return 0;
     }
@@ -262,7 +264,64 @@ fn path_to_move_select_around_target(
 ) -> Vec<GridAction> {
     // ダイクストラ法で select を target の隣へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
-    todo!()
+    let mut shortest_cost = VecOnGrid::with_init(field.grid, 1_000_000_000);
+    let mut back_path = VecOnGrid::with_init(field.grid, None);
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    struct Node {
+        pos: Pos,
+        cost: u32,
+    }
+    impl PartialOrd for Node {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            other.cost.partial_cmp(&self.cost)
+        }
+    }
+    impl Ord for Node {
+        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            other.cost.cmp(&self.cost)
+        }
+    }
+
+    let mut heap = BinaryHeap::new();
+    heap.push(Node {
+        pos: select,
+        cost: 0,
+    });
+    shortest_cost[select] = 0;
+    while let Some(pick) = heap.pop() {
+        if shortest_cost[pick.pos] != pick.cost {
+            continue;
+        }
+        if field.grid.looping_manhattan_dist(pick.pos, target) == 1 {
+            let mut pos = pick.pos;
+            let mut history = vec![pos];
+            while let Some(back) = back_path[pos] {
+                history.push(back);
+                pos = back;
+            }
+            history.reverse();
+            return history
+                .windows(2)
+                .map(|mov| Movement::between_pos(mov[0], mov[1]))
+                .map(GridAction::Swap)
+                .collect();
+        }
+        for next in field.grid.around_of(pick.pos) {
+            let next_cost =
+                pick.cost + 1 + least_movements(field.grid.looping_min_vec(pick.pos, next));
+            if shortest_cost[next] <= next_cost {
+                continue;
+            }
+            shortest_cost[next] = next_cost;
+            back_path[next] = Some(pick.pos);
+            heap.push(Node {
+                pos: next,
+                cost: next_cost,
+            });
+        }
+    }
+    vec![]
 }
 
 fn path_to_move_target_to_goal(field: &VecOnGrid<Pos>, target: Pos) -> Vec<GridAction> {
