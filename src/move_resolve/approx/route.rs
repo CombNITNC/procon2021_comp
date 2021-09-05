@@ -1,10 +1,7 @@
 use std::collections::BinaryHeap;
 
 use super::{Board, LeastMovements};
-use crate::{
-    basis::Movement,
-    grid::{Pos, RangePos, VecOnGrid},
-};
+use crate::grid::{Pos, RangePos, VecOnGrid};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct TargetNode {
@@ -20,10 +17,6 @@ impl Ord for TargetNode {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         other.cost.cmp(&self.cost)
     }
-}
-
-pub(super) fn solve_row(field: &VecOnGrid<Pos>, target_row: u8) -> Vec<Movement> {
-    todo!()
 }
 
 pub(super) fn moves_to_sort(board: &Board, targets: &[Pos], range: RangePos) -> Option<Vec<Pos>> {

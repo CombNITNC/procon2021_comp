@@ -1,9 +1,16 @@
 use std::{collections::HashSet, ops};
 
-use crate::grid::{Grid, Pos, VecOnGrid};
+use crate::{
+    basis::Movement,
+    grid::{Grid, Pos, VecOnGrid},
+};
 
 mod estimate;
 mod route;
+
+pub(crate) fn solve_row(field: &VecOnGrid<Pos>, target_row: u8) -> Vec<Movement> {
+    todo!()
+}
 
 #[derive(Debug, Clone)]
 struct Board<'grid> {
