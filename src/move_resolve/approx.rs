@@ -85,6 +85,7 @@ impl Ord for TargetNode {
     }
 }
 
+/// target 位置のマスを range の範囲内に収める最短経路を求める.
 fn path_to_swap_into_range(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
@@ -118,9 +119,8 @@ fn path_to_swap_into_range(board: &Board, target: Pos, range: RangePos) -> Vec<P
     vec![]
 }
 
+/// select を target へ動かす最短経路を決定する.
 fn path_to_swap_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
-    // ダイクストラ法で select を target へ動かす経路を決定する.
-    // コストは各マスの必要最低手数の合計.
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -153,9 +153,11 @@ fn path_to_swap_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
     vec![]
 }
 
-fn path_to_swap_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, LeastMovements) {
-    // ダイクストラ法で select を target の隣へ動かす経路を決定する.
-    // コストは各マスの必要最低手数の合計.
+/// board が選択しているマスを target の隣へ動かす最短経路を決定する.
+fn shortest_path_to_swap_select_around_target(
+    board: &Board,
+    target: Pos,
+) -> (Vec<Pos>, LeastMovements) {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -192,9 +194,8 @@ fn path_to_swap_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, L
     (vec![], LeastMovements(0))
 }
 
-fn path_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
-    // ダイクストラ法で target をゴール位置へ動かす経路を決定する.
-    // コストは各マスの必要最低手数の合計.
+/// target 位置のマスをそのゴール位置へ動かす最短経路を決定する.
+fn shortest_path_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
@@ -240,7 +241,7 @@ fn path_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> V
                 continue;
             }
             let (moves_to_around, cost) =
-                path_to_swap_select_around_target(&pick.board, pick.target);
+                shortest_path_to_swap_select_around_target(&pick.board, pick.target);
             if moves_to_around.is_empty() {
                 continue;
             }
