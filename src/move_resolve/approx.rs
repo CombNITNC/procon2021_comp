@@ -169,25 +169,17 @@ impl Ord for RowCompleteNode<'_> {
     }
 }
 
-fn path_to_move_target_to_goal(
-    field: &VecOnGrid<Pos>,
-    selected: Pos,
-    target: Pos,
-    range: RangePos,
-) -> Vec<GridAction> {
+fn path_to_move_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<GridAction> {
     // ダイクストラ法で target をゴール位置へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
-    let mut shortest_cost = VecOnGrid::with_init(field.grid, LeastMovements(1_000_000_000));
-    let mut back_path = VecOnGrid::with_init(field.grid, None);
+    let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
+    let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
     let mut heap = BinaryHeap::new();
     heap.push(RowCompleteNode {
         target,
         cost: LeastMovements(0),
-        board: Board {
-            select: selected,
-            field: field.clone(),
-        },
+        board: board.clone(),
     });
     shortest_cost[target] = LeastMovements(0);
     while let Some(pick) = heap.pop() {
@@ -197,7 +189,7 @@ fn path_to_move_target_to_goal(
         if range.is_in(pick.target) {
             return extract_back_path(pick.target, back_path);
         }
-        for next_pos in field.grid.around_of(pick.target) {
+        for next_pos in board.grid().around_of(pick.target) {
             if shortest_cost[next_pos] <= pick.cost {
                 continue;
             }
@@ -238,5 +230,5 @@ fn path_to_move_target_to_goal(
             heap.push(next_node);
         }
     }
-    todo!()
+    vec![]
 }
