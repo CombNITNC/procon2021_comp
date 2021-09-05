@@ -1,5 +1,6 @@
-use super::route::{route_select_to_target, route_target_to_goal};
 use crate::grid::{board::Board, Pos};
+
+use super::route::{route_select_to_target, route_target_to_pos};
 
 #[derive(Debug, Default)]
 pub(super) struct RowSolveEstimate {
@@ -39,8 +40,7 @@ fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEsti
     let mut estimate = RowSolveEstimate::default();
     for &target in &targets[..targets.len() - 2] {
         let mut pos = board.reverse(target);
-        let route = route_target_to_goal(&board, target, board.grid().all_pos())
-            .expect("the route must be found");
+        let route = route_target_to_pos(&board, target, pos).expect("the route must be found");
         let mut route_size = 0;
         for way in route {
             board.lock(pos);
@@ -70,9 +70,24 @@ fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEsti
 /// ```
 /// この形に変形してから `Right` → `Down` して行を完成させる経路を見積もる
 fn estimate_edge_then_right_down(board: &Board, targets: &[Pos]) -> Vec<Pos> {
+    let mut board = board.clone();
+    let mut ret = vec![];
+
     let a = targets[targets.len() - 1];
-    let b = targets.last().unwrap();
-    todo!()
+    let a_goal = board.grid().right_of(a);
+    move_target_to_pos(&mut board, a, a_goal, &mut ret);
+
+    let b = targets.last().copied().unwrap();
+    let b_goal = board.grid().down_of(b);
+    move_target_to_pos(&mut board, b, b_goal, &mut ret);
+
+    let select = board.select();
+    let select_goal = a;
+    move_target_to_pos(&mut board, select, select_goal, &mut ret);
+
+    ret.push(b);
+    ret.push(b_goal);
+    ret
 }
 
 /// ```text
@@ -81,7 +96,38 @@ fn estimate_edge_then_right_down(board: &Board, targets: &[Pos]) -> Vec<Pos> {
 /// ```
 /// この形に変形してから `Left` → `Down` して行を完成させる経路を見積もる
 fn estimate_edge_then_left_down(board: &Board, targets: &[Pos]) -> Vec<Pos> {
+    let mut board = board.clone();
+    let mut ret = vec![];
+
     let a = targets[targets.len() - 1];
-    let b = targets.last().unwrap();
-    todo!()
+    let a_goal = board.grid().down_of(a);
+    move_target_to_pos(&mut board, a, a_goal, &mut ret);
+
+    let b = targets.last().copied().unwrap();
+    let b_goal = board.grid().left_of(b);
+    move_target_to_pos(&mut board, b, b_goal, &mut ret);
+
+    let select = board.select();
+    let select_goal = b;
+    move_target_to_pos(&mut board, select, select_goal, &mut ret);
+
+    ret.push(b);
+    ret.push(b_goal);
+    ret
+}
+
+fn move_target_to_pos(board: &mut Board, mut target: Pos, pos: Pos, ret: &mut Vec<Pos>) {
+    let route = route_target_to_pos(&board, board.reverse(target), pos).unwrap();
+    for way in route {
+        board.lock(target);
+        let route = route_select_to_target(&board, way);
+        for way in route {
+            board.swap_to(way);
+            ret.push(way);
+        }
+        board.unlock(target);
+        board.swap_to(target);
+        ret.push(target);
+        target = way;
+    }
 }
