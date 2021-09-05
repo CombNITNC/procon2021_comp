@@ -326,6 +326,10 @@ fn path_to_move_select_around_target(
             return extract_back_path(pick.pos, back_path);
         }
         for next in field.grid.around_of(pick.pos) {
+            // target とは入れ替えない
+            if next == target {
+                continue;
+            }
             let next_cost = pick.cost.move_on(field, pick.pos, next) + LeastMovements(1);
             if shortest_cost[next] <= next_cost {
                 continue;
