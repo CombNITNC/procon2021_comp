@@ -38,6 +38,7 @@ impl Pos {
 }
 
 /// `RangePos` は `Grid` 上の矩形領域を表し, `Iterator` で走査できる.
+#[derive(Debug, Clone)]
 pub(crate) struct RangePos {
     start: Pos,
     end: Pos,
