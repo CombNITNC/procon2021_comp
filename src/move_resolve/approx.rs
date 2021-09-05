@@ -74,6 +74,57 @@ impl ops::AddAssign for LeastMovements {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TargetNode {
+    target: Pos,
+    cost: LeastMovements,
+}
+impl PartialOrd for TargetNode {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        other.cost.partial_cmp(&self.cost)
+    }
+}
+impl Ord for TargetNode {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.cost.cmp(&self.cost)
+    }
+}
+
+fn path_to_move_select_to_target(board: &Board, target: Pos) -> Vec<GridAction> {
+    // ダイクストラ法で select を target へ動かす経路を決定する.
+    // コストは各マスの必要最低手数の合計.
+    let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
+    let mut back_path = VecOnGrid::with_init(board.grid(), None);
+
+    let mut heap = BinaryHeap::new();
+    heap.push(TargetNode {
+        target: board.select,
+        cost: LeastMovements(0),
+    });
+    shortest_cost[board.select] = LeastMovements(0);
+    while let Some(pick) = heap.pop() {
+        if shortest_cost[pick.target] != pick.cost {
+            continue;
+        }
+        if pick.target == target {
+            return extract_back_path(pick.target, back_path);
+        }
+        for next in board.grid().around_of(pick.target) {
+            let next_cost = pick.cost.move_on(&board.field, pick.target, next);
+            if shortest_cost[next] <= next_cost {
+                continue;
+            }
+            shortest_cost[next] = next_cost;
+            back_path[next] = Some(pick.target);
+            heap.push(TargetNode {
+                target: next,
+                cost: next_cost,
+            });
+        }
+    }
+    vec![]
+}
+
 fn path_to_move_select_around_target(
     board: &Board,
     target: Pos,
@@ -83,24 +134,8 @@ fn path_to_move_select_around_target(
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    struct MoveToAroundNode {
-        target: Pos,
-        cost: LeastMovements,
-    }
-    impl PartialOrd for MoveToAroundNode {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            other.cost.partial_cmp(&self.cost)
-        }
-    }
-    impl Ord for MoveToAroundNode {
-        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-            other.cost.cmp(&self.cost)
-        }
-    }
-
     let mut heap = BinaryHeap::new();
-    heap.push(MoveToAroundNode {
+    heap.push(TargetNode {
         target: board.select,
         cost: LeastMovements(0),
     });
@@ -123,7 +158,7 @@ fn path_to_move_select_around_target(
             }
             shortest_cost[next] = next_cost;
             back_path[next] = Some(pick.target);
-            heap.push(MoveToAroundNode {
+            heap.push(TargetNode {
                 target: next,
                 cost: next_cost,
             });
