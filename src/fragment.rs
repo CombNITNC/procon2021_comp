@@ -48,7 +48,11 @@ impl Edges {
         }
     }
 
-    fn edge(&self, dir: Dir) -> &Edge {
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &Edge> {
+        self.0.iter()
+    }
+
+    pub(crate) fn edge(&self, dir: Dir) -> &Edge {
         self.0
             .iter()
             .find(|edge| edge.dir == dir)
@@ -59,24 +63,65 @@ impl Edges {
 /// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と回転させた向き `rot` と縁四辺 `edges` を表す.
 #[derive(Debug)]
 pub(crate) struct Fragment {
-    pos: Pos,
-    rot: Rot,
-    edges: Edges,
+    pub(crate) pos: Pos,
+    pub(crate) rot: Rot,
+    pub(crate) edges: Edges,
+    pixels: Vec<Color>,
 }
 
 impl Fragment {
+    pub(crate) fn side_length(&self) -> usize {
+        self.edges.0[0].pixels.len()
+    }
+
+    pub(crate) fn rotate(&mut self, rot: Rot) {
+        self.rot += rot;
+        self.edges.rotate(rot);
+    }
+
+    #[allow(clippy::needless_range_loop)]
+    pub(crate) fn pixels(&self) -> Vec<Color> {
+        let row = self.side_length();
+        let count = match self.rot {
+            Rot::R0 => return self.pixels.clone(),
+            Rot::R90 => 1,
+            Rot::R180 => 2,
+            Rot::R270 => 3,
+        };
+
+        let mut temp = self
+            .pixels
+            .chunks(row)
+            .map(|x| x.to_vec())
+            .collect::<Vec<_>>();
+
+        let mut result = vec![vec![Color { r: 0, g: 0, b: 0 }; row]; row];
+
+        for _ in 0..count {
+            for i in 0..row {
+                for j in 0..row {
+                    result[j][row - 1 - i] = temp[i][j];
+                }
+            }
+
+            temp = result.clone();
+        }
+
+        result.into_iter().flatten().collect()
+    }
+
     pub(crate) fn new_all(
-        Problem {
+        &Problem {
             rows,
             cols,
             image:
                 Image {
                     width,
                     height,
-                    pixels,
+                    ref pixels,
                 },
             ..
-        }: Problem,
+        }: &Problem,
     ) -> Vec<Self> {
         let frag_edge = width / rows as u16;
         debug_assert_eq!(frag_edge, height / cols as u16, "Fragment must be a square");
@@ -86,7 +131,7 @@ impl Fragment {
         for col in 0..cols {
             for row in 0..rows {
                 frags.push(Self::new(
-                    &pixels,
+                    pixels,
                     grid.clamping_pos(row, col),
                     width as usize,
                     frag_edge,
@@ -106,9 +151,11 @@ impl Fragment {
         let mut east = vec![];
         let mut south = vec![];
         let mut west = vec![];
+        let mut all = vec![];
         for y in 0..frag_edge {
             for x in 0..frag_edge {
                 let index = as_index(x, y);
+                all.push(pixels[index]);
                 if x == 0 {
                     west.push(pixels[index]);
                 }
@@ -130,6 +177,7 @@ impl Fragment {
             pos,
             rot: Rot::R0,
             edges: Edges::new(north, east, south, west),
+            pixels: all,
         }
     }
 }

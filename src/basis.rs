@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::ops::AddAssign;
+
 use crate::grid::Pos;
 
 /// `Color` は 24 ビットの RGB カラーを表す.
@@ -8,6 +10,17 @@ pub(crate) struct Color {
     pub(crate) r: u8,
     pub(crate) g: u8,
     pub(crate) b: u8,
+}
+
+impl Color {
+    /// RGB色空間での色同士の距離を求める
+    #[inline]
+    pub(crate) fn euclidean_distance(&self, c: Color) -> f64 {
+        let r = (self.r as i16 - c.r as i16) as f64;
+        let g = (self.g as i16 - c.g as i16) as f64;
+        let b = (self.b as i16 - c.b as i16) as f64;
+        f64::sqrt(r * r + g * g + b * b)
+    }
 }
 
 impl std::fmt::Debug for Color {
@@ -84,6 +97,37 @@ pub(crate) enum Rot {
     R270,
 }
 
+impl Rot {
+    #[inline]
+    fn as_num(self) -> u8 {
+        match self {
+            Rot::R0 => 0,
+            Rot::R90 => 1,
+            Rot::R180 => 2,
+            Rot::R270 => 3,
+        }
+    }
+
+    #[inline]
+    fn from_num(rot: u8) -> Self {
+        assert!(rot <= 3, "rot must be lower than 4");
+        match rot {
+            0 => Rot::R0,
+            1 => Rot::R90,
+            2 => Rot::R180,
+            3 => Rot::R270,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl AddAssign for Rot {
+    fn add_assign(&mut self, rhs: Self) {
+        let rot = (self.as_num() + rhs.as_num()) % 4;
+        *self = Self::from_num(rot);
+    }
+}
+
 /// `Dir` はある断片画像において辺が位置する向きを表す.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum Dir {
@@ -110,6 +154,17 @@ impl Dir {
             Rot::R90 => self.r90(),
             Rot::R180 => self.r90().r90(),
             Rot::R270 => self.r90().r90().r90(),
+        }
+    }
+
+    /// 自分を四角形の辺の方向としたとき、対辺の方向を返す。
+    #[inline]
+    pub(crate) fn opposite(self) -> Self {
+        match self {
+            Dir::North => Dir::South,
+            Dir::East => Dir::West,
+            Dir::South => Dir::North,
+            Dir::West => Dir::East,
         }
     }
 
