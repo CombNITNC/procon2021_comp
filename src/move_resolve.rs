@@ -6,7 +6,7 @@ use self::{
 };
 use crate::{
     basis::{Movement, Operation},
-    grid::{Grid, Pos, VecOnGrid},
+    grid::{Grid, Pos, RangePos, VecOnGrid},
 };
 
 pub mod edges_nodes;
@@ -323,18 +323,7 @@ fn path_to_move_select_around_target(
             continue;
         }
         if field.grid.looping_manhattan_dist(pick.pos, target) == 1 {
-            let mut pos = pick.pos;
-            let mut history = vec![pos];
-            while let Some(back) = back_path[pos] {
-                history.push(back);
-                pos = back;
-            }
-            history.reverse();
-            return history
-                .windows(2)
-                .map(|mov| Movement::between_pos(mov[0], mov[1]))
-                .map(GridAction::Swap)
-                .collect();
+            return extract_back_path(pick.pos, back_path);
         }
         for next in field.grid.around_of(pick.pos) {
             let next_cost = pick.cost.move_on(field, pick.pos, next) + LeastMovements(1);
@@ -350,6 +339,20 @@ fn path_to_move_select_around_target(
         }
     }
     vec![]
+}
+
+fn extract_back_path(mut pos: Pos, back_path: VecOnGrid<Option<Pos>>) -> Vec<GridAction> {
+    let mut history = vec![pos];
+    while let Some(back) = back_path[pos] {
+        history.push(back);
+        pos = back;
+    }
+    history.reverse();
+    history
+        .windows(2)
+        .map(|mov| Movement::between_pos(mov[0], mov[1]))
+        .map(GridAction::Swap)
+        .collect()
 }
 
 fn path_to_move_target_to_goal(field: &VecOnGrid<Pos>, target: Pos) -> Vec<GridAction> {
