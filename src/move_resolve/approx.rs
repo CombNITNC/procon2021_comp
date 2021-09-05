@@ -3,7 +3,10 @@ use std::{
     ops,
 };
 
-use crate::grid::{Grid, Pos, RangePos, VecOnGrid};
+use crate::{
+    basis::Movement,
+    grid::{Grid, Pos, RangePos, VecOnGrid},
+};
 
 use super::GridAction;
 
@@ -113,7 +116,29 @@ impl Ord for TargetNode {
 
 /// target 位置のマスをそのゴール位置へ動かす実際の手順を決定する.
 fn moves_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<GridAction> {
-    todo!()
+    let route = route_target_to_goal(board, target, range);
+    if route.is_empty() {
+        return vec![];
+    }
+    let mut board = board.clone();
+    let mut current = target;
+    let mut ret = vec![board.select];
+    for way in route {
+        board.lock(current);
+        let route_to_arrive = route_select_to_target(&board, way);
+        for way in route_to_arrive {
+            board.swap_to(way);
+            ret.push(way);
+        }
+        board.unlock(current);
+        board.swap_to(current);
+        ret.push(current);
+        current = way;
+    }
+    ret.windows(2)
+        .map(|win| Movement::between_pos(win[0], win[1]))
+        .map(GridAction::Swap)
+        .collect()
 }
 
 /// target 位置のマスを range の範囲内に収める最短経路を求める.
