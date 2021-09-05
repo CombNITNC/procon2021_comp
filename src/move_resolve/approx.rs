@@ -86,8 +86,10 @@ impl LeastMovements {
     }
 
     fn swap_on(self, field: &VecOnGrid<Pos>, from: Pos, to: Pos) -> Self {
-        let before = least_movements(field.grid.looping_min_vec(from, field[from]));
-        let after = least_movements(field.grid.looping_min_vec(to, field[from]));
+        let before = least_movements(field.grid.looping_min_vec(from, field[from]))
+            + least_movements(field.grid.looping_min_vec(to, field[to]));
+        let after = least_movements(field.grid.looping_min_vec(to, field[from]))
+            + least_movements(field.grid.looping_min_vec(from, field[to]));
         Self(4 + self.0 + after - before)
     }
 }
