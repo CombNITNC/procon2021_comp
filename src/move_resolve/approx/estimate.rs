@@ -67,10 +67,24 @@ fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEsti
     estimate
 }
 
+/// ```text
+/// ... 選 a
+/// ... ** b
+/// ```
+/// この形に変形してから `Right` → `Down` して行を完成させる経路を見積もる
 fn estimate_edge_then_right_down(board: &Board, targets: &[Pos]) -> Vec<Pos> {
+    let a = targets[targets.len() - 1];
+    let b = targets.last().unwrap();
     todo!()
 }
 
+/// ```text
+/// ... b 選
+/// ... a **
+/// ```
+/// この形に変形してから `Left` → `Down` して行を完成させる経路を見積もる
 fn estimate_edge_then_left_down(board: &Board, targets: &[Pos]) -> Vec<Pos> {
+    let a = targets[targets.len() - 1];
+    let b = targets.last().unwrap();
     todo!()
 }
