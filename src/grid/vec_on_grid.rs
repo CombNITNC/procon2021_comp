@@ -118,10 +118,10 @@ impl<'grid, T> VecOnGrid<'grid, T> {
     /// `Grid` の X 方向で全体を巡回させる.
     pub(crate) fn rotate_x(&mut self, offset: isize) {
         for y in 0..self.grid.height() {
-            let start = self.grid.pos_as_index(self.grid.clamping_pos(0, y));
+            let start = self.grid.pos_as_index(self.grid.pos(0, y));
             let end = self
                 .grid
-                .pos_as_index(self.grid.clamping_pos(self.grid.width() - 1, y));
+                .pos_as_index(self.grid.pos(self.grid.width() - 1, y));
             if 0 < offset {
                 self.vec[start..=end].rotate_right(offset.max(0) as usize);
             } else {

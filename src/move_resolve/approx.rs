@@ -23,7 +23,7 @@ impl Solver {
         target_row: u8,
     ) -> Vec<GridAction> {
         let targets: Vec<_> = (0..field.grid.width())
-            .map(move |x| field.grid.clamping_pos(x, target_row))
+            .map(move |x| field.grid.pos(x, target_row))
             .filter(|&p| p != field[p])
             .collect();
 

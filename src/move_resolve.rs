@@ -257,7 +257,7 @@ fn resolve_approximately(
     for _ in 0..grid.height() - 1 {
         let cost_to_sort_row = |y: u8| -> u32 {
             (0..grid.width())
-                .map(move |x| grid.clamping_pos(x, y))
+                .map(move |x| grid.pos(x, y))
                 .map(|pos| grid.looping_manhattan_dist(pos, nodes[pos]))
                 .sum()
         };
@@ -265,7 +265,7 @@ fn resolve_approximately(
         let y = row_to_sort.pop().unwrap();
 
         for x in 0..grid.width() {
-            let target = grid.clamping_pos(x, y);
+            let target = grid.pos(x, y);
             if target != nodes[target] {
                 let mut actions = todo!();
                 all_actions.append(&mut actions);
