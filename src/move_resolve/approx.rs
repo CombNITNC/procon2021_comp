@@ -14,7 +14,7 @@ impl Board<'_> {
         self.field.grid
     }
 
-    fn move_to(&mut self, to_swap: Pos) {
+    fn swap_to(&mut self, to_swap: Pos) {
         self.field.swap(self.select, to_swap);
         self.select = to_swap;
     }
@@ -49,7 +49,7 @@ impl LeastMovements {
         )
     }
 
-    fn move_on(self, field: &VecOnGrid<Pos>, from: Pos, to: Pos) -> Self {
+    fn swap_on(self, field: &VecOnGrid<Pos>, from: Pos, to: Pos) -> Self {
         let before = least_movements(field.grid.looping_min_vec(from, field[from]));
         let after = least_movements(field.grid.looping_min_vec(to, field[from]));
         Self(4 + self.0 - before + after)
@@ -86,7 +86,7 @@ impl Ord for TargetNode {
     }
 }
 
-fn path_to_move_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
+fn path_to_swap_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
     // ダイクストラ法で select を target へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
@@ -106,7 +106,7 @@ fn path_to_move_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
             return extract_back_path(pick.target, back_path);
         }
         for next in board.grid().around_of(pick.target) {
-            let next_cost = pick.cost.move_on(&board.field, pick.target, next);
+            let next_cost = pick.cost.swap_on(&board.field, pick.target, next);
             if shortest_cost[next] <= next_cost {
                 continue;
             }
@@ -121,7 +121,7 @@ fn path_to_move_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
     vec![]
 }
 
-fn path_to_move_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, LeastMovements) {
+fn path_to_swap_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, LeastMovements) {
     // ダイクストラ法で select を target の隣へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
@@ -145,7 +145,7 @@ fn path_to_move_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, L
             if next == target {
                 continue;
             }
-            let next_cost = pick.cost.move_on(&board.field, pick.target, next) + LeastMovements(1);
+            let next_cost = pick.cost.swap_on(&board.field, pick.target, next) + LeastMovements(1);
             if shortest_cost[next] <= next_cost {
                 continue;
             }
@@ -160,7 +160,7 @@ fn path_to_move_select_around_target(board: &Board, target: Pos) -> (Vec<Pos>, L
     (vec![], LeastMovements(0))
 }
 
-fn path_to_move_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
+fn path_to_swap_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Vec<Pos> {
     // ダイクストラ法で target をゴール位置へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
@@ -208,14 +208,14 @@ fn path_to_move_target_to_goal(board: &Board, target: Pos, range: RangePos) -> V
                 continue;
             }
             let (moves_to_around, cost) =
-                path_to_move_select_around_target(&pick.board, pick.target);
+                path_to_swap_select_around_target(&pick.board, pick.target);
             if moves_to_around.is_empty() {
                 continue;
             }
             let mut next_node = pick.clone();
             next_node.cost += cost;
             for to in moves_to_around {
-                next_node.board.move_to(to);
+                next_node.board.swap_to(to);
             }
             // 隣に移動していなければならない
             assert_eq!(
@@ -228,7 +228,7 @@ fn path_to_move_target_to_goal(board: &Board, target: Pos, range: RangePos) -> V
             // コストだけ先に計算
             next_node.cost = next_node
                 .cost
-                .move_on(&next_node.board.field, pick.target, next_pos)
+                .swap_on(&next_node.board.field, pick.target, next_pos)
                 + LeastMovements(1);
             if shortest_cost[next_pos] <= next_node.cost {
                 continue;
