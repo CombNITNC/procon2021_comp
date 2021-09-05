@@ -45,6 +45,13 @@ pub(crate) struct RangePos {
     y: usize,
 }
 
+impl RangePos {
+    pub(crate) fn is_in(&self, pos: Pos) -> bool {
+        (self.start.x()..=self.end.x()).contains(&pos.x())
+            && (self.start.y()..=self.end.y()).contains(&pos.y())
+    }
+}
+
 impl Iterator for RangePos {
     type Item = Pos;
 
