@@ -1,4 +1,4 @@
-use std::collections::BinaryHeap;
+use std::{collections::BinaryHeap, ops};
 
 use self::{
     edges_nodes::EdgesNodes,
@@ -242,19 +242,48 @@ pub(crate) fn resolve(
     actions_to_operations(path)
 }
 
-fn least_movements((x, y): (i32, i32)) -> u32 {
-    if x == 0 && y == 0 {
+fn least_movements((dx, dy): (i32, i32)) -> u32 {
+    if dx == 0 && dy == 0 {
         return 0;
     }
-    let x = x.abs();
-    let y = y.abs();
-    let d = (x - y).unsigned_abs();
-    let m = x.min(y) as u32;
-    let mut ret = 5 * d + 6 * m - 4;
-    if x == y {
+    let dx = dx.abs();
+    let dy = dy.abs();
+    let d = (dx - dy).unsigned_abs();
+    let min = dx.min(dy) as u32;
+    let mut ret = 5 * d + 6 * min - 4;
+    if dx == dy {
         ret += 2;
     }
     ret
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct LeastMovements(u32);
+
+impl LeastMovements {
+    fn new(field: &VecOnGrid<Pos>) -> Self {
+        Self(
+            field
+                .iter_with_pos()
+                .map(|(pos, &to)| field.grid.looping_min_vec(pos, to))
+                .map(least_movements)
+                .sum(),
+        )
+    }
+
+    fn move_on(self, field: &VecOnGrid<Pos>, from: Pos, to: Pos) -> Self {
+        let before = least_movements(field.grid.looping_min_vec(from, field[from]));
+        let after = least_movements(field.grid.looping_min_vec(to, field[from]));
+        Self(4 + self.0 - before + after)
+    }
+}
+
+impl ops::Add for LeastMovements {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
 }
 
 fn path_to_move_select_around_target(
@@ -264,13 +293,13 @@ fn path_to_move_select_around_target(
 ) -> Vec<GridAction> {
     // ダイクストラ法で select を target の隣へ動かす経路を決定する.
     // コストは各マスの必要最低手数の合計.
-    let mut shortest_cost = VecOnGrid::with_init(field.grid, 1_000_000_000);
+    let mut shortest_cost = VecOnGrid::with_init(field.grid, LeastMovements(1_000_000_000));
     let mut back_path = VecOnGrid::with_init(field.grid, None);
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     struct Node {
         pos: Pos,
-        cost: u32,
+        cost: LeastMovements,
     }
     impl PartialOrd for Node {
         fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -286,9 +315,9 @@ fn path_to_move_select_around_target(
     let mut heap = BinaryHeap::new();
     heap.push(Node {
         pos: select,
-        cost: 0,
+        cost: LeastMovements(0),
     });
-    shortest_cost[select] = 0;
+    shortest_cost[select] = LeastMovements(0);
     while let Some(pick) = heap.pop() {
         if shortest_cost[pick.pos] != pick.cost {
             continue;
@@ -308,8 +337,7 @@ fn path_to_move_select_around_target(
                 .collect();
         }
         for next in field.grid.around_of(pick.pos) {
-            let next_cost =
-                pick.cost + 1 + least_movements(field.grid.looping_min_vec(pick.pos, next));
+            let next_cost = pick.cost.move_on(field, pick.pos, next) + LeastMovements(1);
             if shortest_cost[next] <= next_cost {
                 continue;
             }
