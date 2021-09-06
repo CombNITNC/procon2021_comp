@@ -288,7 +288,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
         }
         pick.board.lock(pick.target);
         let pick = pick;
-        for next_pos in board.around_of(pick.target) {
+        for next_pos in pick.board.around_of(pick.target) {
             if shortest_cost[next_pos] <= pick.cost {
                 continue;
             }
