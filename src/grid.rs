@@ -48,6 +48,15 @@ pub(crate) struct RangePos {
 }
 
 impl RangePos {
+    pub(crate) fn single(pos: Pos) -> Self {
+        Self {
+            start: pos,
+            end: pos,
+            x: pos.x() as _,
+            y: pos.y() as _,
+        }
+    }
+
     pub(crate) fn is_in(&self, pos: Pos) -> bool {
         (self.start.x()..=self.end.x()).contains(&pos.x())
             && (self.start.y()..=self.end.y()).contains(&pos.y())
