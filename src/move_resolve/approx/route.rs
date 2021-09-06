@@ -318,9 +318,10 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
             }
             // この手順がより短かったので適用
             shortest_cost[next_pos] = next_node.cost;
+            back_path[next_pos] = Some(pick.target);
             next_node.board.unlock(pick.target);
             next_node.board.swap_to(pick.target);
-            back_path[next_pos] = Some(pick.target);
+            next_node.target = next_pos;
             heap.push(next_node);
         }
     }
