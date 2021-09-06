@@ -88,7 +88,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
             if shortest_cost[pick.target] != pick.cost {
                 continue;
             }
-            if pick.target == pos {
+            if board.grid().looping_manhattan_dist(pick.target, pos) == 1 {
                 return Some((extract_back_path(pick.target, back_path), pick.cost));
             }
             for next_pos in board.around_of(pick.target) {
@@ -127,7 +127,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
         }
         pick.board.lock(pick.target);
         let pick = pick;
-        for next_pos in board.around_of(pick.target) {
+        for next_pos in pick.board.around_of(pick.target) {
             if shortest_cost[next_pos] <= pick.cost {
                 continue;
             }
@@ -140,11 +140,11 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
             for mov in route {
                 next_node.board.swap_to(mov);
             }
+            next_node.cost += cost;
             next_node.cost = next_node
                 .cost
                 .swap_on(next_node.board.field(), pick.target, next_pos)
-                + LeastMovements(1)
-                + cost;
+                + LeastMovements(1);
 
             if shortest_cost[next_pos] <= next_node.cost {
                 continue;
