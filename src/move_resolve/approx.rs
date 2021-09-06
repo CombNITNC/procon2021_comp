@@ -1,7 +1,7 @@
 use std::ops;
 
 use self::estimate::{estimate_solve_row, RowSolveEstimate};
-use super::GridAction;
+use super::{dijkstra::DijkstraCost, GridAction};
 use crate::{
     basis::Movement,
     grid::{board::Board, Pos, VecOnGrid},
@@ -105,5 +105,13 @@ impl ops::Add for LeastMovements {
 impl ops::AddAssign for LeastMovements {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
+    }
+}
+
+impl DijkstraCost for LeastMovements {
+    const IDENTITY: Self = Self(1_000_000_000);
+
+    fn op(self, other: Self) -> Self {
+        Self(self.0 + other.0)
     }
 }
