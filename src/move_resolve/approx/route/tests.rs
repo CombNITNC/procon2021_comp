@@ -7,9 +7,11 @@ use super::{route_target_to_goal, route_target_to_pos};
 
 #[test]
 fn test_route_target_to_pos() {
+    // target: {}
+    // select: []
     // 22 10 20 30 40
     // 01 11 21[32]41
-    // 02 12[00]31 42
+    // 02 12{00}31 42
     // 03 13 23 33 43
     // 04 14 24 34 44
     let grid = Grid::new(5, 5);
@@ -43,8 +45,10 @@ fn test_route_target_to_pos() {
 
 #[test]
 fn test_route_target_to_goal() {
+    // target: {}
+    // select: []
     // 22 10 20 30 40
-    // 01 11 21[32]41
+    // 01 11 21{32}41
     // 02 12[00]31 42
     // 03 13 23 33 43
     // 04 14 24 34 44
