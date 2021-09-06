@@ -141,6 +141,14 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
                 next_node.board.swap_to(mov);
             }
             next_node.cost += cost;
+            assert_eq!(
+                pick.board
+                    .grid()
+                    .looping_manhattan_dist(pick.target, next_node.board.select()),
+                1,
+                "{:#?}",
+                next_node
+            );
             next_node.cost = next_node
                 .cost
                 .swap_on(next_node.board.field(), pick.target, next_pos)
