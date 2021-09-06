@@ -144,7 +144,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
             assert_eq!(
                 pick.board
                     .grid()
-                    .looping_manhattan_dist(pick.target, next_node.board.select()),
+                    .looping_manhattan_dist(next_pos, next_node.board.select()),
                 1,
                 "{:#?}",
                 next_node
