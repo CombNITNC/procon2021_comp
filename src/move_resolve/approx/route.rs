@@ -303,8 +303,10 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
                 next_node
                     .board
                     .grid()
-                    .looping_manhattan_dist(next_pos, next_node.board.select()),
-                1
+                    .looping_manhattan_dist(pick.target, next_node.board.select()),
+                1,
+                "{:#?}",
+                next_node
             );
             // コストだけ先に計算
             next_node.cost = next_node
