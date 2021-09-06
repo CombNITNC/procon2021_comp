@@ -9,6 +9,7 @@ use crate::{
 };
 
 pub mod approx;
+pub mod dijkstra;
 pub mod edges_nodes;
 pub mod ida_star;
 #[cfg(test)]
