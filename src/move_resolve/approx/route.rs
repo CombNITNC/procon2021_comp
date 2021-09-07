@@ -1,5 +1,3 @@
-use std::collections::BinaryHeap;
-
 use super::LeastMovements;
 use crate::{
     grid::{board::Board, Pos, RangePos, VecOnGrid},
@@ -75,65 +73,73 @@ pub(super) fn moves_to_swap_target_to_goal(
 
 /// `target` 位置のマスを `pos` の位置へ移動させる最短経路を求める.
 pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Option<Vec<Pos>> {
-    let mut shortest_cost = VecOnGrid::with_init(board.grid(), LeastMovements(1_000_000_000));
-    let mut back_path = VecOnGrid::with_init(board.grid(), None);
+    #[derive(Debug, Clone)]
+    struct RouteTargetToPos<'b> {
+        node: RowCompleteNode<'b>,
+        pos: Pos,
+    }
+    impl DijkstraState for RouteTargetToPos<'_> {
+        type C = LeastMovements;
+        fn cost(&self) -> Self::C {
+            self.node.cost
+        }
 
-    let mut heap = BinaryHeap::new();
-    let cost = LeastMovements::new(board.field());
-    heap.push(RowCompleteNode {
-        target,
-        cost,
-        board: board.clone(),
-    });
-    shortest_cost[target] = cost;
-    while let Some(mut pick) = heap.pop() {
-        if shortest_cost[pick.target] != pick.cost {
-            continue;
+        fn as_pos(&self) -> Pos {
+            self.node.target
         }
-        if pos == pick.target {
-            return Some(extract_back_path(pick.target, back_path));
+
+        fn is_goal(&self) -> bool {
+            self.pos == self.as_pos()
         }
-        pick.board.lock(pick.target);
-        let pick = pick;
-        for next_pos in pick.board.around_of(pick.target) {
-            if shortest_cost[next_pos] <= pick.cost {
-                continue;
-            }
-            let route = route_target_around_pos(&pick.board, pick.board.select(), next_pos);
-            if route.is_none() {
-                continue;
-            }
-            let (route, cost) = route.unwrap();
-            let mut next_node = pick.clone();
+
+        type AS = Vec<Pos>;
+        fn next_actions(&self) -> Self::AS {
+            self.node.board.around_of(self.as_pos())
+        }
+
+        fn apply(&self, new_pos: Pos) -> Option<Self> {
+            let (route, cost) =
+                route_target_around_pos(&self.node.board, self.node.board.select(), self.as_pos())?;
+            let mut new_node = self.node.clone();
             for mov in route {
-                next_node.board.swap_to(mov);
+                new_node.board.swap_to(mov);
             }
-            next_node.cost += cost;
+            new_node.cost += cost;
             assert_eq!(
-                pick.board
+                new_node
+                    .board
                     .grid()
-                    .looping_manhattan_dist(next_pos, next_node.board.select()),
+                    .looping_manhattan_dist(new_pos, new_node.board.select()),
                 1,
                 "{:#?}",
-                next_node
+                new_node
             );
-            next_node.cost = next_node
+            new_node.cost = new_node
                 .cost
-                .swap_on(next_node.board.field(), pick.target, next_pos)
+                .swap_on(new_node.board.field(), self.as_pos(), new_pos)
                 + LeastMovements(1);
 
-            if shortest_cost[next_pos] <= next_node.cost {
-                continue;
-            }
-            shortest_cost[next_pos] = next_node.cost;
-            next_node.board.unlock(pick.target);
-            next_node.board.swap_to(pick.target);
-            next_node.target = next_pos;
-            back_path[next_pos] = Some(pick.target);
-            heap.push(next_node);
+            new_node.board.unlock(self.as_pos());
+            new_node.board.swap_to(self.as_pos());
+            new_node.target = new_pos;
+            Some(Self {
+                node: new_node,
+                ..self.clone()
+            })
         }
     }
-    None
+    dijkstra(
+        board,
+        RouteTargetToPos {
+            node: RowCompleteNode {
+                target,
+                cost: LeastMovements::new(board.field()),
+                board: board.clone(),
+            },
+            pos,
+        },
+    )
+    .map(|res| res.0)
 }
 
 fn route_target_around_pos(
