@@ -22,11 +22,6 @@ impl Solver {
         field: &VecOnGrid<Pos>,
         target_row: u8,
     ) -> Vec<GridAction> {
-        let targets: Vec<_> = (0..field.grid.width())
-            .map(move |x| field.grid.pos(x, target_row))
-            .filter(|&p| p != field[p])
-            .collect();
-
         let estimate = estimate_solve_row(Board::new(select, field.clone()), target_row);
         if let Some(worst_estimate) = &self.estimate {
             if worst_estimate.worst_route_size < estimate.worst_route_size {
