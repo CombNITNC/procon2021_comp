@@ -27,7 +27,7 @@ impl Solver {
             .filter(|&p| p != field[p])
             .collect();
 
-        let estimate = estimate_solve_row(Board::new(select, field.clone()), &targets);
+        let estimate = estimate_solve_row(Board::new(select, field.clone()), target_row);
         if let Some(worst_estimate) = &self.estimate {
             if worst_estimate.worst_route_size < estimate.worst_route_size {
                 self.estimate.replace(estimate);

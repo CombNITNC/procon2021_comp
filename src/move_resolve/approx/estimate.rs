@@ -9,10 +9,13 @@ pub(super) struct RowSolveEstimate {
     pub(super) worst_swap_pos: Pos,
 }
 
-pub(super) fn estimate_solve_row(mut board: Board, targets: &[Pos]) -> RowSolveEstimate {
+pub(super) fn estimate_solve_row(mut board: Board, target_row: u8) -> RowSolveEstimate {
+    let targets: Vec<_> = (0..board.grid().width())
+        .map(|x| board.grid().pos(x, target_row))
+        .collect();
     let mut estimate = RowSolveEstimate::default();
 
-    let line_proc = estimate_line_without_edge(board.clone(), targets);
+    let line_proc = estimate_line_without_edge(board.clone(), &targets);
     for mov in line_proc.moves {
         estimate.moves.push(mov);
         board.swap_to(mov);
@@ -25,8 +28,8 @@ pub(super) fn estimate_solve_row(mut board: Board, targets: &[Pos]) -> RowSolveE
         estimate.worst_swap_pos = line_proc.worst_swap_pos;
     }
 
-    let edge_rd_estimate = estimate_edge_then_right_down(&board, targets);
-    let edge_ld_estimate = estimate_edge_then_left_down(&board, targets);
+    let edge_rd_estimate = estimate_edge_then_right_down(&board, &targets);
+    let edge_ld_estimate = estimate_edge_then_left_down(&board, &targets);
     let mut edge_estimate = if edge_rd_estimate.len() < edge_ld_estimate.len() {
         edge_rd_estimate
     } else {
