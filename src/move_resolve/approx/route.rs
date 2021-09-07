@@ -99,7 +99,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
             let (route, cost) =
-                route_target_around_pos(&self.node.board, self.node.board.select(), self.as_pos())?;
+                route_target_around_pos(&self.node.board, self.node.board.select(), new_pos)?;
             let mut new_node = self.node.clone();
             for mov in route {
                 new_node.board.swap_to(mov);
