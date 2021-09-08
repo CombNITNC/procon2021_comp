@@ -17,7 +17,7 @@ pub(crate) trait DijkstraState: Clone + std::fmt::Debug {
     fn is_goal(&self) -> bool;
 
     type AS: IntoIterator<Item = Pos>;
-    fn next_actions(&self) -> Self::AS;
+    fn next_actions(&mut self) -> Self::AS;
 
     fn apply(&self, new_pos: Pos) -> Option<Self>;
 }
@@ -53,14 +53,13 @@ where
     shortest_cost[start.as_pos()] = start.cost();
     let mut heap = BinaryHeap::new();
     heap.push(Reverse(DijkstraNode(start)));
-    while let Some(Reverse(DijkstraNode(pick))) = heap.pop() {
+    while let Some(Reverse(DijkstraNode(mut pick))) = heap.pop() {
         if shortest_cost[pick.as_pos()] != pick.cost() {
             continue;
         }
         if pick.is_goal() {
             return Some((extract_back_path(pick.as_pos(), back_path), pick.cost()));
         }
-        board.lock(pick.as_pos());
         for next in pick.next_actions() {
             if shortest_cost[next] <= pick.cost() {
                 continue;

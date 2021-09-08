@@ -95,13 +95,16 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
         }
 
         type AS = Vec<Pos>;
-        fn next_actions(&self) -> Self::AS {
+        fn next_actions(&mut self) -> Self::AS {
             self.node.board.around_of(self.as_pos())
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
-            let (route, cost) =
-                route_target_around_pos(&self.node.board, self.node.board.select(), new_pos)?;
+            let (route, cost) = route_target_around_pos(
+                self.node.board.clone(),
+                self.node.board.select(),
+                new_pos,
+            )?;
             let mut new_node = self.node.clone();
             for mov in route {
                 new_node.board.swap_to(mov);
@@ -144,7 +147,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
 }
 
 fn route_target_around_pos(
-    board: &Board,
+    mut board: Board,
     target: Pos,
     pos: Pos,
 ) -> Option<(Vec<Pos>, LeastMovements)> {
@@ -172,7 +175,7 @@ fn route_target_around_pos(
         }
 
         type AS = Vec<Pos>;
-        fn next_actions(&self) -> Self::AS {
+        fn next_actions(&mut self) -> Self::AS {
             self.board.around_of(self.as_pos())
         }
 
@@ -189,14 +192,15 @@ fn route_target_around_pos(
             })
         }
     }
+    board.lock(pos);
     dijkstra(
-        board,
+        &board,
         RouteTargetAroundPos {
             node: TargetNode {
                 target,
                 cost: LeastMovements::new(),
             },
-            board,
+            board: &board,
             pos,
         },
     )
@@ -225,7 +229,7 @@ fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Option<Vec<P
         }
 
         type AS = Vec<Pos>;
-        fn next_actions(&self) -> Self::AS {
+        fn next_actions(&mut self) -> Self::AS {
             self.board.around_of(self.as_pos())
         }
 
@@ -279,7 +283,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
         }
 
         type AS = Vec<Pos>;
-        fn next_actions(&self) -> Self::AS {
+        fn next_actions(&mut self) -> Self::AS {
             self.board.around_of(self.as_pos())
         }
 
@@ -312,7 +316,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
 }
 
 /// `board` が選択しているマスを `target` の隣へ動かす最短経路を決定する.
-fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, LeastMovements)> {
+fn route_select_around_target(mut board: Board, target: Pos) -> Option<(Vec<Pos>, LeastMovements)> {
     #[derive(Debug, Clone)]
     struct RouteSelectAroundTarget<'b> {
         node: TargetNode,
@@ -337,7 +341,7 @@ fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, L
         }
 
         type AS = Vec<Pos>;
-        fn next_actions(&self) -> Self::AS {
+        fn next_actions(&mut self) -> Self::AS {
             self.board.around_of(self.as_pos())
         }
 
@@ -359,14 +363,15 @@ fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, L
             })
         }
     }
+    board.lock(target);
     dijkstra(
-        board,
+        &board,
         RouteSelectAroundTarget {
             node: TargetNode {
                 target: board.select(),
                 cost: LeastMovements::new(),
             },
-            board,
+            board: &board,
             target,
         },
     )
@@ -395,13 +400,13 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
         }
 
         type AS = Vec<Pos>;
-        fn next_actions(&self) -> Self::AS {
+        fn next_actions(&mut self) -> Self::AS {
             self.node.board.around_of(self.as_pos())
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
             let (moves_to_around, cost) =
-                route_select_around_target(&self.node.board, self.target)?;
+                route_select_around_target(self.node.board.clone(), self.target)?;
             let mut new_node = self.node.clone();
             new_node.cost += cost;
             for to in moves_to_around {
