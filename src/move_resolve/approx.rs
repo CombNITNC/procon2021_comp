@@ -75,10 +75,10 @@ impl LeastMovements {
         let before = least_movements(before_min_vec);
         let after_min_vec = field.grid.looping_min_vec(to, field[from]);
         let after = least_movements(after_min_vec);
-        let res = 4 + self.0 as i32 + after as i32 - before as i32;
+        let res = 5 + self.0 as i32 + after as i32 - before as i32;
         if res < 0 {
             eprintln!("{:?} -> {:?}", before_min_vec, after_min_vec);
-            eprintln!("4 + {} + {} - {} = {}", self.0, after, before, res);
+            eprintln!("5 + {} + {} - {} = {}", self.0, after, before, res);
             panic!("invalid swap on: {:?} -> {:?}\n{:#?}", from, to, field);
         }
         Self(res as u32)
