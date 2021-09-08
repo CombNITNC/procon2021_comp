@@ -133,7 +133,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
         RouteTargetToPos {
             node: RowCompleteNode {
                 target,
-                cost: LeastMovements::new(board.field()),
+                cost: LeastMovements(0),
                 board: board.clone(),
             },
             pos,
@@ -194,7 +194,7 @@ fn route_target_around_pos(
         RouteTargetAroundPos {
             node: TargetNode {
                 target,
-                cost: LeastMovements::new(board.field()),
+                cost: LeastMovements(0),
             },
             board,
             pos,
@@ -248,7 +248,7 @@ fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Option<Vec<P
         RouteIntoRange {
             node: TargetNode {
                 target,
-                cost: LeastMovements::new(board.field()),
+                cost: LeastMovements(0),
             },
             board,
             range,
@@ -302,7 +302,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
         RouteSelectToTarget {
             node: TargetNode {
                 target: board.select(),
-                cost: LeastMovements::new(board.field()),
+                cost: LeastMovements(0),
             },
             board,
             target,
@@ -366,7 +366,7 @@ fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, L
         RouteSelectAroundTarget {
             node: TargetNode {
                 target: board.select(),
-                cost: LeastMovements::new(board.field()),
+                cost: LeastMovements(0),
             },
             board,
             target,
@@ -437,7 +437,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
         RouteSelectAroundTarget {
             node: RowCompleteNode {
                 target,
-                cost: LeastMovements::new(board.field()),
+                cost: LeastMovements(0),
                 board: board.clone(),
             },
             target,

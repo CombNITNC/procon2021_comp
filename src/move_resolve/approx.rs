@@ -66,27 +66,19 @@ fn least_movements((dx, dy): (i32, i32)) -> u32 {
     ret
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct LeastMovements(u32);
 
 impl LeastMovements {
-    fn new(field: &VecOnGrid<Pos>) -> Self {
-        Self(
-            field
-                .iter_with_pos()
-                .map(|(pos, &to)| field.grid.looping_min_vec(pos, to))
-                .map(least_movements)
-                .sum(),
-        )
-    }
-
     fn swap_on(self, field: &VecOnGrid<Pos>, from: Pos, to: Pos) -> Self {
-        let before = least_movements(field.grid.looping_min_vec(from, field[from]))
-            + least_movements(field.grid.looping_min_vec(to, field[to]));
-        let after = least_movements(field.grid.looping_min_vec(to, field[from]))
-            + least_movements(field.grid.looping_min_vec(from, field[to]));
+        let before_min_vec = field.grid.looping_min_vec(from, field[from]);
+        let before = least_movements(before_min_vec);
+        let after_min_vec = field.grid.looping_min_vec(to, field[from]);
+        let after = least_movements(after_min_vec);
         let res = 4 + self.0 as i32 + after as i32 - before as i32;
         if res < 0 {
+            eprintln!("{:?} -> {:?}", before_min_vec, after_min_vec);
+            eprintln!("4 + {} + {} - {} = {}", self.0, after, before, res);
             panic!("invalid swap on: {:?} -> {:?}\n{:#?}", from, to, field);
         }
         Self(res as u32)
