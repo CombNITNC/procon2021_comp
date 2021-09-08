@@ -114,10 +114,11 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
                 "{:#?}",
                 new_node
             );
-            new_node.cost = new_node
-                .cost
-                .swap_on(new_node.board.field(), self.as_pos(), new_pos)
-                + LeastMovements(1);
+            new_node.cost = (new_node.cost + LeastMovements(1)).swap_on(
+                new_node.board.field(),
+                self.as_pos(),
+                new_pos,
+            );
 
             new_node.board.unlock(self.as_pos());
             new_node.board.swap_to(self.as_pos());
@@ -176,10 +177,11 @@ fn route_target_around_pos(
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
-            let new_cost = self
-                .cost()
-                .swap_on(self.board.field(), self.as_pos(), new_pos)
-                + LeastMovements(1);
+            let new_cost = (self.cost() + LeastMovements(1)).swap_on(
+                self.board.field(),
+                self.as_pos(),
+                new_pos,
+            );
             Some(Self {
                 node: TargetNode {
                     cost: new_cost,
@@ -230,10 +232,11 @@ fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Option<Vec<P
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
-            let new_cost = self
-                .cost()
-                .swap_on(self.board.field(), self.as_pos(), new_pos)
-                + LeastMovements(1);
+            let new_cost = (self.cost() + LeastMovements(1)).swap_on(
+                self.board.field(),
+                self.as_pos(),
+                new_pos,
+            );
             Some(Self {
                 node: TargetNode {
                     cost: new_cost,
@@ -347,11 +350,11 @@ fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, L
             if new_pos == self.as_pos() {
                 return None;
             }
-            let new_cost = self
-                .node
-                .cost
-                .swap_on(self.board.field(), self.as_pos(), new_pos)
-                + LeastMovements(1);
+            let new_cost = (self.node.cost + LeastMovements(1)).swap_on(
+                self.board.field(),
+                self.as_pos(),
+                new_pos,
+            );
             Some(Self {
                 node: TargetNode {
                     target: new_pos,
@@ -420,10 +423,11 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
                 new_node
             );
             // コストだけ先に計算
-            new_node.cost = new_node
-                .cost
-                .swap_on(new_node.board.field(), self.as_pos(), new_pos)
-                + LeastMovements(1);
+            new_node.cost = (new_node.cost + LeastMovements(1)).swap_on(
+                new_node.board.field(),
+                self.as_pos(),
+                new_pos,
+            );
             new_node.board.unlock(self.as_pos());
             new_node.board.swap_to(self.as_pos());
             Some(Self {
