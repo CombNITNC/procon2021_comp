@@ -187,7 +187,7 @@ impl Grid {
 
     pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
         let vec = self.looping_min_vec(a, b);
-        manhattan_dist(a, vec) as u32
+        manhattan_dist(vec) as u32
     }
 
     pub(crate) fn looping_min_vec(&self, from: Pos, to: Pos) -> (i32, i32) {
@@ -217,17 +217,17 @@ impl Grid {
                 (to_x + width, to_y + height),
             ],
         };
-        let (to_x, to_y) = std::iter::once(&(to_x, to_y))
+        std::iter::once(&(to_x, to_y))
             .chain(other_points.iter())
             .cloned()
-            .min_by(|&a, &b| manhattan_dist(from, a).cmp(&manhattan_dist(from, b)))
-            .unwrap();
-        (from.x() as i32 - to_x, from.y() as i32 - to_y)
+            .map(|(to_x, to_y)| (from.x() as i32 - to_x, from.y() as i32 - to_y))
+            .min_by(|&a, &b| manhattan_dist(a).cmp(&manhattan_dist(b)))
+            .unwrap()
     }
 }
 
-fn manhattan_dist(a: Pos, (bx, by): (i32, i32)) -> i32 {
-    (a.x() as i32 - bx).abs() + (a.y() as i32 - by).abs()
+fn manhattan_dist((dx, dy): (i32, i32)) -> i32 {
+    dx.abs() + dy.abs()
 }
 
 #[test]
