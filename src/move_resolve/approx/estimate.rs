@@ -2,6 +2,7 @@ use crate::grid::{board::Board, Pos};
 
 use super::route::{route_select_to_target, route_target_to_pos};
 
+#[cfg(test)]
 mod tests;
 
 #[derive(Debug, Default)]
