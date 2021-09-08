@@ -259,8 +259,5 @@ fn test_looping_min_vec() {
     for p in grid.all_pos() {
         assert_eq!((0, 0), grid.looping_min_vec(p, p));
     }
-    assert_eq!(
-        (-1, 0),
-        grid.looping_min_vec(grid.pos(4, 0), grid.pos(0, 0))
-    );
+    assert_eq!((1, 0), grid.looping_min_vec(grid.pos(4, 0), grid.pos(0, 0)));
 }
