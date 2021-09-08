@@ -85,7 +85,11 @@ impl LeastMovements {
             + least_movements(field.grid.looping_min_vec(to, field[to]));
         let after = least_movements(field.grid.looping_min_vec(to, field[from]))
             + least_movements(field.grid.looping_min_vec(from, field[to]));
-        Self(4 + self.0 + after - before)
+        let res = 4 + self.0 as i32 + after as i32 - before as i32;
+        if res < 0 {
+            panic!("invalid swap on: {:?} -> {:?}\n{:#?}", from, to, field);
+        }
+        Self(res as u32)
     }
 }
 
