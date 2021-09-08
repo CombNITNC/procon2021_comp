@@ -220,7 +220,7 @@ impl Grid {
         std::iter::once(&(to_x, to_y))
             .chain(other_points.iter())
             .cloned()
-            .map(|(to_x, to_y)| (from.x() as i32 - to_x, from.y() as i32 - to_y))
+            .map(|(to_x, to_y)| (to_x - from.x() as i32, to_y - from.y() as i32))
             .min_by(|&a, &b| manhattan_dist(a).cmp(&manhattan_dist(b)))
             .unwrap()
     }
