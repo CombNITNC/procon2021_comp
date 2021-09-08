@@ -412,7 +412,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
                 new_node
                     .board
                     .grid()
-                    .looping_manhattan_dist(self.as_pos(), new_node.board.select()),
+                    .looping_manhattan_dist(self.target, new_node.board.select()),
                 1,
                 "{:#?}",
                 new_node
@@ -423,6 +423,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
                 .swap_on(new_node.board.field(), self.as_pos(), new_pos);
             new_node.board.unlock(self.as_pos());
             new_node.board.swap_to(self.as_pos());
+            new_node.target = new_pos;
             Some(Self {
                 node: new_node,
                 ..self.clone()
