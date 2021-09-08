@@ -190,12 +190,12 @@ impl Grid {
         manhattan_dist(a, x, y) as u32
     }
 
-    pub(crate) fn looping_min_vec(&self, a: Pos, b: Pos) -> (i32, i32) {
+    pub(crate) fn looping_min_vec(&self, from: Pos, to: Pos) -> (i32, i32) {
         let width = self.width as i32;
         let height = self.height as i32;
-        let bx = b.x() as i32;
-        let by = b.y() as i32;
-        let other_points = match (a.x() < self.width / 2, a.y() < self.height / 2) {
+        let bx = to.x() as i32;
+        let by = to.y() as i32;
+        let other_points = match (from.x() < self.width / 2, from.y() < self.height / 2) {
             (true, true) => [
                 (bx - width, by),
                 (bx, by - height),
@@ -221,7 +221,7 @@ impl Grid {
             .chain(other_points.iter())
             .cloned()
             .min_by(|&(ax, ay), &(bx, by)| {
-                manhattan_dist(a, ax, ay).cmp(&manhattan_dist(a, bx, by))
+                manhattan_dist(from, ax, ay).cmp(&manhattan_dist(from, bx, by))
             })
             .unwrap()
     }
