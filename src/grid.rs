@@ -193,35 +193,36 @@ impl Grid {
     pub(crate) fn looping_min_vec(&self, from: Pos, to: Pos) -> (i32, i32) {
         let width = self.width as i32;
         let height = self.height as i32;
-        let bx = to.x() as i32;
-        let by = to.y() as i32;
+        let to_x = to.x() as i32;
+        let to_y = to.y() as i32;
         let other_points = match (from.x() < self.width / 2, from.y() < self.height / 2) {
             (true, true) => [
-                (bx - width, by),
-                (bx, by - height),
-                (bx - width, by - height),
+                (to_x - width, to_y),
+                (to_x, to_y - height),
+                (to_x - width, to_y - height),
             ],
             (true, false) => [
-                (bx - width, by),
-                (bx, by + height),
-                (bx - width, by + height),
+                (to_x - width, to_y),
+                (to_x, to_y + height),
+                (to_x - width, to_y + height),
             ],
             (false, true) => [
-                (bx + width, by),
-                (bx, by - height),
-                (bx + width, by - height),
+                (to_x + width, to_y),
+                (to_x, to_y - height),
+                (to_x + width, to_y - height),
             ],
             (false, false) => [
-                (bx + width, by),
-                (bx, by + height),
-                (bx + width, by + height),
+                (to_x + width, to_y),
+                (to_x, to_y + height),
+                (to_x + width, to_y + height),
             ],
         };
-        std::iter::once(&(bx, by))
+        let (to_x, to_y) = std::iter::once(&(to_x, to_y))
             .chain(other_points.iter())
             .cloned()
             .min_by(|&a, &b| manhattan_dist(from, a).cmp(&manhattan_dist(from, b)))
-            .unwrap()
+            .unwrap();
+        (from.x() as i32 - to_x, from.y() as i32 - to_y)
     }
 }
 
