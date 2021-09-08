@@ -28,9 +28,9 @@ fn test_route_target_to_pos() {
 
     let expected = vec![
         grid.pos(2, 2),
-        grid.pos(1, 2),
+        grid.pos(2, 1),
         grid.pos(1, 1),
-        grid.pos(1, 0),
+        grid.pos(0, 1),
         grid.pos(0, 0),
     ];
     assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
@@ -67,11 +67,9 @@ fn test_route_target_to_goal() {
 
     let expected = vec![
         grid.pos(2, 2),
-        grid.pos(3, 2),
-        grid.pos(3, 3),
-        grid.pos(3, 4),
-        grid.pos(4, 4),
-        grid.pos(0, 4),
+        grid.pos(2, 1),
+        grid.pos(1, 1),
+        grid.pos(1, 0),
         grid.pos(0, 0),
     ];
     assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
