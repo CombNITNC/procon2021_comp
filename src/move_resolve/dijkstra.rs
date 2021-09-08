@@ -1,4 +1,4 @@
-use std::collections::BinaryHeap;
+use std::{cmp::Reverse, collections::BinaryHeap};
 
 use crate::grid::{board::Board, Pos, VecOnGrid};
 
@@ -52,8 +52,8 @@ where
 
     shortest_cost[start.as_pos()] = start.cost();
     let mut heap = BinaryHeap::new();
-    heap.push(DijkstraNode(start));
-    while let Some(DijkstraNode(pick)) = heap.pop() {
+    heap.push(Reverse(DijkstraNode(start)));
+    while let Some(Reverse(DijkstraNode(pick))) = heap.pop() {
         if shortest_cost[pick.as_pos()] != pick.cost() {
             continue;
         }
@@ -71,7 +71,7 @@ where
                 }
                 shortest_cost[applied.as_pos()] = applied.cost();
                 back_path[applied.as_pos()] = Some(pick.as_pos());
-                heap.push(DijkstraNode(applied));
+                heap.push(Reverse(DijkstraNode(applied)));
             }
         }
     }
