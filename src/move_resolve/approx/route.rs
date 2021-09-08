@@ -1,7 +1,9 @@
-use super::LeastMovements;
 use crate::{
     grid::{board::Board, Pos, RangePos, VecOnGrid},
-    move_resolve::dijkstra::{dijkstra, DijkstraState},
+    move_resolve::{
+        dijkstra::{dijkstra, DijkstraState},
+        least_movements::LeastMovements,
+    },
 };
 
 #[cfg(test)]
@@ -132,7 +134,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
         RouteTargetToPos {
             node: RowCompleteNode {
                 target,
-                cost: LeastMovements(0),
+                cost: LeastMovements::new(),
                 board: board.clone(),
             },
             pos,
@@ -192,7 +194,7 @@ fn route_target_around_pos(
         RouteTargetAroundPos {
             node: TargetNode {
                 target,
-                cost: LeastMovements(0),
+                cost: LeastMovements::new(),
             },
             board,
             pos,
@@ -245,7 +247,7 @@ fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Option<Vec<P
         RouteIntoRange {
             node: TargetNode {
                 target,
-                cost: LeastMovements(0),
+                cost: LeastMovements::new(),
             },
             board,
             range,
@@ -299,7 +301,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
         RouteSelectToTarget {
             node: TargetNode {
                 target: board.select(),
-                cost: LeastMovements(0),
+                cost: LeastMovements::new(),
             },
             board,
             target,
@@ -362,7 +364,7 @@ fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, L
         RouteSelectAroundTarget {
             node: TargetNode {
                 target: board.select(),
-                cost: LeastMovements(0),
+                cost: LeastMovements::new(),
             },
             board,
             target,
@@ -432,7 +434,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
         RouteSelectAroundTarget {
             node: RowCompleteNode {
                 target,
-                cost: LeastMovements(0),
+                cost: LeastMovements::new(),
                 board: board.clone(),
             },
             target,

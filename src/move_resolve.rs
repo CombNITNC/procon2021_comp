@@ -12,6 +12,7 @@ pub mod approx;
 pub mod dijkstra;
 pub mod edges_nodes;
 pub mod ida_star;
+pub mod least_movements;
 #[cfg(test)]
 mod tests;
 
