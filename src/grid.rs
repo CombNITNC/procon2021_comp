@@ -253,3 +253,15 @@ fn test_looping_manhattan_dist() {
         assert_eq!(4, grid.looping_manhattan_dist(b, a), "{:?} {:?}", a, b);
     }
 }
+
+#[test]
+fn test_looping_min_vec() {
+    let grid = Grid::new(5, 5);
+    for p in grid.all_pos() {
+        assert_eq!((0, 0), grid.looping_min_vec(p, p));
+    }
+    assert_eq!(
+        (-1, 0),
+        grid.looping_min_vec(grid.pos(4, 0), grid.pos(0, 0))
+    );
+}
