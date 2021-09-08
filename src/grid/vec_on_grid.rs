@@ -155,7 +155,7 @@ impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
                 }
                 writeln!(f)?;
             }
-            writeln!(f, "]")
+            write!(f, "]")
         } else {
             self.vec.fmt(f)
         }
