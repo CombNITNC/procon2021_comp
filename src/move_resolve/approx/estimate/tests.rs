@@ -1,9 +1,8 @@
+use super::estimate_solve_row;
 use crate::{
     grid::{board::Board, Grid},
     move_resolve::edges_nodes::EdgesNodes,
 };
-
-use super::estimate_solve_row;
 
 #[test]
 fn test_estimate_solve_row() {
@@ -22,5 +21,24 @@ fn test_estimate_solve_row() {
     let EdgesNodes { nodes, .. } = EdgesNodes::new(&grid, movements);
     let board = Board::new(grid.pos(2, 2), nodes);
     let actual = estimate_solve_row(board, 0);
-    eprintln!("{:#?}", actual.moves);
+
+    let expected = vec![
+        grid.pos(2, 2),
+        grid.pos(2, 1),
+        grid.pos(1, 1),
+        grid.pos(1, 0),
+        grid.pos(0, 0),
+    ];
+    assert_eq!(
+        expected.len(),
+        actual.moves.len(),
+        "{:?} {:?}",
+        expected,
+        actual
+    );
+    expected
+        .iter()
+        .zip(actual.moves.iter())
+        .enumerate()
+        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
 }
