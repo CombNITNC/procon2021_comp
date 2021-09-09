@@ -427,8 +427,8 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
             new_node.cost = new_node
                 .cost
                 .swap_on(new_node.board.field(), self.as_pos(), new_pos);
-            new_node.board.unlock(self.as_pos());
-            new_node.board.swap_to(self.as_pos());
+            new_node.board.unlock(self.target);
+            new_node.board.swap_to(self.target);
             new_node.target = new_pos;
             Some(Self {
                 node: new_node,
