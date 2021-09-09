@@ -66,6 +66,7 @@ fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEsti
             estimate.moves.append(&mut route);
             route_size += route.len();
             board.unlock(way);
+            estimate.moves.push(way);
             board.swap_to(way);
             pos = way;
         }
@@ -75,6 +76,7 @@ fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEsti
         }
         board.lock(target);
     }
+    estimate.moves.dedup();
     estimate
 }
 
@@ -126,18 +128,19 @@ fn estimate_edge_then_left_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> {
     ret
 }
 
-fn move_target_to_pos(board: &mut Board, mut target: Pos, pos: Pos, ret: &mut Vec<Pos>) {
+fn move_target_to_pos(board: &mut Board, target: Pos, pos: Pos, ret: &mut Vec<Pos>) {
     let route = route_target_to_pos(board, target, pos).unwrap();
     eprintln!("{:?} {:?} {:?}", route, target, pos);
-    for way in route {
-        board.lock(target);
-        eprintln!("{:?} {:#?}", way, board);
-        let mut route = route_select_to_target(board, way);
+    for win in route.windows(2) {
+        let way = win[0];
+        let next = win[1];
+        board.lock(way);
+        eprintln!("{:?} {:#?}", win, board);
+        let mut route = route_select_to_target(board, next);
         board.swap_many_to(&route);
         ret.append(&mut route);
-        board.unlock(target);
-        board.swap_to(target);
-        ret.push(target);
-        target = way;
+        board.unlock(way);
+        board.swap_to(way);
+        ret.push(way);
     }
 }
