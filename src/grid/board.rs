@@ -28,7 +28,7 @@ impl<'grid> Board<'grid> {
         self.forward.grid
     }
 
-    pub(crate) fn select(&self) -> Pos {
+    pub(crate) fn selected(&self) -> Pos {
         self.select
     }
 

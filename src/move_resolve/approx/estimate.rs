@@ -96,7 +96,7 @@ fn estimate_edge_then_right_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> 
     let b_goal = board.grid().down_of(b);
     move_target_to_pos(&mut board, b, b_goal, &mut ret);
 
-    let select = board.select();
+    let select = board.selected();
     let select_goal = a;
     move_target_to_pos(&mut board, select, select_goal, &mut ret);
 
@@ -120,7 +120,7 @@ fn estimate_edge_then_left_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> {
     let b_goal = board.grid().left_of(b);
     move_target_to_pos(&mut board, b, b_goal, &mut ret);
 
-    let select = board.select();
+    let select = board.selected();
     let select_goal = b;
     move_target_to_pos(&mut board, select, select_goal, &mut ret);
 
