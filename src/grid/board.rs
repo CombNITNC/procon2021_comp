@@ -65,7 +65,7 @@ impl<'grid> Board<'grid> {
             .around_of(pos)
             .iter()
             .copied()
-            .filter(|pos| !self.locked.contains(&pos))
+            .filter(|pos| !self.locked.contains(pos))
             .collect()
     }
 
