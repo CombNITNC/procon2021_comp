@@ -30,21 +30,25 @@ pub(super) fn estimate_solve_row(mut board: Board, target_row: u8) -> RowSolveEs
         estimate.worst_route_size = line_proc.worst_route_size;
         estimate.worst_swap_pos = line_proc.worst_swap_pos;
     }
-
-    let edge_rd_estimate = estimate_edge_then_right_down(
-        &board,
-        (targets[targets.len() - 2], targets[targets.len() - 1]),
-    );
-    let edge_ld_estimate = estimate_edge_then_left_down(
-        &board,
-        (targets[targets.len() - 2], targets[targets.len() - 1]),
-    );
-    let mut edge_estimate = if edge_rd_estimate.len() < edge_ld_estimate.len() {
-        edge_rd_estimate
-    } else {
-        edge_ld_estimate
-    };
-    estimate.moves.append(&mut edge_estimate);
+    if (&targets[targets.len() - 2..])
+        .iter()
+        .any(|&p| p != board.forward(p))
+    {
+        let edge_rd_estimate = estimate_edge_then_right_down(
+            &board,
+            (targets[targets.len() - 2], targets[targets.len() - 1]),
+        );
+        let edge_ld_estimate = estimate_edge_then_left_down(
+            &board,
+            (targets[targets.len() - 2], targets[targets.len() - 1]),
+        );
+        let mut edge_estimate = if edge_rd_estimate.len() < edge_ld_estimate.len() {
+            edge_rd_estimate
+        } else {
+            edge_ld_estimate
+        };
+        estimate.moves.append(&mut edge_estimate);
+    }
     estimate
 }
 
@@ -64,7 +68,7 @@ fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEsti
             estimate.moves.append(&mut route);
             route_size += route.len();
             board.unlock(pos);
-            board.swap_to(pos);
+            board.swap_to(way);
             pos = way;
         }
         if estimate.worst_route_size < route_size {
@@ -126,8 +130,10 @@ fn estimate_edge_then_left_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> {
 
 fn move_target_to_pos(board: &mut Board, mut target: Pos, pos: Pos, ret: &mut Vec<Pos>) {
     let route = route_target_to_pos(board, target, pos).unwrap();
+    eprintln!("{:?} {:?} {:?}", route, target, pos);
     for way in route {
         board.lock(target);
+        eprintln!("{:?} {:#?}", way, board);
         let route = route_select_to_target(board, way);
         for way in route {
             board.swap_to(way);
