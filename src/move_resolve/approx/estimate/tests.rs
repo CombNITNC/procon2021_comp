@@ -8,7 +8,7 @@ use crate::{
 fn test_estimate_solve_row() {
     // 22 10 20 30 40
     // 01 11 21 32 41
-    // 02 12{00}31 42
+    // 02 12 00{31}42
     // 03 13 23 33 43
     // 04 14 24 34 44
     let grid = Grid::new(5, 5);
@@ -19,7 +19,7 @@ fn test_estimate_solve_row() {
         (grid.pos(3, 2), grid.pos(3, 1)),
     ];
     let EdgesNodes { nodes, .. } = EdgesNodes::new(&grid, movements);
-    let board = Board::new(grid.pos(2, 2), nodes);
+    let board = Board::new(grid.pos(3, 2), nodes);
     let actual = estimate_solve_row(board, 0);
 
     let expected = vec![
