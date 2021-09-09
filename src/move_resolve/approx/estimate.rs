@@ -49,6 +49,7 @@ pub(super) fn estimate_solve_row(mut board: Board, target_row: u8) -> RowSolveEs
         };
         estimate.moves.append(&mut edge_estimate);
     }
+    estimate.moves.dedup();
     estimate
 }
 
