@@ -106,6 +106,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
                 new_pos,
             )?;
             let mut new_node = self.node.clone();
+            new_node.board.unlock(new_node.board.select());
             for mov in route {
                 new_node.board.swap_to(mov);
             }
