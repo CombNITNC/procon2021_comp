@@ -312,7 +312,8 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
             target,
         },
     )
-    .map_or(vec![], |res| res.0)
+    .expect("the route must be found")
+    .0
 }
 
 /// `board` が選択しているマスを `target` の隣へ動かす最短経路を決定する.
