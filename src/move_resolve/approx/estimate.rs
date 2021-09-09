@@ -55,7 +55,7 @@ pub(super) fn estimate_solve_row(mut board: Board, target_row: u8) -> RowSolveEs
 
 fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEstimate {
     let mut estimate = RowSolveEstimate::default();
-    for &target in &targets[..targets.len() - 2] {
+    for &target in targets {
         let mut pos = target;
         let route = route_target_to_pos(&board, board.forward(target), pos)
             .expect("the route must be found");
