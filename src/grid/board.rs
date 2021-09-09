@@ -64,6 +64,12 @@ impl<'grid> Board<'grid> {
         self.select = to_swap;
     }
 
+    pub(crate) fn swap_many_to(&mut self, to_swaps: &[Pos]) {
+        for &to_swap in to_swaps {
+            self.swap_to(to_swap);
+        }
+    }
+
     pub(crate) fn around_of(&self, pos: Pos) -> Vec<Pos> {
         self.grid()
             .around_of(pos)
