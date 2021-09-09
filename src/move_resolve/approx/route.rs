@@ -60,11 +60,9 @@ pub(super) fn moves_to_swap_target_to_goal(
     let mut ret = vec![board.selected()];
     for way in route {
         board.lock(current);
-        let route_to_arrive = route_select_to_target(&board, way);
-        for way in route_to_arrive {
-            board.swap_to(way);
-            ret.push(way);
-        }
+        let mut route_to_arrive = route_select_to_target(&board, way);
+        board.swap_many_to(&route_to_arrive);
+        ret.append(&mut route_to_arrive);
         board.unlock(current);
         board.swap_to(current);
         ret.push(current);
@@ -107,9 +105,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
             )?;
             let mut new_node = self.node.clone();
             new_node.board.unlock(new_node.board.selected());
-            for mov in route {
-                new_node.board.swap_to(mov);
-            }
+            new_node.board.swap_many_to(&route);
             new_node.cost += cost;
             assert_eq!(
                 new_node
@@ -410,9 +406,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
                 route_select_around_target(self.node.board.clone(), self.target)?;
             let mut new_node = self.node.clone();
             new_node.cost += cost;
-            for to in moves_to_around {
-                new_node.board.swap_to(to);
-            }
+            new_node.board.swap_many_to(&moves_to_around);
             // 隣に移動していなければならない
             assert_eq!(
                 new_node
