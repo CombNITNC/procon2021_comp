@@ -51,8 +51,9 @@ pub(super) fn estimate_solve_row(mut board: Board, target_row: u8) -> RowSolveEs
 fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEstimate {
     let mut estimate = RowSolveEstimate::default();
     for &target in &targets[..targets.len() - 2] {
-        let mut pos = board.reverse(target);
-        let route = route_target_to_pos(&board, target, pos).expect("the route must be found");
+        let mut pos = target;
+        let route = route_target_to_pos(&board, board.forward(target), pos)
+            .expect("the route must be found");
         let mut route_size = 0;
         for way in route {
             board.lock(pos);
@@ -63,7 +64,6 @@ fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEsti
             estimate.moves.append(&mut route);
             route_size += route.len();
             board.unlock(pos);
-            estimate.moves.push(pos);
             board.swap_to(pos);
             pos = way;
         }
