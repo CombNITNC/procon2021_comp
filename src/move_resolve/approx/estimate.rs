@@ -89,11 +89,13 @@ fn estimate_edge_then_right_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> 
     let mut board = board.clone();
     let mut ret = vec![];
 
+    let a_pos = board.reverse(a);
     let a_goal = board.grid().right_of(a);
-    move_target_to_pos(&mut board, a, a_goal, &mut ret);
+    move_target_to_pos(&mut board, a_pos, a_goal, &mut ret);
 
+    let b_pos = board.reverse(b);
     let b_goal = board.grid().down_of(b);
-    move_target_to_pos(&mut board, b, b_goal, &mut ret);
+    move_target_to_pos(&mut board, b_pos, b_goal, &mut ret);
 
     let select = board.selected();
     let select_goal = a;
@@ -113,11 +115,13 @@ fn estimate_edge_then_left_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> {
     let mut board = board.clone();
     let mut ret = vec![];
 
+    let a_pos = board.reverse(a);
     let a_goal = board.grid().down_of(a);
-    move_target_to_pos(&mut board, a, a_goal, &mut ret);
+    move_target_to_pos(&mut board, a_pos, a_goal, &mut ret);
 
+    let b_pos = board.reverse(b);
     let b_goal = board.grid().left_of(b);
-    move_target_to_pos(&mut board, b, b_goal, &mut ret);
+    move_target_to_pos(&mut board, b_pos, b_goal, &mut ret);
 
     let select = board.selected();
     let select_goal = b;
@@ -130,12 +134,12 @@ fn estimate_edge_then_left_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> {
 
 fn move_target_to_pos(board: &mut Board, target: Pos, pos: Pos, ret: &mut Vec<Pos>) {
     let route = route_target_to_pos(board, target, pos).unwrap();
-    eprintln!("{:?} {:?} {:?}", route, target, pos);
+
     for win in route.windows(2) {
         let way = win[0];
         let next = win[1];
         board.lock(way);
-        eprintln!("{:?} {:#?}", win, board);
+
         let mut route = route_select_to_target(board, next);
         board.swap_many_to(&route);
         ret.append(&mut route);
