@@ -53,7 +53,11 @@ impl<'grid> Board<'grid> {
             eprintln!("the position was locked: {:?}", to_swap);
             return;
         }
-        assert_eq!(1, dist, "swapping position must be a neighbor");
+        assert_eq!(
+            1, dist,
+            "swapping position must be a neighbor\nselect: {:?}, to_swap: {:?}",
+            self.select, to_swap
+        );
         self.reverse
             .swap(self.forward[self.select], self.forward[to_swap]);
         self.forward.swap(self.select, to_swap);
