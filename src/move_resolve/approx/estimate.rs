@@ -18,11 +18,9 @@ pub(super) fn estimate_solve_row(mut board: Board, target_row: u8) -> RowSolveEs
         .collect();
     let mut estimate = RowSolveEstimate::default();
 
-    let line_proc = estimate_line_without_edge(board.clone(), &targets[..targets.len() - 2]);
-    for mov in line_proc.moves {
-        estimate.moves.push(mov);
-        board.swap_to(mov);
-    }
+    let mut line_proc = estimate_line_without_edge(board.clone(), &targets[..targets.len() - 2]);
+    board.swap_many_to(&line_proc.moves);
+    estimate.moves.append(&mut line_proc.moves);
     for &p in &targets[..targets.len() - 2] {
         board.lock(p);
     }
@@ -56,19 +54,14 @@ pub(super) fn estimate_solve_row(mut board: Board, target_row: u8) -> RowSolveEs
 fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEstimate {
     let mut estimate = RowSolveEstimate::default();
     for &target in targets {
-        let mut pos = target;
-        let route = route_target_to_pos(&board, board.forward(target), pos)
-            .expect("the route must be found");
+        let mut pos = board.reverse(target);
+        let route = route_target_to_pos(&board, pos, target).expect("the route must be found");
         let mut route_size = 0;
         for way in route {
-            board.lock(pos);
             let mut route = route_select_to_target(&board, way);
-            for &way in &route {
-                board.swap_to(way);
-            }
+            board.swap_many_to(&route);
             estimate.moves.append(&mut route);
             route_size += route.len();
-            board.unlock(pos);
             board.swap_to(way);
             pos = way;
         }
@@ -135,11 +128,9 @@ fn move_target_to_pos(board: &mut Board, mut target: Pos, pos: Pos, ret: &mut Ve
     for way in route {
         board.lock(target);
         eprintln!("{:?} {:#?}", way, board);
-        let route = route_select_to_target(board, way);
-        for way in route {
-            board.swap_to(way);
-            ret.push(way);
-        }
+        let mut route = route_select_to_target(board, way);
+        board.swap_many_to(&route);
+        ret.append(&mut route);
         board.unlock(target);
         board.swap_to(target);
         ret.push(target);
