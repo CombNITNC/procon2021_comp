@@ -125,7 +125,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
                 .swap_on(new_node.board.field(), self.as_pos(), new_pos);
 
             new_node.board.unlock(self.as_pos());
-            new_node.board.swap_to(self.as_pos());
+            new_node.board.swap_to(new_pos);
             new_node.target = new_pos;
             Some(Self {
                 node: new_node,
