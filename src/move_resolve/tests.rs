@@ -1,4 +1,4 @@
-use super::{edges_nodes::EdgesNodes, resolve, resolve_approximately, DifferentCells};
+use super::{edges_nodes::EdgesNodes, resolve, DifferentCells};
 use crate::{
     basis::{Movement::*, Operation},
     grid::{Grid, Pos, VecOnGrid},
@@ -192,12 +192,11 @@ fn rand_case() {
         points.shuffle(rng);
         let between = Uniform::from(2..points.len());
         let taking = between.sample(rng);
-        eprintln!("taking: {}", taking);
         points.into_iter().take(taking).collect()
     }
-    const WIDTH: u8 = 6;
-    const HEIGHT: u8 = 5;
-    const SELECT_LIMIT: u8 = 6;
+    const WIDTH: u8 = 5;
+    const HEIGHT: u8 = 6;
+    const SELECT_LIMIT: u8 = 3;
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
     let mut rng = rand::thread_rng();
