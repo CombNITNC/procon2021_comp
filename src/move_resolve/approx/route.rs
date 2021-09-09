@@ -203,60 +203,6 @@ fn route_target_around_pos(
     )
 }
 
-/// `target` 位置のマスを `range` の範囲内に収める最短経路を求める.
-fn route_into_range(board: &Board, target: Pos, range: RangePos) -> Option<Vec<Pos>> {
-    #[derive(Debug, Clone)]
-    struct RouteIntoRange<'b> {
-        node: TargetNode,
-        board: &'b Board<'b>,
-        range: RangePos,
-    }
-    impl DijkstraState for RouteIntoRange<'_> {
-        type C = LeastMovements;
-        fn cost(&self) -> Self::C {
-            self.node.cost
-        }
-
-        fn as_pos(&self) -> Pos {
-            self.node.target
-        }
-
-        fn is_goal(&self) -> bool {
-            self.range.is_in(self.as_pos())
-        }
-
-        type AS = Vec<Pos>;
-        fn next_actions(&mut self) -> Self::AS {
-            self.board.around_of(self.as_pos())
-        }
-
-        fn apply(&self, new_pos: Pos) -> Option<Self> {
-            let new_cost = self
-                .cost()
-                .swap_on(self.board.field(), self.as_pos(), new_pos);
-            Some(Self {
-                node: TargetNode {
-                    cost: new_cost,
-                    target: new_pos,
-                },
-                ..self.clone()
-            })
-        }
-    }
-    dijkstra(
-        board,
-        RouteIntoRange {
-            node: TargetNode {
-                target,
-                cost: LeastMovements::new(),
-            },
-            board,
-            range,
-        },
-    )
-    .map(|res| res.0)
-}
-
 /// `board` の `select` を `target` へ動かす最短経路を決定する.
 pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
     #[derive(Debug, Clone)]
