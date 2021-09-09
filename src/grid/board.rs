@@ -50,8 +50,7 @@ impl<'grid> Board<'grid> {
             return;
         }
         if self.locked.contains(&to_swap) || self.locked.contains(&self.select) {
-            eprintln!("the position was locked: {:?}", to_swap);
-            return;
+            panic!("the position was locked: {:?}", to_swap);
         }
         assert_eq!(
             1, dist,
