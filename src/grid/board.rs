@@ -46,7 +46,11 @@ impl<'grid> Board<'grid> {
 
     pub(crate) fn swap_to(&mut self, to_swap: Pos) {
         let dist = self.grid().looping_manhattan_dist(self.select, to_swap);
-        if dist == 0 || self.locked.contains(&to_swap) || self.locked.contains(&self.select) {
+        if dist == 0 {
+            return;
+        }
+        if self.locked.contains(&to_swap) || self.locked.contains(&self.select) {
+            eprintln!("the position was locked: {:?}", to_swap);
             return;
         }
         assert_eq!(1, dist, "swapping position must be a neighbor");
