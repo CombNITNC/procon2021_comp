@@ -312,7 +312,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
             target,
         },
     )
-    .unwrap()
+    .expect("the route must be found")
     .0
 }
 
