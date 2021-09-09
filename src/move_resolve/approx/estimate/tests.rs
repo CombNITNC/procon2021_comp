@@ -20,7 +20,7 @@ fn test_estimate_solve_row() {
         (grid.pos(3, 2), grid.pos(3, 1)),
     ];
     let EdgesNodes { nodes, .. } = EdgesNodes::new(&grid, movements);
-    let board = Board::new(grid.pos(3, 1), nodes);
+    let board = Board::new(grid.pos(2, 2), nodes);
     let actual = estimate_solve_row(board, 0);
     eprintln!("{:#?}", actual.moves);
 }
