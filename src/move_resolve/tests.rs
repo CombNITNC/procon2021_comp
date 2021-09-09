@@ -196,7 +196,7 @@ fn rand_case() {
         points.into_iter().take(taking).collect()
     }
     const WIDTH: u8 = 6;
-    const HEIGHT: u8 = 6;
+    const HEIGHT: u8 = 5;
     const SELECT_LIMIT: u8 = 6;
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
@@ -213,7 +213,7 @@ fn rand_case() {
     let EdgesNodes { mut nodes, .. } = EdgesNodes::new(&grid, &case);
     eprintln!("before: {:#?}", nodes);
 
-    let result = resolve_approximately(&grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
+    let result = resolve(&grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
     eprintln!("operations: {:#?}", result);
     for Operation { select, movements } in result {
