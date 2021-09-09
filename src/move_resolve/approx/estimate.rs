@@ -57,11 +57,15 @@ fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEsti
         let mut pos = board.reverse(target);
         let route = route_target_to_pos(&board, pos, target).expect("the route must be found");
         let mut route_size = 0;
-        for way in route {
-            let mut route = route_select_to_target(&board, way);
+        for win in route.windows(2) {
+            let way = win[0];
+            let next = win[1];
+            board.lock(way);
+            let mut route = route_select_to_target(&board, next);
             board.swap_many_to(&route);
             estimate.moves.append(&mut route);
             route_size += route.len();
+            board.unlock(way);
             board.swap_to(way);
             pos = way;
         }
