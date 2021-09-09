@@ -125,10 +125,10 @@ fn estimate_edge_then_left_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> {
 }
 
 fn move_target_to_pos(board: &mut Board, mut target: Pos, pos: Pos, ret: &mut Vec<Pos>) {
-    let route = route_target_to_pos(&board, board.reverse(target), pos).unwrap();
+    let route = route_target_to_pos(board, target, pos).unwrap();
     for way in route {
         board.lock(target);
-        let route = route_select_to_target(&board, way);
+        let route = route_select_to_target(board, way);
         for way in route {
             board.swap_to(way);
             ret.push(way);
