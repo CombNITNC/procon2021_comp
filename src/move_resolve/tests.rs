@@ -1,7 +1,7 @@
 use super::{edges_nodes::Nodes, resolve, DifferentCells};
 use crate::{
     basis::{Movement::*, Operation},
-    grid::{Grid, Pos, VecOnGrid},
+    grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
 };
 
 #[test]
@@ -202,10 +202,11 @@ fn large_case() {
 
     let result = resolve(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
+    let finder = BoardFinder::new(grid);
     for Operation { select, movements } in result {
         let mut current = select;
         for movement in movements {
-            let to_swap = grid.move_pos_to(current, movement);
+            let to_swap = finder.move_pos_to(current, movement);
             nodes.swap(current, to_swap);
             current = to_swap;
         }
@@ -246,11 +247,12 @@ fn rand_case() {
 
     let result = resolve(grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
+    let finder = BoardFinder::new(grid);
     eprintln!("operations: {:#?}", result);
     for Operation { select, movements } in result {
         let mut current = select;
         for movement in movements {
-            let to_swap = grid.move_pos_to(current, movement);
+            let to_swap = finder.move_pos_to(current, movement);
             nodes.swap(current, to_swap);
             current = to_swap;
         }
