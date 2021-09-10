@@ -19,7 +19,7 @@ pub(crate) struct Solver {
 impl Solver {
     pub(super) fn solve(&mut self, select: Pos, field: &VecOnGrid<Pos>) -> Vec<GridAction> {
         let mut board = Board::new(select, field.clone());
-        let mut finder = BoardFinder::new(&board);
+        let mut finder = BoardFinder::new(field.grid);
         let mut actions = vec![];
         loop {
             if finder.height() < finder.width() {
@@ -53,7 +53,7 @@ impl Solver {
             for pos in targets {
                 board.lock(pos);
             }
-            finder.slice_up(&board);
+            finder.slice_up();
         }
         actions
     }

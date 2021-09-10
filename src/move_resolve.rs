@@ -4,7 +4,7 @@ use self::{
 };
 use crate::{
     basis::{Movement, Operation},
-    grid::{Grid, Pos, VecOnGrid},
+    grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
     move_resolve::approx::Solver,
 };
 
@@ -81,7 +81,8 @@ impl IdaStarState for GridCompleter {
         match action {
             GridAction::Swap(mov) => {
                 let selecting = self.selecting.unwrap();
-                let next_swap = self.field.grid.move_pos_to(selecting, mov);
+                let finder = BoardFinder::new(self.field.grid);
+                let next_swap = finder.move_pos_to(selecting, mov);
                 let mut new_field = self.field.clone();
                 new_field.swap(selecting, next_swap);
                 Self {
@@ -290,7 +291,7 @@ fn resolve_on_select(
         match action {
             GridAction::Swap(mov) => {
                 let select = selection.unwrap();
-                let to = grid.move_pos_to(select, mov);
+                let to = BoardFinder::new(grid).move_pos_to(select, mov);
                 nodes.swap(select, to);
                 selection = Some(to);
             }

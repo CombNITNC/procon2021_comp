@@ -150,7 +150,7 @@ impl Board {
     }
 
     pub(crate) fn new_finder(&self) -> BoardFinder {
-        BoardFinder::new(self)
+        BoardFinder::new(self.grid())
     }
 }
 
@@ -192,11 +192,11 @@ pub(crate) struct BoardFinder {
 }
 
 impl BoardFinder {
-    pub(crate) fn new(board: &Board) -> Self {
+    pub(crate) fn new(grid: Grid) -> Self {
         Self {
-            offset: board.forward.grid.pos(0, 0),
-            width: board.forward.grid.width(),
-            height: board.forward.grid.height(),
+            offset: grid.pos(0, 0),
+            width: grid.width(),
+            height: grid.height(),
             rotation: 0,
         }
     }
@@ -288,8 +288,9 @@ impl BoardFinder {
     }
 
     /// 窓の上端を 1 つ削る.
-    pub(crate) fn slice_up(&mut self, board: &Board) {
-        self.offset = board.forward.grid.pos(self.offset.x(), self.offset.y());
+    pub(crate) fn slice_up(&mut self) {
+        let grid = self.as_grid();
+        self.offset = grid.pos(self.offset.x(), self.offset.y());
         self.height -= 1;
     }
 }
