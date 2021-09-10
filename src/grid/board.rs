@@ -103,41 +103,6 @@ impl Board {
             .all_pos()
             .find(|p| !self.locked.contains(p))
     }
-
-    /// 時計回りに 90 度単位の `rotation` で回転した `Board` を作成する.
-    pub(crate) fn rotate_to(&self, rotation: u8) -> Self {
-        let grid = Grid::new(self.grid().width(), self.grid().height());
-        let mut forward = VecOnGrid::with_default(grid);
-        for (p, &e) in self.forward.iter_with_pos() {
-            forward[self.rotated_pos(p, rotation)] = e;
-        }
-        let mut reverse = forward.clone();
-        for (p, &e) in self.reverse.iter_with_pos() {
-            reverse[self.rotated_pos(p, rotation)] = e;
-        }
-        Self {
-            select: self.rotated_pos(self.select, rotation),
-            forward,
-            reverse,
-            locked: self
-                .locked
-                .iter()
-                .map(|&p| self.rotated_pos(p, rotation))
-                .collect(),
-        }
-    }
-
-    /// 時計回りに 90 度単位の `rotation` で回転した位置を計算する.
-    fn rotated_pos(&self, pos: Pos, rotation: u8) -> Pos {
-        let grid = self.grid();
-        match rotation % 4 {
-            0 => pos,
-            1 => grid.pos(grid.width() - 1 - pos.y(), pos.x()),
-            2 => grid.pos(grid.width() - 1 - pos.x(), grid.height() - 1 - pos.y()),
-            3 => grid.pos(pos.y(), grid.height() - 1 - pos.x()),
-            _ => unreachable!(),
-        }
-    }
 }
 
 #[test]
@@ -208,4 +173,71 @@ fn test_rotate() {
     assert_eq!(rotated_3.forward[grid.pos(1, 0)], grid.pos(0, 0));
     assert_eq!(rotated_3.forward[grid.pos(0, 1)], grid.pos(1, 0));
     assert_eq!(rotated_3.forward[grid.pos(1, 1)], grid.pos(0, 1));
+}
+
+/// `Board` に移動や回転を加えてアクセスするための覗き窓.
+#[derive(Debug, Clone)]
+pub(crate) struct BoardFinder {
+    offset: Pos,
+    width: u8,
+    height: u8,
+    rotation: u8,
+}
+
+impl BoardFinder {
+    pub(crate) fn new(board: &Board) -> Self {
+        Self {
+            offset: board.grid().pos(0, 0),
+            width: board.grid().width(),
+            height: board.grid().height(),
+            rotation: 0,
+        }
+    }
+
+    pub(crate) fn width(&self) -> u8 {
+        self.width
+    }
+    pub(crate) fn height(&self) -> u8 {
+        self.height
+    }
+
+    pub(crate) fn iter(&self) -> FinderIter {
+        todo!()
+    }
+
+    /// 時計回りに 90 度単位の `rotation` で回転する.
+    pub(crate) fn rotate_to(&mut self, rotation: u8, grid: Grid) {
+        self.rotation += rotation;
+        self.rotation %= 4;
+
+        std::mem::swap(&mut self.width, &mut self.height);
+        self.offset = self.rotated_pos(self.offset, grid);
+    }
+
+    /// 窓の上端を 1 つ削る.
+    pub(crate) fn slice_up(&mut self, board: &Board) {
+        self.offset = board.grid().pos(self.offset.x(), self.offset.y());
+        self.height -= 1;
+    }
+
+    /// 時計回りに 90 度単位の `rotation` で回転した位置を計算する.
+    fn rotated_pos(&self, pos: Pos, grid: Grid) -> Pos {
+        match self.rotation % 4 {
+            0 => pos,
+            1 => grid.pos(grid.width() - 1 - pos.y(), pos.x()),
+            2 => grid.pos(grid.width() - 1 - pos.x(), grid.height() - 1 - pos.y()),
+            3 => grid.pos(pos.y(), grid.height() - 1 - pos.x()),
+            _ => unreachable!(),
+        }
+    }
+}
+
+pub(crate) struct FinderIter {}
+
+impl Iterator for FinderIter {
+    type Item = Pos;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        todo!()
+    }
 }
