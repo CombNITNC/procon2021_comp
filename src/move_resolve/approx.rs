@@ -29,19 +29,25 @@ impl Solver {
                 board = board.rotate_to(3);
                 continue;
             }
-            let mut moves = self.solve_row(&board, target_row);
-            for &mov in &moves {
-                match mov {
-                    GridAction::Swap(mov) => {
-                        let to_swap = board.grid().move_pos_to(board.selected(), mov);
-                        board.swap_to(to_swap);
-                    }
-                    GridAction::Select(sel) => {
-                        board.select(sel);
+            let completed = (0..board.grid().width()).all(|x| {
+                let pos = board.grid().pos(x, target_row);
+                pos == board.forward(pos)
+            });
+            if !completed {
+                let mut moves = self.solve_row(&board, target_row);
+                for &mov in &moves {
+                    match mov {
+                        GridAction::Swap(mov) => {
+                            let to_swap = board.grid().move_pos_to(board.selected(), mov);
+                            board.swap_to(to_swap);
+                        }
+                        GridAction::Select(sel) => {
+                            board.select(sel);
+                        }
                     }
                 }
+                actions.append(&mut moves);
             }
-            actions.append(&mut moves);
             for x in 0..board.grid().width() {
                 let pos = board.grid().pos(x, target_row);
                 board.lock(pos);
