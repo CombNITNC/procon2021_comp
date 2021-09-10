@@ -175,7 +175,12 @@ impl BoardFinder {
             3 => Movement::Down,
             _ => unreachable!(),
         };
-        FinderIter::new(self.offset, grid.left_of(self.offset), grid, movement)
+        FinderIter::new(
+            self.offset,
+            grid.move_pos_to(self.offset, movement.opposite()),
+            grid,
+            movement,
+        )
     }
 
     /// 時計回りに 90 度単位の `rotation` で回転する.
