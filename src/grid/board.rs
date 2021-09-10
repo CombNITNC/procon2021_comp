@@ -61,7 +61,7 @@ impl Board {
         if dist == 0 {
             return;
         }
-        if self.locked.contains(&to_swap) || self.locked.contains(&self.select) {
+        if self.locked.contains(&to_swap) {
             panic!("the position was locked: {:?}", to_swap);
         }
         assert_eq!(
@@ -135,6 +135,9 @@ impl Board {
     }
 
     pub(crate) fn lock(&mut self, pos: Pos) -> bool {
+        if pos == self.select {
+            panic!("tried to lock the selected pos: {:?}", pos);
+        }
         self.locked.insert(pos)
     }
 
