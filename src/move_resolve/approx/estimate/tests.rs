@@ -20,7 +20,7 @@ fn test_estimate_solve_row() {
     ];
     let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
     let mut board = Board::new(grid.pos(3, 2), nodes);
-    let actual = estimate_solve_row(board.clone(), 0);
+    let actual = estimate_solve_row(board.clone(), &[grid.pos(0, 0)]);
 
     let expected = vec![
         grid.pos(3, 2),
