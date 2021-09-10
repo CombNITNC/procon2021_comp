@@ -233,7 +233,8 @@ impl BoardFinder {
     }
 
     /// 時計回りに 90 度単位の `rotation` で回転する.
-    pub(crate) fn rotate_to(&mut self, rotation: u8, grid: Grid) {
+    pub(crate) fn rotate_to(&mut self, rotation: u8) {
+        let grid = self.as_grid();
         self.rotation += rotation;
         self.rotation %= 4;
 
