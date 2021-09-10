@@ -33,10 +33,11 @@ pub(super) fn estimate_solve_row(
 
     let mut estimate = RowSolveEstimate::default();
 
-    let mut line_proc = estimate_line_without_edge(board.clone(), &targets[..targets.len() - 2]);
+    let without_corner = &targets[..targets.len() - 2];
+    let mut line_proc = estimate_line_without_corner(board.clone(), without_corner);
     board.swap_many_to(&line_proc.moves);
     estimate.moves.append(&mut line_proc.moves);
-    for &p in &targets[..targets.len() - 2] {
+    for &p in without_corner {
         board.lock(p);
     }
     if estimate.worst_route_size < line_proc.worst_route_size {
@@ -68,7 +69,7 @@ pub(super) fn estimate_solve_row(
     estimate
 }
 
-fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEstimate {
+fn estimate_line_without_corner(mut board: Board, targets: &[Pos]) -> RowSolveEstimate {
     let mut estimate = RowSolveEstimate::default();
     for &target in targets {
         let pos = board.reverse(target);
