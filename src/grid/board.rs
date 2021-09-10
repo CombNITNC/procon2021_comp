@@ -29,6 +29,10 @@ impl Board {
         self.forward.grid.looping_manhattan_dist(a, b)
     }
 
+    pub(crate) fn grid(&self) -> Grid {
+        self.forward.grid
+    }
+
     pub(crate) fn selected(&self) -> Pos {
         self.select
     }
