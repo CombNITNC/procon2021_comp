@@ -14,7 +14,11 @@ pub(crate) struct Solver {
 }
 
 impl Solver {
-    pub(super) fn solve_row(
+    pub(super) fn solve(&mut self, select: Pos, field: &VecOnGrid<Pos>) -> Vec<GridAction> {
+        todo!()
+    }
+
+    fn solve_row(
         &mut self,
         select: Pos,
         field: &VecOnGrid<Pos>,

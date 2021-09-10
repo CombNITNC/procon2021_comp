@@ -248,47 +248,60 @@ pub(crate) fn resolve(
 fn resolve_approximately(
     grid: &Grid,
     movements: &[(Pos, Pos)],
-    mut select_limit: u8,
+    select_limit: u8,
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
+    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
+    let operations_cost = |ops: &[Operation]| -> u32 {
+        ops.iter()
+            .map(|op| op.movements.len() as u32 * swap_cost as u32 + select_cost as u32)
+            .sum()
+    };
+    grid.all_pos()
+        .map(|pos| {
+            resolve_on_select(
+                grid,
+                nodes.clone(),
+                swap_cost,
+                select_cost,
+                select_limit,
+                pos,
+            )
+        })
+        .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
+        .unwrap()
+}
+
+fn resolve_on_select(
+    grid: &Grid,
+    mut nodes: VecOnGrid<Pos>,
+    swap_cost: u16,
+    select_cost: u16,
+    mut select_limit: u8,
+    init_select: Pos,
+) -> Vec<Operation> {
     let mut solver = Solver::default();
     let mut all_actions = vec![];
     let mut selection = None;
 
-    let mut row_to_sort: Vec<_> = (0..grid.height()).collect();
-    for _ in 0..grid.height() - 1 {
-        let cost_to_sort_row = |y: u8| -> u32 {
-            (0..grid.width())
-                .map(move |x| grid.pos(x, y))
-                .map(|pos| grid.looping_manhattan_dist(pos, nodes[pos]))
-                .sum()
-        };
-        row_to_sort.sort_by(|&a, &b| cost_to_sort_row(a).cmp(&cost_to_sort_row(b)));
-        let y = row_to_sort.pop().unwrap();
-
-        for x in 0..grid.width() {
-            let target = grid.pos(x, y);
-            if target != nodes[target] {
-                let mut actions = solver.solve_row(target, &nodes, y);
-                for &action in &actions {
-                    match action {
-                        GridAction::Swap(mov) => {
-                            let select = selection.unwrap();
-                            let to = grid.move_pos_to(select, mov);
-                            nodes.swap(select, to);
-                            selection = Some(to);
-                        }
-                        GridAction::Select(sel) => selection = Some(sel),
-                    }
-                }
-                all_actions.append(&mut actions);
+    let mut actions = solver.solve(init_select, &nodes);
+    for &action in &actions {
+        match action {
+            GridAction::Swap(mov) => {
+                let select = selection.unwrap();
+                let to = grid.move_pos_to(select, mov);
+                nodes.swap(select, to);
+                selection = Some(to);
+            }
+            GridAction::Select(sel) => {
+                selection = Some(sel);
+                select_limit -= 1;
             }
         }
-
-        eprintln!("sort result: {:?}", nodes);
     }
+    all_actions.append(&mut actions);
+
     let different_cells = DifferentCells::new(&nodes);
     let (mut actions, _total_cost) = ida_star(
         GridCompleter {
