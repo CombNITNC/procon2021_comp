@@ -6,11 +6,7 @@ use crate::{
 
 use super::{average_distance, find_and_remove, find_with, DiffEntry};
 
-fn get_edge_pixels<'a>(
-    grid: &'a VecOnGrid<Option<Fragment>>,
-    pos: Pos,
-    dir: Dir,
-) -> Option<&'a Vec<Color>> {
+fn get_edge_pixels(grid: &VecOnGrid<Option<Fragment>>, pos: Pos, dir: Dir) -> Option<&Vec<Color>> {
     Some(&grid[pos].as_ref()?.edges.edge(dir).pixels)
 }
 
