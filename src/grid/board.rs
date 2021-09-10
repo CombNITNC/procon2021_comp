@@ -125,9 +125,9 @@ impl Board {
         let grid = self.grid();
         match rotation % 4 {
             0 => pos,
-            1 => grid.pos(pos.y(), grid.height() - 1 - pos.x()),
+            1 => grid.pos(grid.width() - 1 - pos.y(), pos.x()),
             2 => grid.pos(grid.width() - 1 - pos.x(), grid.height() - 1 - pos.y()),
-            3 => grid.pos(grid.width() - 1 - pos.y(), pos.x()),
+            3 => grid.pos(pos.y(), grid.height() - 1 - pos.x()),
             _ => unreachable!(),
         }
     }
