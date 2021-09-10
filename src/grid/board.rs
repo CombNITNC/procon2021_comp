@@ -189,24 +189,13 @@ impl BoardFinder {
         self.rotation %= 4;
 
         std::mem::swap(&mut self.width, &mut self.height);
-        self.offset = self.rotated_pos(self.offset, grid);
+        self.offset = rotated_pos(self.rotation, self.offset, grid);
     }
 
     /// 窓の上端を 1 つ削る.
     pub(crate) fn slice_up(&mut self, board: &Board) {
         self.offset = board.grid().pos(self.offset.x(), self.offset.y());
         self.height -= 1;
-    }
-
-    /// 時計回りに 90 度単位の `rotation` で回転した位置を計算する.
-    fn rotated_pos(&self, pos: Pos, grid: Grid) -> Pos {
-        match self.rotation % 4 {
-            0 => pos,
-            1 => grid.pos(grid.width() - 1 - pos.y(), pos.x()),
-            2 => grid.pos(grid.width() - 1 - pos.x(), grid.height() - 1 - pos.y()),
-            3 => grid.pos(pos.y(), grid.height() - 1 - pos.x()),
-            _ => unreachable!(),
-        }
     }
 }
 
@@ -246,5 +235,16 @@ impl Iterator for FinderIter {
             self.advance()
         };
         Some(ret)
+    }
+}
+
+/// 時計回りに 90 度単位の `rotation` で回転した位置を計算する.
+fn rotated_pos(rotation: u8, pos: Pos, grid: Grid) -> Pos {
+    match rotation % 4 {
+        0 => pos,
+        1 => grid.pos(grid.width() - 1 - pos.y(), pos.x()),
+        2 => grid.pos(grid.width() - 1 - pos.x(), grid.height() - 1 - pos.y()),
+        3 => grid.pos(pos.y(), grid.height() - 1 - pos.x()),
+        _ => unreachable!(),
     }
 }
