@@ -29,6 +29,8 @@ impl Solver {
                 board = board.rotate_to(3);
                 continue;
             }
+            eprintln!("target row: {}", target_row);
+
             let completed = (0..board.grid().width()).all(|x| {
                 let pos = board.grid().pos(x, target_row);
                 pos == board.forward(pos)
