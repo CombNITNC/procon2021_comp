@@ -4,13 +4,13 @@ use super::{Grid, Pos};
 
 /// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
 #[derive(Clone)]
-pub(crate) struct VecOnGrid<'grid, T> {
+pub(crate) struct VecOnGrid<T> {
     vec: Vec<T>,
-    pub(crate) grid: &'grid Grid,
+    pub(crate) grid: Grid,
 }
 
-impl<'grid, T> VecOnGrid<'grid, T> {
-    pub(crate) fn with_init(grid: &'grid Grid, init: T) -> Self
+impl<T> VecOnGrid<T> {
+    pub(crate) fn with_init(grid: Grid, init: T) -> Self
     where
         T: Clone,
     {
@@ -20,7 +20,7 @@ impl<'grid, T> VecOnGrid<'grid, T> {
         }
     }
 
-    pub(crate) fn with_default(grid: &'grid Grid) -> Self
+    pub(crate) fn with_default(grid: Grid) -> Self
     where
         T: Default,
     {
@@ -141,7 +141,7 @@ impl<'grid, T> VecOnGrid<'grid, T> {
     }
 }
 
-impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
+impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if f.alternate() {
             writeln!(f, "[")?;
@@ -162,7 +162,7 @@ impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<'_, T> {
     }
 }
 
-impl<'grid, T> std::iter::IntoIterator for VecOnGrid<'grid, T> {
+impl<T> std::iter::IntoIterator for VecOnGrid<T> {
     type Item = T;
 
     type IntoIter = std::vec::IntoIter<T>;
@@ -172,7 +172,7 @@ impl<'grid, T> std::iter::IntoIterator for VecOnGrid<'grid, T> {
     }
 }
 
-impl<'a, 'grid, T> std::iter::IntoIterator for &'a VecOnGrid<'grid, T> {
+impl<'a, T> std::iter::IntoIterator for &'a VecOnGrid<T> {
     type Item = &'a T;
 
     type IntoIter = std::slice::Iter<'a, T>;
@@ -182,7 +182,7 @@ impl<'a, 'grid, T> std::iter::IntoIterator for &'a VecOnGrid<'grid, T> {
     }
 }
 
-impl<'a, 'grid, T> std::iter::IntoIterator for &'a mut VecOnGrid<'grid, T> {
+impl<'a, T> std::iter::IntoIterator for &'a mut VecOnGrid<T> {
     type Item = &'a mut T;
 
     type IntoIter = std::slice::IterMut<'a, T>;
@@ -192,7 +192,7 @@ impl<'a, 'grid, T> std::iter::IntoIterator for &'a mut VecOnGrid<'grid, T> {
     }
 }
 
-impl<T> ops::Index<Pos> for VecOnGrid<'_, T> {
+impl<T> ops::Index<Pos> for VecOnGrid<T> {
     type Output = T;
 
     fn index(&self, index: Pos) -> &Self::Output {
@@ -200,7 +200,7 @@ impl<T> ops::Index<Pos> for VecOnGrid<'_, T> {
     }
 }
 
-impl<T> ops::IndexMut<Pos> for VecOnGrid<'_, T> {
+impl<T> ops::IndexMut<Pos> for VecOnGrid<T> {
     fn index_mut(&mut self, index: Pos) -> &mut Self::Output {
         &mut self.vec[self.grid.pos_as_index(index)]
     }

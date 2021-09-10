@@ -48,8 +48,8 @@ impl DifferentCells {
 }
 
 #[derive(Clone)]
-struct GridCompleter<'grid> {
-    field: VecOnGrid<'grid, Pos>,
+struct GridCompleter {
+    field: VecOnGrid<Pos>,
     selecting: Option<Pos>,
     prev_action: Option<GridAction>,
     different_cells: DifferentCells,
@@ -58,7 +58,7 @@ struct GridCompleter<'grid> {
     remaining_select: u8,
 }
 
-impl std::fmt::Debug for GridCompleter<'_> {
+impl std::fmt::Debug for GridCompleter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridState")
             .field("field", &self.field)
@@ -75,7 +75,7 @@ enum GridAction {
     Select(Pos),
 }
 
-impl<'grid> IdaStarState for GridCompleter<'grid> {
+impl IdaStarState for GridCompleter {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
         match action {
@@ -194,11 +194,11 @@ fn actions_to_operations(actions: Vec<GridAction>) -> Vec<Operation> {
 /// ```
 /// // 10 00
 /// let grid = Grid::new(2, 1);
-/// let mut field = VecOnGrid::with_init(&grid, grid.pos(0, 0));
+/// let mut field = VecOnGrid::with_init(grid, grid.pos(0, 0));
 /// field[grid.pos(0, 0)] = grid.pos(1, 0);
 /// field[grid.pos(1, 0)] = grid.pos(0, 0);
 /// let path = resolve(
-///     &grid,
+///     grid,
 ///     &[
 ///         (grid.pos(0, 0), grid.pos(1, 0)),
 ///         (grid.pos(1, 0), grid.pos(0, 0)),
@@ -217,7 +217,7 @@ fn actions_to_operations(actions: Vec<GridAction>) -> Vec<Operation> {
 /// );
 /// ```
 pub(crate) fn resolve(
-    grid: &Grid,
+    grid: Grid,
     movements: &[(Pos, Pos)],
     select_limit: u8,
     swap_cost: u16,
@@ -246,7 +246,7 @@ pub(crate) fn resolve(
 
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の近似解を求める.
 fn resolve_approximately(
-    grid: &Grid,
+    grid: Grid,
     movements: &[(Pos, Pos)],
     select_limit: u8,
     swap_cost: u16,
@@ -274,7 +274,7 @@ fn resolve_approximately(
 }
 
 fn resolve_on_select(
-    grid: &Grid,
+    grid: Grid,
     mut nodes: VecOnGrid<Pos>,
     swap_cost: u16,
     select_cost: u16,

@@ -1,14 +1,14 @@
 use crate::grid::{Grid, Pos, VecOnGrid};
 
-pub(crate) struct EdgesNodes<'grid> {
+pub(crate) struct EdgesNodes {
     pub(crate) edges: Vec<(Pos, Pos)>,
-    pub(crate) nodes: VecOnGrid<'grid, Pos>,
-    pub(crate) reversed_nodes: VecOnGrid<'grid, Pos>,
+    pub(crate) nodes: VecOnGrid<Pos>,
+    pub(crate) reversed_nodes: VecOnGrid<Pos>,
 }
 
-impl<'grid> EdgesNodes<'grid> {
+impl EdgesNodes {
     /// 頂点の移動元と移動先からグラフの重み付き辺と頂点に対する移動先を格納したものを作る.
-    pub(crate) fn new(grid: &'grid Grid, movements: &[(Pos, Pos)]) -> Self {
+    pub(crate) fn new(grid: Grid, movements: &[(Pos, Pos)]) -> Self {
         let w = grid.width();
         let h = grid.height();
         let mut nodes = VecOnGrid::with_init(grid, grid.pos(0, 0));
@@ -72,7 +72,7 @@ fn edges_case1() {
         (grid.pos(1, 1), grid.pos(2, 1)),
         (grid.pos(2, 1), grid.pos(0, 1)),
     ];
-    let EdgesNodes { edges: actual, .. } = EdgesNodes::new(&grid, case);
+    let EdgesNodes { edges: actual, .. } = EdgesNodes::new(grid, case);
     test_edges(expected, actual);
 }
 
@@ -99,7 +99,7 @@ fn edge_cases2() {
         (grid.pos(1, 1), grid.pos(2, 1)),
         (grid.pos(2, 1), grid.pos(0, 0)),
     ];
-    let EdgesNodes { edges: actual, .. } = EdgesNodes::new(&grid, case);
+    let EdgesNodes { edges: actual, .. } = EdgesNodes::new(grid, case);
     test_edges(expected, actual);
 }
 
@@ -112,7 +112,7 @@ fn edge_cases3() {
         (grid.pos(1, 0), grid.pos(0, 0)),
     ];
     let expected = vec![(grid.pos(1, 0), grid.pos(0, 0))];
-    let actual = EdgesNodes::new(&grid, case);
+    let actual = EdgesNodes::new(grid, case);
     test_edges(expected, actual.edges);
     assert_eq!(actual.nodes[grid.pos(0, 0)], grid.pos(1, 0));
     assert_eq!(actual.nodes[grid.pos(1, 0)], grid.pos(0, 0));

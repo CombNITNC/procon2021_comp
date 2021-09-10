@@ -25,11 +25,11 @@ fn main() {
     let problem = image::read_problem(reader).unwrap();
     let grid = Grid::new(problem.rows, problem.cols);
 
-    let recovered_image = pixel_match::resolve(&problem, &grid);
-    debug_image_output("recovered_image.png", &grid, recovered_image);
+    let recovered_image = pixel_match::resolve(&problem, grid);
+    debug_image_output("recovered_image.png", grid, recovered_image);
 }
 
-fn debug_image_output(name: &str, grid: &Grid, fragment_grid: VecOnGrid<Option<Fragment>>) {
+fn debug_image_output(name: &str, grid: Grid, fragment_grid: VecOnGrid<Option<Fragment>>) {
     let mut colors_grid: VecOnGrid<Option<Vec<Color>>> = VecOnGrid::with_default(grid);
 
     let side_length = fragment_grid

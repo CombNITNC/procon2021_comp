@@ -18,7 +18,7 @@ fn test_estimate_solve_row() {
         (grid.pos(3, 1), grid.pos(3, 2)),
         (grid.pos(3, 2), grid.pos(3, 1)),
     ];
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(&grid, movements);
+    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
     let mut board = Board::new(grid.pos(3, 2), nodes);
     let actual = estimate_solve_row(board.clone(), 0);
 

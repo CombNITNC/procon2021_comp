@@ -3,15 +3,15 @@ use std::collections::HashSet;
 use super::{Grid, Pos, VecOnGrid};
 
 #[derive(Debug, Clone)]
-pub(crate) struct Board<'grid> {
+pub(crate) struct Board {
     select: Pos,
-    forward: VecOnGrid<'grid, Pos>,
-    reverse: VecOnGrid<'grid, Pos>,
+    forward: VecOnGrid<Pos>,
+    reverse: VecOnGrid<Pos>,
     locked: HashSet<Pos>,
 }
 
-impl<'grid> Board<'grid> {
-    pub(crate) fn new(select: Pos, field: VecOnGrid<'grid, Pos>) -> Board<'grid> {
+impl Board {
+    pub(crate) fn new(select: Pos, field: VecOnGrid<Pos>) -> Self {
         let mut reverse = field.clone();
         for (pos, &elem) in field.iter_with_pos() {
             reverse[elem] = pos;
@@ -24,7 +24,7 @@ impl<'grid> Board<'grid> {
         }
     }
 
-    pub(crate) fn grid(&self) -> &Grid {
+    pub(crate) fn grid(&self) -> Grid {
         self.forward.grid
     }
 
@@ -95,7 +95,7 @@ fn test_reverse() {
     // 01 00
     let grid = Grid::new(2, 2);
     let EdgesNodes { nodes, .. } = EdgesNodes::new(
-        &grid,
+        grid,
         &[
             (grid.pos(0, 0), grid.pos(1, 1)),
             (grid.pos(1, 1), grid.pos(1, 0)),
