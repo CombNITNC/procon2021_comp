@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use super::{Grid, Pos, VecOnGrid};
+use crate::basis::Movement;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Board {
@@ -238,12 +239,41 @@ impl BoardFinder {
     }
 }
 
-pub(crate) struct FinderIter {}
+pub(crate) struct FinderIter {
+    next: Option<Pos>,
+    end: Pos,
+    grid: Grid,
+    movement: Movement,
+}
+
+impl FinderIter {
+    fn new(start: Pos, end: Pos, grid: Grid, movement: Movement) -> Self {
+        let mut iter = Self {
+            next: None,
+            end,
+            grid,
+            movement,
+        };
+        iter.next = Some(start);
+        iter
+    }
+
+    fn advance(&self) -> Option<Pos> {
+        self.next
+            .map(|next| self.grid.move_pos_to(next, self.movement))
+    }
+}
 
 impl Iterator for FinderIter {
     type Item = Pos;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        let ret = self.next?;
+        self.next = if ret == self.end {
+            None
+        } else {
+            self.advance()
+        };
+        Some(ret)
     }
 }
