@@ -134,48 +134,6 @@ fn test_reverse() {
     assert_eq!(board.reverse[grid.pos(1, 1)], grid.pos(1, 0));
 }
 
-#[test]
-fn test_rotate() {
-    use crate::move_resolve::edges_nodes::EdgesNodes;
-
-    // 10 11
-    // 01 00
-    let grid = Grid::new(2, 2);
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(
-        grid,
-        &[
-            (grid.pos(0, 0), grid.pos(1, 1)),
-            (grid.pos(1, 1), grid.pos(1, 0)),
-            (grid.pos(1, 0), grid.pos(0, 0)),
-        ],
-    );
-    let board = Board::new(grid.pos(0, 0), nodes);
-
-    // 01 10
-    // 00 11
-    let rotated_1 = board.rotate_to(1);
-    assert_eq!(rotated_1.forward[grid.pos(0, 0)], grid.pos(0, 1));
-    assert_eq!(rotated_1.forward[grid.pos(1, 0)], grid.pos(1, 0));
-    assert_eq!(rotated_1.forward[grid.pos(0, 1)], grid.pos(0, 0));
-    assert_eq!(rotated_1.forward[grid.pos(1, 1)], grid.pos(1, 1));
-
-    // 00 01
-    // 11 10
-    let rotated_2 = board.rotate_to(2);
-    assert_eq!(rotated_2.forward[grid.pos(0, 0)], grid.pos(0, 0));
-    assert_eq!(rotated_2.forward[grid.pos(1, 0)], grid.pos(0, 1));
-    assert_eq!(rotated_2.forward[grid.pos(0, 1)], grid.pos(1, 1));
-    assert_eq!(rotated_2.forward[grid.pos(1, 1)], grid.pos(1, 0));
-
-    // 11 00
-    // 10 01
-    let rotated_3 = board.rotate_to(3);
-    assert_eq!(rotated_3.forward[grid.pos(0, 0)], grid.pos(1, 1));
-    assert_eq!(rotated_3.forward[grid.pos(1, 0)], grid.pos(0, 0));
-    assert_eq!(rotated_3.forward[grid.pos(0, 1)], grid.pos(1, 0));
-    assert_eq!(rotated_3.forward[grid.pos(1, 1)], grid.pos(0, 1));
-}
-
 /// `Board` に移動や回転を加えてアクセスするための覗き窓.
 #[derive(Debug, Clone)]
 pub(crate) struct BoardFinder {
