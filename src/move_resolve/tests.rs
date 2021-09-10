@@ -182,6 +182,38 @@ fn case3() {
 }
 
 #[test]
+fn large_case() {
+    // 00 10 20 55 40 50
+    // 01 30 21 31 41 51
+    // 02 12 22 32 42 52
+    // 03 13 23 33 43 53
+    // 04 14 24 34 44 54
+    // 05 15 25 35 45 11
+    let grid = Grid::new(6, 6);
+    let case = &[
+        (grid.pos(5, 5), grid.pos(3, 0)),
+        (grid.pos(3, 0), grid.pos(1, 1)),
+        (grid.pos(1, 1), grid.pos(5, 5)),
+    ];
+    let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, case);
+    const SELECT_LIMIT: u8 = 3;
+    const SWAP_COST: u16 = 1;
+    const SELECT_COST: u16 = 8;
+
+    let result = resolve(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
+
+    for Operation { select, movements } in result {
+        let mut current = select;
+        for movement in movements {
+            let to_swap = grid.move_pos_to(current, movement);
+            nodes.swap(current, to_swap);
+            current = to_swap;
+        }
+    }
+    assert!(grid.all_pos().zip(nodes.into_iter()).all(|(p, n)| p == n));
+}
+
+#[test]
 fn rand_case() {
     fn gen_circular(grid: Grid, rng: &mut rand::rngs::ThreadRng) -> Vec<Pos> {
         use rand::{
