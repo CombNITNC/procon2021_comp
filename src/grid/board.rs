@@ -85,6 +85,10 @@ impl Board {
             .collect()
     }
 
+    pub(crate) fn is_locked(&self, pos: Pos) -> bool {
+        self.locked.contains(&pos)
+    }
+
     pub(crate) fn lock(&mut self, pos: Pos) -> bool {
         self.locked.insert(pos)
     }
