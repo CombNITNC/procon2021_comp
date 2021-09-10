@@ -148,6 +148,10 @@ impl Board {
             .all_pos()
             .find(|p| !self.locked.contains(p))
     }
+
+    pub(crate) fn new_finder(&self) -> BoardFinder {
+        BoardFinder::new(self)
+    }
 }
 
 #[test]
