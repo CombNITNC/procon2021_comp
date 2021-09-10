@@ -29,10 +29,6 @@ impl Board {
         self.forward.grid.looping_manhattan_dist(a, b)
     }
 
-    pub(crate) fn move_pos_to(&self, pos: Pos, to: Movement) -> Pos {
-        self.forward.grid.move_pos_to(pos, to)
-    }
-
     pub(crate) fn selected(&self) -> Pos {
         self.select
     }
@@ -57,10 +53,7 @@ impl Board {
     }
 
     pub(crate) fn swap_to(&mut self, to_swap: Pos) {
-        let dist = self
-            .forward
-            .grid
-            .looping_manhattan_dist(self.select, to_swap);
+        let dist = self.looping_manhattan_dist(self.select, to_swap);
         if dist == 0 {
             return;
         }
@@ -84,14 +77,53 @@ impl Board {
         }
     }
 
+    fn width(&self) -> u8 {
+        self.forward.grid.width()
+    }
+    fn height(&self) -> u8 {
+        self.forward.grid.height()
+    }
+
+    fn up_of(&self, pos: Pos) -> Pos {
+        if pos.y() == 0 {
+            Pos::new(pos.x(), self.height() - 1)
+        } else {
+            Pos::new(pos.x(), pos.y() - 1)
+        }
+    }
+    fn right_of(&self, pos: Pos) -> Pos {
+        if pos.x() + 1 == self.width() {
+            Pos::new(0, pos.y())
+        } else {
+            Pos::new(pos.x() + 1, pos.y())
+        }
+    }
+    fn down_of(&self, pos: Pos) -> Pos {
+        if pos.y() + 1 == self.height() {
+            Pos::new(pos.x(), 0)
+        } else {
+            Pos::new(pos.x(), pos.y() + 1)
+        }
+    }
+    fn left_of(&self, pos: Pos) -> Pos {
+        if pos.x() == 0 {
+            Pos::new(self.width() - 1, pos.y())
+        } else {
+            Pos::new(pos.x() - 1, pos.y())
+        }
+    }
+
     pub(crate) fn around_of(&self, pos: Pos) -> Vec<Pos> {
-        self.forward
-            .grid
-            .around_of(pos)
-            .iter()
-            .copied()
-            .filter(|pos| !self.locked.contains(pos))
-            .collect()
+        [
+            self.up_of(pos),
+            self.right_of(pos),
+            self.down_of(pos),
+            self.left_of(pos),
+        ]
+        .iter()
+        .copied()
+        .filter(|pos| !self.locked.contains(pos))
+        .collect()
     }
 
     pub(crate) fn is_locked(&self, pos: Pos) -> bool {
@@ -178,14 +210,15 @@ impl BoardFinder {
         let grid = Grid::new(self.width, self.height);
         let movement = match self.rotation {
             0 => Movement::Right,
-            1 => Movement::Up,
+            1 => Movement::Down,
             2 => Movement::Left,
-            3 => Movement::Down,
+            3 => Movement::Up,
             _ => unreachable!(),
         };
         FinderIter::new(
+            self,
             self.offset,
-            grid.move_pos_to(self.offset, movement.opposite()),
+            self.move_pos_to(self.offset, movement.opposite()),
             grid,
             movement,
         )
@@ -195,44 +228,44 @@ impl BoardFinder {
         Grid::new(self.width, self.height)
     }
 
-    pub(crate) fn up_of(&self, pos: Pos) -> Pos {
+    pub(crate) fn move_pos_to(&self, pos: Pos, movement: Movement) -> Pos {
         let grid = self.as_grid();
-        match self.rotation {
-            0 => grid.up_of(pos),
-            1 => grid.left_of(pos),
-            2 => grid.down_of(pos),
-            3 => grid.right_of(pos),
+        let movement = match self.rotation {
+            0 => movement,
+            1 => movement.turn_left(),
+            2 => movement.opposite(),
+            3 => movement.turn_right(),
             _ => unreachable!(),
-        }
-    }
-    pub(crate) fn right_of(&self, pos: Pos) -> Pos {
-        let grid = self.as_grid();
-        match self.rotation {
-            0 => grid.right_of(pos),
-            1 => grid.down_of(pos),
-            2 => grid.left_of(pos),
-            3 => grid.up_of(pos),
-            _ => unreachable!(),
-        }
-    }
-    pub(crate) fn down_of(&self, pos: Pos) -> Pos {
-        let grid = self.as_grid();
-        match self.rotation {
-            0 => grid.down_of(pos),
-            1 => grid.right_of(pos),
-            2 => grid.up_of(pos),
-            3 => grid.left_of(pos),
-            _ => unreachable!(),
-        }
-    }
-    pub(crate) fn left_of(&self, pos: Pos) -> Pos {
-        let grid = self.as_grid();
-        match self.rotation {
-            0 => grid.left_of(pos),
-            1 => grid.up_of(pos),
-            2 => grid.right_of(pos),
-            3 => grid.down_of(pos),
-            _ => unreachable!(),
+        };
+        match movement {
+            Movement::Up => {
+                if pos.y() == 0 {
+                    grid.pos(pos.x(), grid.height() - 1)
+                } else {
+                    grid.pos(pos.x(), pos.y() - 1)
+                }
+            }
+            Movement::Right => {
+                if pos.x() == grid.width() - 1 {
+                    grid.pos(0, pos.y())
+                } else {
+                    grid.pos(pos.x() + 1, pos.y())
+                }
+            }
+            Movement::Down => {
+                if pos.y() == grid.height() - 1 {
+                    grid.pos(pos.x(), 0)
+                } else {
+                    grid.pos(pos.x(), pos.y() + 1)
+                }
+            }
+            Movement::Left => {
+                if pos.x() == 0 {
+                    grid.pos(grid.width() - 1, pos.y())
+                } else {
+                    grid.pos(pos.x() - 1, pos.y())
+                }
+            }
         }
     }
 
@@ -253,20 +286,22 @@ impl BoardFinder {
     }
 }
 
-pub(crate) struct FinderIter {
+pub(crate) struct FinderIter<'f> {
     next: Option<Pos>,
     end: Pos,
     grid: Grid,
     movement: Movement,
+    finder: &'f BoardFinder,
 }
 
-impl FinderIter {
-    fn new(start: Pos, end: Pos, grid: Grid, movement: Movement) -> Self {
+impl<'f> FinderIter<'f> {
+    fn new(finder: &'f BoardFinder, start: Pos, end: Pos, grid: Grid, movement: Movement) -> Self {
         let mut iter = Self {
             next: None,
             end,
             grid,
             movement,
+            finder,
         };
         iter.next = Some(start);
         iter
@@ -274,11 +309,11 @@ impl FinderIter {
 
     fn advance(&self) -> Option<Pos> {
         self.next
-            .map(|next| self.grid.move_pos_to(next, self.movement))
+            .map(|next| self.finder.move_pos_to(next, self.movement))
     }
 }
 
-impl Iterator for FinderIter {
+impl Iterator for FinderIter<'_> {
     type Item = Pos;
 
     fn next(&mut self) -> Option<Self::Item> {
