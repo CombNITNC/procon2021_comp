@@ -1,5 +1,5 @@
 use self::{
-    edges_nodes::EdgesNodes,
+    edges_nodes::Nodes,
     ida_star::{ida_star, IdaStarState},
 };
 use crate::{
@@ -226,7 +226,7 @@ pub(crate) fn resolve(
     if 36 <= grid.width() * grid.height() {
         return resolve_approximately(grid, movements, select_limit, swap_cost, select_cost);
     }
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
+    let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let different_cells = DifferentCells::new(&nodes);
     let lower_bound = different_cells.0;
     let (path, _total_cost) = ida_star(
@@ -252,7 +252,7 @@ fn resolve_approximately(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
+    let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let operations_cost = |ops: &[Operation]| -> u32 {
         ops.iter()
             .map(|op| op.movements.len() as u32 * swap_cost as u32 + select_cost as u32)

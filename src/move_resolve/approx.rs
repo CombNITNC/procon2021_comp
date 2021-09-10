@@ -40,7 +40,7 @@ impl Solver {
                 for &mov in &moves {
                     match mov {
                         GridAction::Swap(mov) => {
-                            let to_swap = board.move_pos_to(board.selected(), mov);
+                            let to_swap = finder.move_pos_to(board.selected(), mov);
                             board.swap_to(to_swap);
                         }
                         GridAction::Select(sel) => {

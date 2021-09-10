@@ -1,4 +1,4 @@
-use super::{edges_nodes::EdgesNodes, resolve, DifferentCells};
+use super::{edges_nodes::Nodes, resolve, DifferentCells};
 use crate::{
     basis::{Movement::*, Operation},
     grid::{Grid, Pos, VecOnGrid},
@@ -14,7 +14,7 @@ fn test_different_cells() {
         (grid.pos(1, 0), grid.pos(0, 1)),
         (grid.pos(1, 1), grid.pos(1, 0)),
     ];
-    let EdgesNodes { nodes: field, .. } = EdgesNodes::new(grid, case);
+    let Nodes { nodes: field, .. } = Nodes::new(grid, case);
 
     let diff = DifferentCells(4);
     assert_eq!(diff.on_swap(&field, grid.pos(0, 1), grid.pos(1, 1)).0, 2);
@@ -195,7 +195,7 @@ fn large_case() {
         (grid.pos(3, 0), grid.pos(1, 1)),
         (grid.pos(1, 1), grid.pos(5, 5)),
     ];
-    let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, case);
+    let Nodes { mut nodes, .. } = Nodes::new(grid, case);
     const SELECT_LIMIT: u8 = 3;
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
@@ -241,7 +241,7 @@ fn rand_case() {
     }
     case.push((*circular.last().unwrap(), *circular.first().unwrap()));
 
-    let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, &case);
+    let Nodes { mut nodes, .. } = Nodes::new(grid, &case);
     eprintln!("before: {:#?}", nodes);
 
     let result = resolve(grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);

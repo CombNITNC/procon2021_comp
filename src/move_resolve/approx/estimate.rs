@@ -1,6 +1,9 @@
-use crate::grid::{
-    board::{Board, BoardFinder},
-    Pos,
+use crate::{
+    basis::Movement,
+    grid::{
+        board::{Board, BoardFinder},
+        Pos,
+    },
 };
 
 use super::route::{route_select_to_target, route_target_to_pos};
@@ -107,11 +110,11 @@ fn estimate_edge_then_right_down(
     let mut ret = vec![];
 
     let a_pos = board.reverse(a);
-    let a_goal = finder.right_of(a);
+    let a_goal = finder.move_pos_to(a, Movement::Right);
     move_target_to_pos(&mut board, a_pos, a_goal, &mut ret);
 
     let b_pos = board.reverse(b);
-    let b_goal = finder.down_of(b);
+    let b_goal = finder.move_pos_to(b, Movement::Down);
     move_target_to_pos(&mut board, b_pos, b_goal, &mut ret);
 
     let select = board.selected();
@@ -137,11 +140,11 @@ fn estimate_edge_then_left_down(
     let mut ret = vec![];
 
     let a_pos = board.reverse(a);
-    let a_goal = finder.down_of(a);
+    let a_goal = finder.move_pos_to(a, Movement::Down);
     move_target_to_pos(&mut board, a_pos, a_goal, &mut ret);
 
     let b_pos = board.reverse(b);
-    let b_goal = finder.left_of(b);
+    let b_goal = finder.move_pos_to(b, Movement::Left);
     move_target_to_pos(&mut board, b_pos, b_goal, &mut ret);
 
     let select = board.selected();

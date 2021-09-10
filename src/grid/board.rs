@@ -152,12 +152,12 @@ impl Board {
 
 #[test]
 fn test_reverse() {
-    use crate::move_resolve::edges_nodes::EdgesNodes;
+    use crate::move_resolve::edges_nodes::Nodes;
 
     // 10 11
     // 01 00
     let grid = Grid::new(2, 2);
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(
+    let Nodes { nodes, .. } = Nodes::new(
         grid,
         &[
             (grid.pos(0, 0), grid.pos(1, 1)),
