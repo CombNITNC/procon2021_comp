@@ -23,8 +23,6 @@ impl Solver {
                 board.rotate_to(3);
             }
             if board.grid().width() <= 3 && board.grid().height() <= 3 {
-                let mut moves = self.solve_finish(&mut board);
-                actions.append(&mut moves);
                 break;
             }
             let target_row = self.next_row(&board);
@@ -59,10 +57,6 @@ impl Solver {
             }
         }
         0
-    }
-
-    fn solve_finish(&mut self, board: &mut Board) -> Vec<GridAction> {
-        todo!()
     }
 
     fn solve_row(&mut self, board: &Board, target_row: u8) -> Vec<GridAction> {
