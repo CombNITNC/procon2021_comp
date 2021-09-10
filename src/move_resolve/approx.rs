@@ -10,7 +10,7 @@ mod route;
 
 #[derive(Debug, Default)]
 pub(crate) struct Solver {
-    estimate: Option<RowSolveEstimate>,
+    row_estimate: Option<RowSolveEstimate>,
 }
 
 impl Solver {
@@ -25,14 +25,14 @@ impl Solver {
         target_row: u8,
     ) -> Vec<GridAction> {
         let estimate = estimate_solve_row(Board::new(select, field.clone()), target_row);
-        if let Some(worst_estimate) = &self.estimate {
+        if let Some(worst_estimate) = &self.row_estimate {
             if worst_estimate.worst_route_size < estimate.worst_route_size {
-                self.estimate.replace(estimate);
+                self.row_estimate.replace(estimate);
             }
         } else {
-            self.estimate.replace(estimate);
+            self.row_estimate.replace(estimate);
         }
-        let estimate = self.estimate.as_ref().unwrap();
+        let estimate = self.row_estimate.as_ref().unwrap();
 
         let mut actions = vec![];
         if field
