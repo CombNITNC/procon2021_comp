@@ -12,10 +12,17 @@ pub(super) struct RowSolveEstimate {
     pub(super) worst_swap_pos: Pos,
 }
 
-pub(super) fn estimate_solve_row(mut board: Board, target_row: u8) -> RowSolveEstimate {
-    let targets: Vec<_> = (0..board.grid().width())
-        .map(|x| board.grid().pos(x, target_row))
-        .collect();
+pub(super) fn estimate_solve_row(mut board: Board, targets: &[Pos]) -> RowSolveEstimate {
+    debug_assert_eq!(
+        board
+            .grid()
+            .looping_manhattan_dist(targets[targets.len() - 2], *targets.last().unwrap()),
+        1,
+        "board: {:#?}, targets: {:?}",
+        board,
+        targets
+    );
+
     let mut estimate = RowSolveEstimate::default();
 
     let mut line_proc = estimate_line_without_edge(board.clone(), &targets[..targets.len() - 2]);

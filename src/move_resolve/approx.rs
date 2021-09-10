@@ -28,19 +28,15 @@ impl Solver {
             if finder.width() <= 3 && finder.height() <= 3 {
                 break;
             }
-            let target_row = self.next_row(&board, &finder);
-            if board.selected().y() == target_row {
+            let targets = self.next_targets(&board, &finder);
+            if targets.contains(&board.selected()) {
                 finder.rotate_to(3, board.grid());
                 continue;
             }
-            eprintln!("target row: {}", target_row);
+            eprintln!("targets: {:?}", targets);
 
-            let completed = (0..finder.width()).all(|x| {
-                let pos = board.grid().pos(x + finder.offset().x(), target_row);
-                pos == board.forward(pos)
-            });
-            if !completed {
-                let mut moves = self.solve_row(&board, target_row);
+            if !targets.is_empty() {
+                let mut moves = self.solve_row(&board, &targets);
                 for &mov in &moves {
                     match mov {
                         GridAction::Swap(mov) => {
@@ -54,8 +50,7 @@ impl Solver {
                 }
                 actions.append(&mut moves);
             }
-            for x in 0..board.grid().width() {
-                let pos = board.grid().pos(x, target_row);
+            for pos in targets {
                 board.lock(pos);
             }
             finder.slice_up(&board);
@@ -63,17 +58,12 @@ impl Solver {
         actions
     }
 
-    fn next_row(&self, board: &Board, finder: &BoardFinder) -> u8 {
-        let first_unlocked = finder.iter().find(|&pos| !board.is_locked(pos)).unwrap();
-        if finder.rotation() % 2 == 0 {
-            first_unlocked.y()
-        } else {
-            first_unlocked.x()
-        }
+    fn next_targets(&self, board: &Board, finder: &BoardFinder) -> Vec<Pos> {
+        finder.iter().filter(|&pos| !board.is_locked(pos)).collect()
     }
 
-    fn solve_row(&mut self, board: &Board, target_row: u8) -> Vec<GridAction> {
-        let estimate = estimate_solve_row(board.clone(), target_row);
+    fn solve_row(&mut self, board: &Board, targets: &[Pos]) -> Vec<GridAction> {
+        let estimate = estimate_solve_row(board.clone(), targets);
         if let Some(worst_estimate) = &self.row_estimate {
             if worst_estimate.worst_route_size < estimate.worst_route_size {
                 self.row_estimate.replace(estimate);
