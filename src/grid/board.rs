@@ -85,6 +85,40 @@ impl Board {
     pub(crate) fn unlock(&mut self, pos: Pos) -> bool {
         self.locked.remove(&pos)
     }
+
+    pub(crate) fn rotate_to_right(&self) -> Self {
+        let grid = Grid::new(self.grid().width(), self.grid().height());
+        let mut forward = VecOnGrid::with_default(grid);
+        for (p, &e) in self.forward.iter_with_pos() {
+            forward[self.rotated_pos(p, 1)] = e;
+        }
+        let mut reverse = forward.clone();
+        for (p, &e) in self.reverse.iter_with_pos() {
+            reverse[self.rotated_pos(p, 1)] = e;
+        }
+        Self {
+            select: self.rotated_pos(self.select, 1),
+            forward,
+            reverse,
+            locked: self
+                .locked
+                .iter()
+                .map(|&p| self.rotated_pos(p, 1))
+                .collect(),
+        }
+    }
+
+    /// 時計回りに 90 度単位の `rotation` で回転した位置を計算する.
+    fn rotated_pos(&self, pos: Pos, rotation: u8) -> Pos {
+        let grid = self.grid();
+        match rotation % 4 {
+            0 => pos,
+            1 => grid.pos(pos.y(), grid.height() - 1 - pos.x()),
+            2 => grid.pos(grid.width() - 1 - pos.x(), grid.height() - 1 - pos.y()),
+            3 => grid.pos(grid.width() - 1 - pos.y(), pos.x()),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[test]
