@@ -19,14 +19,14 @@ impl Solver {
         let mut actions = vec![];
         loop {
             if board.grid().height() < board.grid().width() {
-                board.rotate_to(3);
+                board = board.rotate_to(3);
             }
             if board.grid().width() <= 3 && board.grid().height() <= 3 {
                 break;
             }
             let target_row = self.next_row(&board);
             if board.selected().y() == target_row {
-                board.rotate_to(3);
+                board = board.rotate_to(3);
                 continue;
             }
             let mut moves = self.solve_row(&board, target_row);
