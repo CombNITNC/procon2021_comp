@@ -32,6 +32,13 @@ impl Board {
         self.select
     }
 
+    pub(crate) fn select(&mut self, to_select: Pos) {
+        if self.locked.contains(&to_select) {
+            panic!("the position was locked: {:?}", to_select);
+        }
+        self.select = to_select;
+    }
+
     pub(crate) fn field(&self) -> &VecOnGrid<Pos> {
         &self.forward
     }
