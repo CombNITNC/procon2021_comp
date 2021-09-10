@@ -50,7 +50,15 @@ impl Solver {
     }
 
     fn next_row(&self, board: &Board) -> u8 {
-        todo!()
+        for y in 0..board.grid().height() {
+            if (0..board.grid().width()).any(|x| {
+                let pos = board.grid().pos(x, y);
+                !board.is_locked(pos)
+            }) {
+                return y;
+            }
+        }
+        0
     }
 
     fn solve_finish(&mut self, board: &mut Board) -> Vec<GridAction> {
