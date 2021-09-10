@@ -23,24 +23,24 @@ impl Solver {
         let mut actions = vec![];
         loop {
             if finder.height() < finder.width() {
-                finder.rotate_to(3, board.grid());
+                finder.rotate_to(3);
             }
             if finder.width() <= 3 && finder.height() <= 3 {
                 break;
             }
             let targets = self.next_targets(&board, &finder);
             if targets.contains(&board.selected()) {
-                finder.rotate_to(3, board.grid());
+                finder.rotate_to(3);
                 continue;
             }
             eprintln!("targets: {:?}", targets);
 
             if !targets.is_empty() {
-                let mut moves = self.solve_row(&board, &targets);
+                let mut moves = self.solve_row(&board, &finder, &targets);
                 for &mov in &moves {
                     match mov {
                         GridAction::Swap(mov) => {
-                            let to_swap = board.grid().move_pos_to(board.selected(), mov);
+                            let to_swap = board.move_pos_to(board.selected(), mov);
                             board.swap_to(to_swap);
                         }
                         GridAction::Select(sel) => {
@@ -64,8 +64,13 @@ impl Solver {
         targets
     }
 
-    fn solve_row(&mut self, board: &Board, targets: &[Pos]) -> Vec<GridAction> {
-        let estimate = estimate_solve_row(board.clone(), targets);
+    fn solve_row(
+        &mut self,
+        board: &Board,
+        finder: &BoardFinder,
+        targets: &[Pos],
+    ) -> Vec<GridAction> {
+        let estimate = estimate_solve_row(board.clone(), finder, targets);
         if let Some(worst_estimate) = &self.row_estimate {
             if worst_estimate.worst_route_size < estimate.worst_route_size {
                 self.row_estimate.replace(estimate);
@@ -76,15 +81,11 @@ impl Solver {
         let estimate = self.row_estimate.as_ref().unwrap();
 
         let mut actions = vec![];
-        if board
-            .grid()
-            .looping_manhattan_dist(estimate.moves[0], estimate.moves[1])
-            != 1
-        {
+        if board.looping_manhattan_dist(estimate.moves[0], estimate.moves[1]) != 1 {
             actions.push(GridAction::Select(estimate.moves[0]));
         }
         for win in estimate.moves.windows(2) {
-            if board.grid().looping_manhattan_dist(win[0], win[1]) == 1 {
+            if board.looping_manhattan_dist(win[0], win[1]) == 1 {
                 actions.push(GridAction::Swap(Movement::between_pos(win[0], win[1])));
             } else {
                 actions.push(GridAction::Select(win[1]));
