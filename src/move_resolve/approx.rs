@@ -2,7 +2,10 @@ use self::estimate::{estimate_solve_row, RowSolveEstimate};
 use super::GridAction;
 use crate::{
     basis::Movement,
-    grid::{board::Board, Pos, VecOnGrid},
+    grid::{
+        board::{Board, BoardFinder},
+        Pos, VecOnGrid,
+    },
 };
 
 mod estimate;
@@ -16,23 +19,24 @@ pub(crate) struct Solver {
 impl Solver {
     pub(super) fn solve(&mut self, select: Pos, field: &VecOnGrid<Pos>) -> Vec<GridAction> {
         let mut board = Board::new(select, field.clone());
+        let mut finder = BoardFinder::new(&board);
         let mut actions = vec![];
         loop {
-            if board.grid().height() < board.grid().width() {
-                board = board.rotate_to(3);
+            if finder.height() < finder.width() {
+                finder.rotate_to(3, board.grid());
             }
-            if board.grid().width() <= 3 && board.grid().height() <= 3 {
+            if finder.width() <= 3 && finder.height() <= 3 {
                 break;
             }
-            let target_row = self.next_row(&board);
+            let target_row = self.next_row(&board, &finder);
             if board.selected().y() == target_row {
-                board = board.rotate_to(3);
+                finder.rotate_to(3, board.grid());
                 continue;
             }
             eprintln!("target row: {}", target_row);
 
-            let completed = (0..board.grid().width()).all(|x| {
-                let pos = board.grid().pos(x, target_row);
+            let completed = (0..finder.width()).all(|x| {
+                let pos = board.grid().pos(x + finder.offset().x(), target_row);
                 pos == board.forward(pos)
             });
             if !completed {
@@ -54,20 +58,18 @@ impl Solver {
                 let pos = board.grid().pos(x, target_row);
                 board.lock(pos);
             }
+            finder.slice_up(&board);
         }
         actions
     }
 
-    fn next_row(&self, board: &Board) -> u8 {
-        for y in 0..board.grid().height() {
-            if (0..board.grid().width()).any(|x| {
-                let pos = board.grid().pos(x, y);
-                !board.is_locked(pos)
-            }) {
-                return y;
-            }
+    fn next_row(&self, board: &Board, finder: &BoardFinder) -> u8 {
+        let first_unlocked = finder.iter().find(|&pos| !board.is_locked(pos)).unwrap();
+        if finder.rotation() % 2 == 0 {
+            first_unlocked.y()
+        } else {
+            first_unlocked.x()
         }
-        0
     }
 
     fn solve_row(&mut self, board: &Board, target_row: u8) -> Vec<GridAction> {
