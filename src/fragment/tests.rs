@@ -33,7 +33,7 @@ fn case1() -> Result<()> {
 
     for y in 0..cols {
         for x in 0..rows {
-            let pos = grid.clamping_pos(x as u8, y as u8);
+            let pos = grid.pos(x as u8, y as u8);
             let frag = Fragment::new(&pixels, pos.clone(), width, frag_edge as u16);
 
             let up_left = x * frag_edge + y * frag_edge * width;

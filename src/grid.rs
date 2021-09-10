@@ -2,6 +2,7 @@ pub(crate) use vec_on_grid::*;
 
 use crate::basis::Movement;
 
+pub(crate) mod board;
 mod vec_on_grid;
 
 /// `Pos` は `Grid` に存在する座標を表す.
@@ -12,7 +13,7 @@ pub(crate) struct Pos(u8);
 
 impl std::fmt::Debug for Pos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({}, {})", self.x(), self.y())
+        write!(f, "({:X}{:X})", self.x(), self.y())
     }
 }
 
@@ -38,11 +39,28 @@ impl Pos {
 }
 
 /// `RangePos` は `Grid` 上の矩形領域を表し, `Iterator` で走査できる.
+#[derive(Debug, Clone)]
 pub(crate) struct RangePos {
     start: Pos,
     end: Pos,
     x: usize,
     y: usize,
+}
+
+impl RangePos {
+    pub(crate) fn single(pos: Pos) -> Self {
+        Self {
+            start: pos,
+            end: pos,
+            x: pos.x() as _,
+            y: pos.y() as _,
+        }
+    }
+
+    pub(crate) fn is_in(&self, pos: Pos) -> bool {
+        (self.start.x()..=self.end.x()).contains(&pos.x())
+            && (self.start.y()..=self.end.y()).contains(&pos.y())
+    }
 }
 
 impl Iterator for RangePos {
@@ -168,49 +186,48 @@ impl Grid {
     }
 
     pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
-        let (x, y) = self.looping_min_vec(a, b);
-        manhattan_dist(a, x, y) as u32
+        let vec = self.looping_min_vec(a, b);
+        manhattan_dist(vec) as u32
     }
 
-    pub(crate) fn looping_min_vec(&self, a: Pos, b: Pos) -> (i32, i32) {
+    pub(crate) fn looping_min_vec(&self, from: Pos, to: Pos) -> (i32, i32) {
         let width = self.width as i32;
         let height = self.height as i32;
-        let bx = b.x() as i32;
-        let by = b.y() as i32;
-        let other_points = match (a.x() < self.width / 2, a.y() < self.height / 2) {
+        let to_x = to.x() as i32;
+        let to_y = to.y() as i32;
+        let other_points = match (from.x() < self.width / 2, from.y() < self.height / 2) {
             (true, true) => [
-                (bx - width, by),
-                (bx, by - height),
-                (bx - width, by - height),
+                (to_x - width, to_y),
+                (to_x, to_y - height),
+                (to_x - width, to_y - height),
             ],
             (true, false) => [
-                (bx - width, by),
-                (bx, by + height),
-                (bx - width, by + height),
+                (to_x - width, to_y),
+                (to_x, to_y + height),
+                (to_x - width, to_y + height),
             ],
             (false, true) => [
-                (bx + width, by),
-                (bx, by - height),
-                (bx + width, by - height),
+                (to_x + width, to_y),
+                (to_x, to_y - height),
+                (to_x + width, to_y - height),
             ],
             (false, false) => [
-                (bx + width, by),
-                (bx, by + height),
-                (bx + width, by + height),
+                (to_x + width, to_y),
+                (to_x, to_y + height),
+                (to_x + width, to_y + height),
             ],
         };
-        std::iter::once(&(bx, by))
+        std::iter::once(&(to_x, to_y))
             .chain(other_points.iter())
             .cloned()
-            .min_by(|&(ax, ay), &(bx, by)| {
-                manhattan_dist(a, ax, ay).cmp(&manhattan_dist(a, bx, by))
-            })
+            .map(|(to_x, to_y)| (to_x - from.x() as i32, to_y - from.y() as i32))
+            .min_by(|&a, &b| manhattan_dist(a).cmp(&manhattan_dist(b)))
             .unwrap()
     }
 }
 
-fn manhattan_dist(a: Pos, bx: i32, by: i32) -> i32 {
-    (a.x() as i32 - bx).abs() + (a.y() as i32 - by).abs()
+fn manhattan_dist((dx, dy): (i32, i32)) -> i32 {
+    dx.abs() + dy.abs()
 }
 
 #[test]
@@ -234,4 +251,13 @@ fn test_looping_manhattan_dist() {
         assert_eq!(4, grid.looping_manhattan_dist(a, b), "{:?} {:?}", a, b);
         assert_eq!(4, grid.looping_manhattan_dist(b, a), "{:?} {:?}", a, b);
     }
+}
+
+#[test]
+fn test_looping_min_vec() {
+    let grid = Grid::new(5, 5);
+    for p in grid.all_pos() {
+        assert_eq!((0, 0), grid.looping_min_vec(p, p));
+    }
+    assert_eq!((1, 0), grid.looping_min_vec(grid.pos(4, 0), grid.pos(0, 0)));
 }

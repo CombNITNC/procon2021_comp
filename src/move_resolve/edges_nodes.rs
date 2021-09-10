@@ -11,11 +11,11 @@ impl<'grid> EdgesNodes<'grid> {
     pub(crate) fn new(grid: &'grid Grid, movements: &[(Pos, Pos)]) -> Self {
         let w = grid.width();
         let h = grid.height();
-        let mut nodes = VecOnGrid::with_init(grid, grid.clamping_pos(0, 0));
-        let mut reversed_nodes = VecOnGrid::with_init(grid, grid.clamping_pos(0, 0));
+        let mut nodes = VecOnGrid::with_init(grid, grid.pos(0, 0));
+        let mut reversed_nodes = VecOnGrid::with_init(grid, grid.pos(0, 0));
         for col in 0..h {
             for row in 0..w {
-                let pos = grid.clamping_pos(row, col);
+                let pos = grid.pos(row, col);
                 nodes[pos] = pos;
                 reversed_nodes[pos] = pos;
             }
@@ -26,7 +26,7 @@ impl<'grid> EdgesNodes<'grid> {
         }
         let mut edges = Vec::with_capacity(2 * w as usize * h as usize - w as usize - h as usize);
         if 2 <= w {
-            for pos in grid.range(grid.clamping_pos(0, 0), grid.clamping_pos(w - 2, h - 1)) {
+            for pos in grid.range(grid.pos(0, 0), grid.pos(w - 2, h - 1)) {
                 let right = grid.right_of(pos);
                 let a = nodes[pos];
                 let b = nodes[right];
@@ -34,7 +34,7 @@ impl<'grid> EdgesNodes<'grid> {
             }
         }
         if 2 <= h {
-            for pos in grid.range(grid.clamping_pos(0, 0), grid.clamping_pos(w - 1, h - 2)) {
+            for pos in grid.range(grid.pos(0, 0), grid.pos(w - 1, h - 2)) {
                 let down = grid.down_of(pos);
                 let a = nodes[pos];
                 let b = nodes[down];
