@@ -17,7 +17,6 @@ impl Solver {
     pub(super) fn solve(&mut self, select: Pos, field: &VecOnGrid<Pos>) -> Vec<GridAction> {
         let mut board = Board::new(select, field.clone());
         let mut actions = vec![];
-
         loop {
             if board.grid().height() < board.grid().width() {
                 board.rotate_to(3);
@@ -26,7 +25,7 @@ impl Solver {
                 break;
             }
             let target_row = self.next_row(&board);
-            if board.field().iter().any(|&p| p == board.selected()) {
+            if board.selected().y() == target_row {
                 board.rotate_to(3);
                 continue;
             }
