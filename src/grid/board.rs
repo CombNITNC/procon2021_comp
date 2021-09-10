@@ -200,6 +200,9 @@ impl BoardFinder {
     pub(crate) fn height(&self) -> u8 {
         self.height
     }
+    pub(crate) fn offset(&self) -> Pos {
+        self.offset
+    }
 
     pub(crate) fn iter(&self) -> FinderIter {
         todo!()
