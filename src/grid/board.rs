@@ -298,6 +298,62 @@ impl BoardFinder {
     }
 }
 
+#[test]
+fn test_finder() {
+    let grid = Grid::new(6, 6);
+    let mut finder = BoardFinder::new(grid);
+
+    finder.rotate_to(1);
+    let expected = &[
+        grid.pos(0, 5),
+        grid.pos(0, 4),
+        grid.pos(0, 3),
+        grid.pos(0, 2),
+        grid.pos(0, 1),
+        grid.pos(0, 0),
+    ];
+    let actual: Vec<_> = finder.iter().collect();
+    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
+    expected
+        .iter()
+        .zip(actual.iter())
+        .enumerate()
+        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
+
+    finder.rotate_to(1);
+    let expected = &[
+        grid.pos(5, 5),
+        grid.pos(4, 5),
+        grid.pos(3, 5),
+        grid.pos(2, 5),
+        grid.pos(1, 5),
+    ];
+    let actual: Vec<_> = finder.iter().collect();
+    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
+    expected
+        .iter()
+        .zip(actual.iter())
+        .enumerate()
+        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
+
+    finder.rotate_to(1);
+    let expected = &[
+        grid.pos(5, 0),
+        grid.pos(5, 1),
+        grid.pos(5, 2),
+        grid.pos(5, 3),
+        grid.pos(5, 4),
+        grid.pos(5, 5),
+    ];
+    let actual: Vec<_> = finder.iter().collect();
+    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
+    expected
+        .iter()
+        .zip(actual.iter())
+        .enumerate()
+        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
+}
+
 pub(crate) struct FinderIter<'f> {
     next: Option<Pos>,
     end: Pos,
