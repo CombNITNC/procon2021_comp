@@ -167,7 +167,15 @@ impl BoardFinder {
     }
 
     pub(crate) fn iter(&self) -> FinderIter {
-        todo!()
+        let grid = Grid::new(self.width, self.height);
+        let movement = match self.rotation {
+            0 => Movement::Right,
+            1 => Movement::Up,
+            2 => Movement::Left,
+            3 => Movement::Down,
+            _ => unreachable!(),
+        };
+        FinderIter::new(self.offset, grid.left_of(self.offset), grid, movement)
     }
 
     /// 時計回りに 90 度単位の `rotation` で回転する.
