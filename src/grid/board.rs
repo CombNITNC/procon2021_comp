@@ -97,6 +97,13 @@ impl Board {
         self.locked.remove(&pos)
     }
 
+    pub(crate) fn first_unlocked(&self) -> Option<Pos> {
+        self.forward
+            .grid
+            .all_pos()
+            .find(|p| !self.locked.contains(p))
+    }
+
     /// 時計回りに 90 度単位の `rotation` で回転した `Board` を作成する.
     pub(crate) fn rotate_to(&self, rotation: u8) -> Self {
         let grid = Grid::new(self.grid().width(), self.grid().height());
