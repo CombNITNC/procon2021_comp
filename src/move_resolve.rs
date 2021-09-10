@@ -231,7 +231,7 @@ pub(crate) fn resolve(
     let lower_bound = different_cells.0;
     let (path, _total_cost) = ida_star(
         GridCompleter {
-            field: nodes.clone(),
+            field: nodes,
             selecting: None,
             prev_action: None,
             different_cells,
