@@ -25,10 +25,6 @@ impl Board {
         }
     }
 
-    pub(crate) fn grid(&self) -> Grid {
-        self.forward.grid
-    }
-
     pub(crate) fn selected(&self) -> Pos {
         self.select
     }
@@ -53,7 +49,10 @@ impl Board {
     }
 
     pub(crate) fn swap_to(&mut self, to_swap: Pos) {
-        let dist = self.grid().looping_manhattan_dist(self.select, to_swap);
+        let dist = self
+            .forward
+            .grid
+            .looping_manhattan_dist(self.select, to_swap);
         if dist == 0 {
             return;
         }
@@ -78,7 +77,8 @@ impl Board {
     }
 
     pub(crate) fn around_of(&self, pos: Pos) -> Vec<Pos> {
-        self.grid()
+        self.forward
+            .grid
             .around_of(pos)
             .iter()
             .copied()
@@ -146,9 +146,9 @@ pub(crate) struct BoardFinder {
 impl BoardFinder {
     pub(crate) fn new(board: &Board) -> Self {
         Self {
-            offset: board.grid().pos(0, 0),
-            width: board.grid().width(),
-            height: board.grid().height(),
+            offset: board.forward.grid.pos(0, 0),
+            width: board.forward.grid.width(),
+            height: board.forward.grid.height(),
             rotation: 0,
         }
     }
@@ -194,7 +194,7 @@ impl BoardFinder {
 
     /// 窓の上端を 1 つ削る.
     pub(crate) fn slice_up(&mut self, board: &Board) {
-        self.offset = board.grid().pos(self.offset.x(), self.offset.y());
+        self.offset = board.forward.grid.pos(self.offset.x(), self.offset.y());
         self.height -= 1;
     }
 }
