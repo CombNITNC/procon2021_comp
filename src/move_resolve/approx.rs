@@ -42,6 +42,10 @@ impl Solver {
                 }
             }
             actions.append(&mut moves);
+            for x in 0..board.grid().width() {
+                let pos = board.grid().pos(x, target_row);
+                board.lock(pos);
+            }
         }
         actions
     }
