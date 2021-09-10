@@ -86,24 +86,25 @@ impl Board {
         self.locked.remove(&pos)
     }
 
-    pub(crate) fn rotate_to_right(&self) -> Self {
+    /// 時計回りに 90 度単位の `rotation` で回転した `Board` を作成する.
+    pub(crate) fn rotate_to(&self, rotation: u8) -> Self {
         let grid = Grid::new(self.grid().width(), self.grid().height());
         let mut forward = VecOnGrid::with_default(grid);
         for (p, &e) in self.forward.iter_with_pos() {
-            forward[self.rotated_pos(p, 1)] = e;
+            forward[self.rotated_pos(p, rotation)] = e;
         }
         let mut reverse = forward.clone();
         for (p, &e) in self.reverse.iter_with_pos() {
-            reverse[self.rotated_pos(p, 1)] = e;
+            reverse[self.rotated_pos(p, rotation)] = e;
         }
         Self {
-            select: self.rotated_pos(self.select, 1),
+            select: self.rotated_pos(self.select, rotation),
             forward,
             reverse,
             locked: self
                 .locked
                 .iter()
-                .map(|&p| self.rotated_pos(p, 1))
+                .map(|&p| self.rotated_pos(p, rotation))
                 .collect(),
         }
     }
