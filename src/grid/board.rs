@@ -183,6 +183,51 @@ impl BoardFinder {
         )
     }
 
+    fn as_grid(&self) -> Grid {
+        Grid::new(self.width, self.height)
+    }
+
+    pub(crate) fn up_of(&self, pos: Pos) -> Pos {
+        let grid = self.as_grid();
+        match self.rotation {
+            0 => grid.up_of(pos),
+            1 => grid.left_of(pos),
+            2 => grid.down_of(pos),
+            3 => grid.right_of(pos),
+            _ => unreachable!(),
+        }
+    }
+    pub(crate) fn right_of(&self, pos: Pos) -> Pos {
+        let grid = self.as_grid();
+        match self.rotation {
+            0 => grid.right_of(pos),
+            1 => grid.down_of(pos),
+            2 => grid.left_of(pos),
+            3 => grid.up_of(pos),
+            _ => unreachable!(),
+        }
+    }
+    pub(crate) fn down_of(&self, pos: Pos) -> Pos {
+        let grid = self.as_grid();
+        match self.rotation {
+            0 => grid.down_of(pos),
+            1 => grid.right_of(pos),
+            2 => grid.up_of(pos),
+            3 => grid.left_of(pos),
+            _ => unreachable!(),
+        }
+    }
+    pub(crate) fn left_of(&self, pos: Pos) -> Pos {
+        let grid = self.as_grid();
+        match self.rotation {
+            0 => grid.left_of(pos),
+            1 => grid.up_of(pos),
+            2 => grid.right_of(pos),
+            3 => grid.down_of(pos),
+            _ => unreachable!(),
+        }
+    }
+
     /// 時計回りに 90 度単位の `rotation` で回転する.
     pub(crate) fn rotate_to(&mut self, rotation: u8, grid: Grid) {
         self.rotation += rotation;
