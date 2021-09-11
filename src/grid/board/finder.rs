@@ -95,14 +95,14 @@ impl BoardFinder {
         self.rotation %= 4;
 
         std::mem::swap(&mut self.width, &mut self.height);
-        self.offset = rotated_pos(rotation, self.offset, grid);
+        let rotated = rotated_pos(rotation, grid.pos(0, 0), grid);
+        self.offset = grid.pos(self.offset.x() + rotated.x(), self.offset.y() + rotated.y());
     }
 
     /// 窓の上端を 1 つ削る.
     pub(crate) fn slice_up(&mut self) {
-        let grid = self.as_grid();
-        self.offset = grid.pos(self.offset.x(), self.offset.y() + 1);
         self.height -= 1;
+        self.offset = self.move_pos_to(self.offset, Movement::Down);
     }
 }
 
@@ -185,9 +185,13 @@ fn test_finder() {
     finder.rotate_to(2);
     assert_eq!(grid.pos(5, 0), finder.offset());
     finder.slice_up();
-    assert_eq!(grid.pos(5, 1), finder.offset());
+    assert_eq!(grid.pos(4, 0), finder.offset());
     finder.rotate_to(3);
-    assert_eq!(grid.pos(1, 0), finder.offset());
+    assert_eq!(grid.pos(0, 0), finder.offset());
+    finder.rotate_to(2);
+    assert_eq!(grid.pos(4, 5), finder.offset());
+    finder.slice_up();
+    assert_eq!(grid.pos(4, 4), finder.offset());
 }
 
 pub(crate) struct FinderIter<'f> {
