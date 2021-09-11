@@ -155,8 +155,8 @@ fn estimate_edge_then_left_down(
     let select_goal = b;
     move_select_to_target(&mut board, select_goal, &mut ret);
 
-    ret.push(b);
-    ret.push(b_goal);
+    ret.push(a);
+    ret.push(a_goal);
     ret
 }
 
