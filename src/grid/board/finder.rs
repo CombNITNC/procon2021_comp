@@ -131,39 +131,7 @@ fn test_finder() {
         grid.pos(5, 0),
     ];
     let actual: Vec<_> = finder.iter().collect();
-    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
-    expected
-        .iter()
-        .zip(actual.iter())
-        .enumerate()
-        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
-
-    finder.rotate_to(1);
-    let expected = &[
-        grid.pos(0, 5),
-        grid.pos(0, 4),
-        grid.pos(0, 3),
-        grid.pos(0, 2),
-        grid.pos(0, 1),
-        grid.pos(0, 0),
-    ];
-    let actual: Vec<_> = finder.iter().collect();
-    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
-    expected
-        .iter()
-        .zip(actual.iter())
-        .enumerate()
-        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
-
-    finder.rotate_to(1);
-    let expected = &[
-        grid.pos(5, 5),
-        grid.pos(4, 5),
-        grid.pos(3, 5),
-        grid.pos(2, 5),
-        grid.pos(1, 5),
-    ];
-    let actual: Vec<_> = finder.iter().collect();
+    assert_eq!(grid.pos(0, 0), finder.offset());
     assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
     expected
         .iter()
@@ -181,6 +149,42 @@ fn test_finder() {
         grid.pos(5, 5),
     ];
     let actual: Vec<_> = finder.iter().collect();
+    assert_eq!(grid.pos(5, 0), finder.offset());
+    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
+    expected
+        .iter()
+        .zip(actual.iter())
+        .enumerate()
+        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
+
+    finder.rotate_to(1);
+    let expected = &[
+        grid.pos(5, 5),
+        grid.pos(4, 5),
+        grid.pos(3, 5),
+        grid.pos(2, 5),
+        grid.pos(1, 5),
+    ];
+    let actual: Vec<_> = finder.iter().collect();
+    assert_eq!(grid.pos(5, 5), finder.offset());
+    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
+    expected
+        .iter()
+        .zip(actual.iter())
+        .enumerate()
+        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
+
+    finder.rotate_to(1);
+    let expected = &[
+        grid.pos(0, 5),
+        grid.pos(0, 4),
+        grid.pos(0, 3),
+        grid.pos(0, 2),
+        grid.pos(0, 1),
+        grid.pos(0, 0),
+    ];
+    let actual: Vec<_> = finder.iter().collect();
+    assert_eq!(grid.pos(0, 5), finder.offset());
     assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
     expected
         .iter()
