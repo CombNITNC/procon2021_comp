@@ -31,7 +31,6 @@ impl Solver {
                 finder.rotate_to(3);
                 continue;
             }
-            eprintln!("targets: {:?}", targets);
 
             if !targets.is_empty() {
                 let estimate = estimate_solve_row(board.clone(), &finder, &targets);
