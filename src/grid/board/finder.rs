@@ -91,18 +91,44 @@ impl BoardFinder {
     /// 時計回りに 90 度単位の `rotation` で回転する.
     pub(crate) fn rotate_to(&mut self, rotation: u8) {
         let grid = self.as_grid();
+        let original_up_left = match self.rotation {
+            0 => self.offset,
+            1 => grid.pos(self.offset.x() + 1 - grid.height(), self.offset.y()),
+            2 => grid.pos(
+                self.offset.x() + 1 - grid.width(),
+                self.offset.y() + 1 - grid.height(),
+            ),
+            3 => grid.pos(self.offset.x(), self.offset.y() + 1 - grid.width()),
+            _ => unreachable!(),
+        };
+
         self.rotation += rotation;
         self.rotation %= 4;
 
         std::mem::swap(&mut self.width, &mut self.height);
-        let rotated = rotated_pos(rotation, grid.pos(0, 0), grid);
-        self.offset = grid.pos(self.offset.x() + rotated.x(), self.offset.y() + rotated.y());
+
+        self.offset = match self.rotation {
+            0 => original_up_left,
+            1 => grid.pos(
+                original_up_left.x() + grid.height() - 1,
+                original_up_left.y(),
+            ),
+            2 => grid.pos(
+                original_up_left.x() + grid.width() - 1,
+                original_up_left.y() + grid.height() - 1,
+            ),
+            3 => grid.pos(
+                original_up_left.x(),
+                original_up_left.y() + grid.width() - 1,
+            ),
+            _ => unreachable!(),
+        };
     }
 
     /// 窓の上端を 1 つ削る.
     pub(crate) fn slice_up(&mut self) {
-        self.height -= 1;
         self.offset = self.move_pos_to(self.offset, Movement::Down);
+        self.height -= 1;
     }
 }
 
