@@ -51,6 +51,7 @@ impl Solver {
                 actions.append(&mut moves);
             }
             for pos in targets {
+                debug_assert_eq!(pos, board.forward(pos), "{:#?}", board);
                 board.lock(pos);
             }
             finder.slice_up();
