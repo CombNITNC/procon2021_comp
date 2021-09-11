@@ -230,3 +230,20 @@ fn rotated_pos(rotation: u8, pos: Pos, grid: Grid) -> Pos {
         _ => unreachable!(),
     }
 }
+
+#[test]
+fn test_rotated_pos() {
+    let grid = Grid::new(6, 6);
+
+    for pos in grid.all_pos() {
+        assert_eq!(pos, rotated_pos(0, pos, grid));
+    }
+
+    assert_eq!(grid.pos(4, 1), rotated_pos(1, grid.pos(1, 1), grid));
+    assert_eq!(grid.pos(4, 4), rotated_pos(2, grid.pos(1, 1), grid));
+    assert_eq!(grid.pos(1, 4), rotated_pos(3, grid.pos(1, 1), grid));
+
+    assert_eq!(grid.pos(5, 1), rotated_pos(1, grid.pos(1, 0), grid));
+    assert_eq!(grid.pos(4, 5), rotated_pos(2, grid.pos(1, 0), grid));
+    assert_eq!(grid.pos(0, 4), rotated_pos(3, grid.pos(1, 0), grid));
+}
