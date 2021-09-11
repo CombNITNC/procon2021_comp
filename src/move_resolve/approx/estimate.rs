@@ -38,6 +38,7 @@ pub(super) fn estimate_solve_row(
     board.swap_many_to(&line_proc.moves);
     estimate.moves.append(&mut line_proc.moves);
     for &p in without_corner {
+        debug_assert_eq!(p, board.forward(p), "{:#?}", board);
         board.lock(p);
     }
     if estimate.worst_route_size < line_proc.worst_route_size {
