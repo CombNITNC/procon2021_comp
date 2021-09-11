@@ -7,6 +7,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub(crate) struct BoardFinder {
     offset: Pos,
+    original: Grid,
     width: u8,
     height: u8,
     rotation: u8,
@@ -16,6 +17,7 @@ impl BoardFinder {
     pub(crate) fn new(grid: Grid) -> Self {
         Self {
             offset: grid.pos(0, 0),
+            original: grid,
             width: grid.width(),
             height: grid.height(),
             rotation: 0,
@@ -48,7 +50,7 @@ impl BoardFinder {
     }
 
     pub(crate) fn move_pos_to(&self, pos: Pos, movement: Movement) -> Pos {
-        let grid = self.as_grid();
+        let grid = self.original;
         let movement = match self.rotation {
             0 => movement,
             1 => movement.turn_right(),
