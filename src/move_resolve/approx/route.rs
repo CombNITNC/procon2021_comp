@@ -73,6 +73,13 @@ pub(super) fn moves_to_swap_target_to_goal(
 
 /// `target` 位置のマスを `pos` の位置へ移動させる最短経路を求める.
 pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Option<Vec<Pos>> {
+    debug_assert_ne!(
+        board.selected(),
+        target,
+        "the target must not be selected: {:#?}",
+        board
+    );
+
     #[derive(Debug, Clone)]
     struct RouteTargetToPos {
         node: RowCompleteNode,
