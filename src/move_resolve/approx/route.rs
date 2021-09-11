@@ -105,6 +105,9 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
+            if self.node.board.selected() == new_pos {
+                return None;
+            }
             let (route, cost) = route_target_around_pos(
                 self.node.board.clone(),
                 self.node.board.selected(),
