@@ -153,6 +153,7 @@ fn test_finder() {
         grid.pos(3, 5),
         grid.pos(2, 5),
         grid.pos(1, 5),
+        grid.pos(0, 5),
     ];
     let actual: Vec<_> = finder.iter().collect();
     assert_eq!(grid.pos(5, 5), finder.offset());
