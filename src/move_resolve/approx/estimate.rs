@@ -73,6 +73,11 @@ fn estimate_line_without_corner(mut board: Board, targets: &[Pos]) -> RowSolveEs
     let mut estimate = RowSolveEstimate::default();
     for &target in targets {
         let pos = board.reverse(target);
+        if target == pos {
+            board.lock(pos);
+            continue;
+        }
+        eprintln!("{:#?} {:?} {:?}", board, pos, target);
         let route = route_target_to_pos(&board, pos, target).expect("the route must be found");
         let mut route_size = 0;
         for win in route.windows(2) {
