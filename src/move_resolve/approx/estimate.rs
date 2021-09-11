@@ -123,9 +123,8 @@ fn estimate_edge_then_right_down(
     let b_goal = finder.move_pos_to(b, Movement::Down);
     move_target_to_pos(&mut board, b_pos, b_goal, &mut ret);
 
-    let select = board.selected();
     let select_goal = a;
-    move_target_to_pos(&mut board, select, select_goal, &mut ret);
+    move_select_to_target(&mut board, select_goal, &mut ret);
 
     ret.push(b);
     ret.push(b_goal);
@@ -153,9 +152,8 @@ fn estimate_edge_then_left_down(
     let b_goal = finder.move_pos_to(b, Movement::Left);
     move_target_to_pos(&mut board, b_pos, b_goal, &mut ret);
 
-    let select = board.selected();
     let select_goal = b;
-    move_target_to_pos(&mut board, select, select_goal, &mut ret);
+    move_select_to_target(&mut board, select_goal, &mut ret);
 
     ret.push(b);
     ret.push(b_goal);
@@ -177,4 +175,10 @@ fn move_target_to_pos(board: &mut Board, target: Pos, pos: Pos, ret: &mut Vec<Po
         board.swap_to(way);
         ret.push(way);
     }
+}
+
+fn move_select_to_target(board: &mut Board, target: Pos, ret: &mut Vec<Pos>) {
+    let mut route = route_select_to_target(board, target);
+    board.swap_many_to(&route);
+    ret.append(&mut route);
 }
