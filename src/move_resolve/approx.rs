@@ -59,9 +59,7 @@ impl Solver {
     }
 
     fn next_targets(&self, board: &Board, finder: &BoardFinder) -> Vec<Pos> {
-        let mut targets: Vec<_> = finder.iter().filter(|&pos| !board.is_locked(pos)).collect();
-        targets.sort_unstable();
-        targets
+        finder.iter().filter(|&pos| !board.is_locked(pos)).collect()
     }
 
     fn solve_row(
