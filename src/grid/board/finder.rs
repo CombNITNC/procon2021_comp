@@ -36,20 +36,10 @@ impl BoardFinder {
     }
 
     pub(crate) fn iter(&self) -> FinderIter {
-        let grid = Grid::new(self.width, self.height);
-        let movement = match self.rotation {
-            0 => Movement::Right,
-            1 => Movement::Down,
-            2 => Movement::Left,
-            3 => Movement::Up,
-            _ => unreachable!(),
-        };
         FinderIter::new(
             self,
             self.offset,
-            self.move_pos_to(self.offset, movement.opposite()),
-            grid,
-            movement,
+            self.move_pos_to(self.offset, Movement::Left),
         )
     }
 
@@ -105,8 +95,7 @@ impl BoardFinder {
         self.rotation %= 4;
 
         std::mem::swap(&mut self.width, &mut self.height);
-        let rotated = rotated_pos(rotation, grid.pos(0, 0), grid);
-        self.offset = grid.pos(rotated.x() + self.offset.x(), rotated.y() + self.offset.y());
+        self.offset = rotated_pos(rotation, self.offset, grid);
     }
 
     /// 窓の上端を 1 つ削る.
@@ -196,18 +185,14 @@ fn test_finder() {
 pub(crate) struct FinderIter<'f> {
     next: Option<Pos>,
     end: Pos,
-    grid: Grid,
-    movement: Movement,
     finder: &'f BoardFinder,
 }
 
 impl<'f> FinderIter<'f> {
-    fn new(finder: &'f BoardFinder, start: Pos, end: Pos, grid: Grid, movement: Movement) -> Self {
+    fn new(finder: &'f BoardFinder, start: Pos, end: Pos) -> Self {
         let mut iter = Self {
             next: None,
             end,
-            grid,
-            movement,
             finder,
         };
         iter.next = Some(start);
@@ -216,7 +201,7 @@ impl<'f> FinderIter<'f> {
 
     fn advance(&self) -> Option<Pos> {
         self.next
-            .map(|next| self.finder.move_pos_to(next, self.movement))
+            .map(|next| self.finder.move_pos_to(next, Movement::Right))
     }
 }
 
