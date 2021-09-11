@@ -60,7 +60,7 @@ pub(super) fn moves_to_swap_target_to_goal(
     let mut ret = vec![board.selected()];
     for way in route {
         board.lock(current);
-        let mut route_to_arrive = route_select_to_target(&board, way);
+        let mut route_to_arrive = route_select_to_target(&board, way)?;
         board.swap_many_to(&route_to_arrive);
         ret.append(&mut route_to_arrive);
         board.unlock(current);
@@ -213,7 +213,7 @@ fn route_target_around_pos(
 }
 
 /// `board` の `select` を `target` へ動かす最短経路を決定する.
-pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
+pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Option<Vec<Pos>> {
     #[derive(Debug, Clone)]
     struct RouteSelectToTarget<'b> {
         node: TargetNode,
@@ -263,8 +263,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
             target,
         },
     )
-    .expect("the route must be found")
-    .0
+    .map(|res| res.0)
 }
 
 /// `board` が選択しているマスを `target` の隣へ動かす最短経路を決定する.

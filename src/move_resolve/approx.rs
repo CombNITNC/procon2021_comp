@@ -35,6 +35,10 @@ impl Solver {
 
             if !targets.is_empty() {
                 let estimate = estimate_solve_row(board.clone(), &finder, &targets);
+                if estimate.is_none() {
+                    return actions;
+                }
+                let estimate = estimate.unwrap();
                 for &pos in &estimate.moves {
                     board.swap_to(pos);
                 }
