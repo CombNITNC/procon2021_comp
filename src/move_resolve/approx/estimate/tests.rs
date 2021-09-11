@@ -20,7 +20,18 @@ fn test_estimate_solve_row() {
     ];
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let mut board = Board::new(grid.pos(3, 2), nodes);
-    let actual = estimate_solve_row(board.clone(), &board.new_finder(), &[grid.pos(0, 0)]).unwrap();
+    let actual = estimate_solve_row(
+        board.clone(),
+        &board.new_finder(),
+        &[
+            grid.pos(0, 0),
+            grid.pos(1, 0),
+            grid.pos(2, 0),
+            grid.pos(3, 0),
+            grid.pos(4, 0),
+        ],
+    )
+    .unwrap();
 
     let expected = vec![
         grid.pos(3, 2),
