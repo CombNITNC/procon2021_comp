@@ -101,7 +101,7 @@ impl BoardFinder {
     /// 窓の上端を 1 つ削る.
     pub(crate) fn slice_up(&mut self) {
         let grid = self.as_grid();
-        self.offset = grid.pos(self.offset.x(), self.offset.y());
+        self.offset = grid.pos(self.offset.x(), self.offset.y() + 1);
         self.height -= 1;
     }
 }
@@ -181,6 +181,13 @@ fn test_finder() {
         .zip(actual.iter())
         .enumerate()
         .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
+
+    finder.rotate_to(2);
+    assert_eq!(grid.pos(5, 0), finder.offset());
+    finder.slice_up();
+    assert_eq!(grid.pos(5, 1), finder.offset());
+    finder.rotate_to(3);
+    assert_eq!(grid.pos(1, 0), finder.offset());
 }
 
 pub(crate) struct FinderIter<'f> {
