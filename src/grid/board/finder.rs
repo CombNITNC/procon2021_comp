@@ -92,15 +92,15 @@ impl BoardFinder {
 
     /// 時計回りに 90 度単位の `rotation` で回転する.
     pub(crate) fn rotate_to(&mut self, rotation: u8) {
-        let grid = self.as_grid();
+        let grid = self.original;
         let original_up_left = match self.rotation {
             0 => self.offset,
-            1 => grid.pos(self.offset.x() + 1 - grid.height(), self.offset.y()),
+            1 => grid.pos(self.offset.x() + 1 - self.height, self.offset.y()),
             2 => grid.pos(
-                self.offset.x() + 1 - grid.width(),
-                self.offset.y() + 1 - grid.height(),
+                self.offset.x() + 1 - self.width,
+                self.offset.y() + 1 - self.height,
             ),
-            3 => grid.pos(self.offset.x(), self.offset.y() + 1 - grid.width()),
+            3 => grid.pos(self.offset.x(), self.offset.y() + 1 - self.width),
             _ => unreachable!(),
         };
 
@@ -111,18 +111,12 @@ impl BoardFinder {
 
         self.offset = match self.rotation {
             0 => original_up_left,
-            1 => grid.pos(
-                original_up_left.x() + grid.height() - 1,
-                original_up_left.y(),
-            ),
+            1 => grid.pos(original_up_left.x() + self.height - 1, original_up_left.y()),
             2 => grid.pos(
-                original_up_left.x() + grid.width() - 1,
-                original_up_left.y() + grid.height() - 1,
+                original_up_left.x() + self.width - 1,
+                original_up_left.y() + self.height - 1,
             ),
-            3 => grid.pos(
-                original_up_left.x(),
-                original_up_left.y() + grid.width() - 1,
-            ),
+            3 => grid.pos(original_up_left.x(), original_up_left.y() + self.width - 1),
             _ => unreachable!(),
         };
     }
