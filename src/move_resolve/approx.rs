@@ -27,7 +27,7 @@ impl Solver {
                 break;
             }
             let targets = self.next_targets(&board, &finder);
-            if targets.contains(&board.selected()) {
+            if targets.contains(&board.forward(board.selected())) {
                 finder.rotate_to(3);
                 continue;
             }
