@@ -111,7 +111,6 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
                 new_pos,
             )?;
             let mut new_node = self.node.clone();
-            new_node.board.unlock(new_node.board.selected());
             new_node.board.swap_many_to(&route);
             new_node.cost += cost;
             assert_eq!(
