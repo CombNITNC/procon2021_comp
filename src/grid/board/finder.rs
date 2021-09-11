@@ -105,7 +105,7 @@ impl BoardFinder {
         self.rotation %= 4;
 
         std::mem::swap(&mut self.width, &mut self.height);
-        let rotated = rotated_pos((rotation + 3) % 4, grid.pos(0, 0), grid);
+        let rotated = rotated_pos(rotation, grid.pos(0, 0), grid);
         self.offset = grid.pos(rotated.x() + self.offset.x(), rotated.y() + self.offset.y());
     }
 
