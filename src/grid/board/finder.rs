@@ -108,7 +108,7 @@ impl BoardFinder {
         self.rotation %= 4;
 
         std::mem::swap(&mut self.width, &mut self.height);
-
+        eprintln!("rot: {}", self.rotation);
         self.offset = match self.rotation {
             0 => original_up_left,
             1 => grid.pos(original_up_left.x() + self.height - 1, original_up_left.y()),
@@ -205,14 +205,37 @@ fn test_finder() {
         .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
 
     finder.rotate_to(2);
+    // 00 ..[50]
+    // :     :
+    // 05 .. 55
     assert_eq!(grid.pos(5, 0), finder.offset());
     finder.slice_up();
+    // 00 ..[40] | 50
+    // :     :   | :
+    // 05 .. 45  | 55
+    assert_eq!(6, finder.width());
+    assert_eq!(5, finder.height());
     assert_eq!(grid.pos(4, 0), finder.offset());
     finder.rotate_to(3);
+    //[00].. 40  | 50
+    // :     :   | :
+    // 05 .. 45  | 55
     assert_eq!(grid.pos(0, 0), finder.offset());
     finder.rotate_to(2);
+    // 00 .. 40  | 50
+    // :     :   | :
+    // 05 ..[45] | 55
+    assert_eq!(5, finder.width());
+    assert_eq!(6, finder.height());
     assert_eq!(grid.pos(4, 5), finder.offset());
     finder.slice_up();
+    // 00 .. 40  | 50
+    // :     :   | :
+    // 04 ..[44] | 54
+    // ----------+
+    // 05 .. 45    55
+    assert_eq!(5, finder.width());
+    assert_eq!(5, finder.height());
     assert_eq!(grid.pos(4, 4), finder.offset());
 }
 
