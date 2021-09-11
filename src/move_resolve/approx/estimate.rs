@@ -146,15 +146,15 @@ fn estimate_edge_then_left_down(
     let mut board = board.clone();
     let mut ret = vec![];
 
-    let a_pos = board.reverse(a);
-    let a_goal = finder.move_pos_to(a, Movement::Down);
-    move_target_to_pos(&mut board, a_pos, a_goal, &mut ret);
-    board.lock(a_goal);
-
     let b_pos = board.reverse(b);
     let b_goal = finder.move_pos_to(b, Movement::Left);
     move_target_to_pos(&mut board, b_pos, b_goal, &mut ret);
     board.lock(b_goal);
+
+    let a_pos = board.reverse(a);
+    let a_goal = finder.move_pos_to(a, Movement::Down);
+    move_target_to_pos(&mut board, a_pos, a_goal, &mut ret);
+    board.lock(a_goal);
 
     let select_goal = b;
     move_select_to_target(&mut board, select_goal, &mut ret);
