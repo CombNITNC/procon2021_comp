@@ -267,7 +267,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Option<Vec<P
 }
 
 /// `board` が選択しているマスを `target` の隣へ動かす最短経路を決定する.
-fn route_select_around_target(mut board: Board, target: Pos) -> Option<(Vec<Pos>, LeastMovements)> {
+fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, LeastMovements)> {
     #[derive(Debug, Clone)]
     struct RouteSelectAroundTarget<'b> {
         node: TargetNode,
@@ -293,7 +293,11 @@ fn route_select_around_target(mut board: Board, target: Pos) -> Option<(Vec<Pos>
 
         type AS = Vec<Pos>;
         fn next_actions(&mut self) -> Self::AS {
-            self.board.around_of(self.as_pos())
+            self.board
+                .around_of(self.as_pos())
+                .into_iter()
+                .filter(|&p| p != self.target)
+                .collect()
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
@@ -314,15 +318,14 @@ fn route_select_around_target(mut board: Board, target: Pos) -> Option<(Vec<Pos>
             })
         }
     }
-    board.lock(target);
     dijkstra(
-        &board,
+        board,
         RouteSelectAroundTarget {
             node: TargetNode {
                 target: board.selected(),
                 cost: LeastMovements::new(),
             },
-            board: &board,
+            board,
             target,
         },
     )
@@ -357,7 +360,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
             let (moves_to_around, cost) =
-                route_select_around_target(self.node.board.clone(), self.target)?;
+                route_select_around_target(&self.node.board, self.target)?;
             let mut new_node = self.node.clone();
             new_node.cost += cost;
             new_node.board.swap_many_to(&moves_to_around);
