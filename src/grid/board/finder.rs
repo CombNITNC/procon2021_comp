@@ -51,9 +51,9 @@ impl BoardFinder {
         let grid = self.as_grid();
         let movement = match self.rotation {
             0 => movement,
-            1 => movement.turn_left(),
+            1 => movement.turn_right(),
             2 => movement.opposite(),
-            3 => movement.turn_right(),
+            3 => movement.turn_left(),
             _ => unreachable!(),
         };
         match movement {
