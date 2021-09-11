@@ -20,7 +20,7 @@ impl Solver {
     pub(super) fn solve(&mut self, select: Pos, field: &VecOnGrid<Pos>) -> Vec<GridAction> {
         let mut board = Board::new(select, field.clone());
         let mut finder = BoardFinder::new(field.grid);
-        let mut actions = vec![];
+        let mut actions = vec![GridAction::Select(select)];
         loop {
             if finder.height() < finder.width() {
                 finder.rotate_to(3);
