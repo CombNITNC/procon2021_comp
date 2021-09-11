@@ -303,6 +303,22 @@ fn test_finder() {
     let grid = Grid::new(6, 6);
     let mut finder = BoardFinder::new(grid);
 
+    let expected = &[
+        grid.pos(0, 0),
+        grid.pos(1, 0),
+        grid.pos(2, 0),
+        grid.pos(3, 0),
+        grid.pos(4, 0),
+        grid.pos(5, 0),
+    ];
+    let actual: Vec<_> = finder.iter().collect();
+    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
+    expected
+        .iter()
+        .zip(actual.iter())
+        .enumerate()
+        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
+
     finder.rotate_to(1);
     let expected = &[
         grid.pos(0, 5),
