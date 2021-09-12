@@ -224,7 +224,7 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    if 36 <= grid.width() * grid.height() {
+    if 36 <= grid.width() as u32 * grid.height() as u32 {
         return resolve_approximately(grid, movements, select_limit, swap_cost, select_cost);
     }
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
