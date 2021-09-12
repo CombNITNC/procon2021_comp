@@ -1,3 +1,5 @@
+use easy_parallel::Parallel;
+
 use self::{
     edges_nodes::Nodes,
     ida_star::{ida_star, IdaStarState},
@@ -259,8 +261,8 @@ fn resolve_approximately(
             .map(|op| op.movements.len() as u32 * swap_cost as u32 + select_cost as u32)
             .sum()
     };
-    grid.all_pos()
-        .flat_map(|pos| {
+    Parallel::new()
+        .each(grid.all_pos(), |pos| {
             resolve_on_select(
                 grid,
                 nodes.clone(),
@@ -270,6 +272,9 @@ fn resolve_approximately(
                 pos,
             )
         })
+        .run()
+        .into_iter()
+        .flatten()
         .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
         .unwrap()
 }
