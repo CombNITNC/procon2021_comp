@@ -26,23 +26,23 @@ impl Ord for TargetNode {
 }
 
 #[derive(Debug, Clone)]
-struct RowCompleteNode<'grid> {
+struct RowCompleteNode {
     target: Pos,
     cost: LeastMovements,
-    board: Board<'grid>,
+    board: Board,
 }
-impl PartialEq for RowCompleteNode<'_> {
+impl PartialEq for RowCompleteNode {
     fn eq(&self, other: &Self) -> bool {
         self.cost == other.cost
     }
 }
-impl Eq for RowCompleteNode<'_> {}
-impl PartialOrd for RowCompleteNode<'_> {
+impl Eq for RowCompleteNode {}
+impl PartialOrd for RowCompleteNode {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         other.cost.partial_cmp(&self.cost)
     }
 }
-impl Ord for RowCompleteNode<'_> {
+impl Ord for RowCompleteNode {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         other.cost.cmp(&self.cost)
     }
@@ -60,7 +60,7 @@ pub(super) fn moves_to_swap_target_to_goal(
     let mut ret = vec![board.selected()];
     for way in route {
         board.lock(current);
-        let mut route_to_arrive = route_select_to_target(&board, way);
+        let mut route_to_arrive = route_select_to_target(&board, way)?;
         board.swap_many_to(&route_to_arrive);
         ret.append(&mut route_to_arrive);
         board.unlock(current);
@@ -73,12 +73,19 @@ pub(super) fn moves_to_swap_target_to_goal(
 
 /// `target` 位置のマスを `pos` の位置へ移動させる最短経路を求める.
 pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Option<Vec<Pos>> {
+    debug_assert_ne!(
+        board.selected(),
+        target,
+        "the target must not be selected: {:#?}",
+        board
+    );
+
     #[derive(Debug, Clone)]
-    struct RouteTargetToPos<'b> {
-        node: RowCompleteNode<'b>,
+    struct RouteTargetToPos {
+        node: RowCompleteNode,
         pos: Pos,
     }
-    impl DijkstraState for RouteTargetToPos<'_> {
+    impl DijkstraState for RouteTargetToPos {
         type C = LeastMovements;
         fn cost(&self) -> Self::C {
             self.node.cost
@@ -98,13 +105,15 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
+            if self.node.board.selected() == new_pos {
+                return None;
+            }
             let (route, cost) = route_target_around_pos(
                 self.node.board.clone(),
                 self.node.board.selected(),
                 new_pos,
             )?;
             let mut new_node = self.node.clone();
-            new_node.board.unlock(new_node.board.selected());
             new_node.board.swap_many_to(&route);
             new_node.cost += cost;
             assert_eq!(
@@ -151,7 +160,7 @@ fn route_target_around_pos(
     #[derive(Debug, Clone)]
     struct RouteTargetAroundPos<'b> {
         node: TargetNode,
-        board: &'b Board<'b>,
+        board: &'b Board,
         pos: Pos,
     }
     impl DijkstraState for RouteTargetAroundPos<'_> {
@@ -204,11 +213,11 @@ fn route_target_around_pos(
 }
 
 /// `board` の `select` を `target` へ動かす最短経路を決定する.
-pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
+pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Option<Vec<Pos>> {
     #[derive(Debug, Clone)]
     struct RouteSelectToTarget<'b> {
         node: TargetNode,
-        board: &'b Board<'b>,
+        board: &'b Board,
         target: Pos,
     }
     impl DijkstraState for RouteSelectToTarget<'_> {
@@ -254,16 +263,15 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Vec<Pos> {
             target,
         },
     )
-    .expect("the route must be found")
-    .0
+    .map(|res| res.0)
 }
 
 /// `board` が選択しているマスを `target` の隣へ動かす最短経路を決定する.
-fn route_select_around_target(mut board: Board, target: Pos) -> Option<(Vec<Pos>, LeastMovements)> {
+fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, LeastMovements)> {
     #[derive(Debug, Clone)]
     struct RouteSelectAroundTarget<'b> {
         node: TargetNode,
-        board: &'b Board<'b>,
+        board: &'b Board,
         target: Pos,
     }
     impl DijkstraState for RouteSelectAroundTarget<'_> {
@@ -285,7 +293,11 @@ fn route_select_around_target(mut board: Board, target: Pos) -> Option<(Vec<Pos>
 
         type AS = Vec<Pos>;
         fn next_actions(&mut self) -> Self::AS {
-            self.board.around_of(self.as_pos())
+            self.board
+                .around_of(self.as_pos())
+                .into_iter()
+                .filter(|&p| p != self.target)
+                .collect()
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
@@ -306,15 +318,14 @@ fn route_select_around_target(mut board: Board, target: Pos) -> Option<(Vec<Pos>
             })
         }
     }
-    board.lock(target);
     dijkstra(
-        &board,
+        board,
         RouteSelectAroundTarget {
             node: TargetNode {
                 target: board.selected(),
                 cost: LeastMovements::new(),
             },
-            board: &board,
+            board,
             target,
         },
     )
@@ -324,7 +335,7 @@ fn route_select_around_target(mut board: Board, target: Pos) -> Option<(Vec<Pos>
 fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<Vec<Pos>> {
     #[derive(Debug, Clone)]
     struct RouteSelectAroundTarget<'b> {
-        node: RowCompleteNode<'b>,
+        node: RowCompleteNode,
         range: &'b RangePos,
         target: Pos,
     }
@@ -349,7 +360,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
             let (moves_to_around, cost) =
-                route_select_around_target(self.node.board.clone(), self.target)?;
+                route_select_around_target(&self.node.board, self.target)?;
             let mut new_node = self.node.clone();
             new_node.cost += cost;
             new_node.board.swap_many_to(&moves_to_around);

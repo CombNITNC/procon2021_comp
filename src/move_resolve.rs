@@ -1,10 +1,10 @@
 use self::{
-    edges_nodes::EdgesNodes,
+    edges_nodes::Nodes,
     ida_star::{ida_star, IdaStarState},
 };
 use crate::{
     basis::{Movement, Operation},
-    grid::{Grid, Pos, VecOnGrid},
+    grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
     move_resolve::approx::Solver,
 };
 
@@ -48,8 +48,8 @@ impl DifferentCells {
 }
 
 #[derive(Clone)]
-struct GridCompleter<'grid> {
-    field: VecOnGrid<'grid, Pos>,
+struct GridCompleter {
+    field: VecOnGrid<Pos>,
     selecting: Option<Pos>,
     prev_action: Option<GridAction>,
     different_cells: DifferentCells,
@@ -58,7 +58,7 @@ struct GridCompleter<'grid> {
     remaining_select: u8,
 }
 
-impl std::fmt::Debug for GridCompleter<'_> {
+impl std::fmt::Debug for GridCompleter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridState")
             .field("field", &self.field)
@@ -75,13 +75,14 @@ enum GridAction {
     Select(Pos),
 }
 
-impl<'grid> IdaStarState for GridCompleter<'grid> {
+impl IdaStarState for GridCompleter {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
         match action {
             GridAction::Swap(mov) => {
                 let selecting = self.selecting.unwrap();
-                let next_swap = self.field.grid.move_pos_to(selecting, mov);
+                let finder = BoardFinder::new(self.field.grid);
+                let next_swap = finder.move_pos_to(selecting, mov);
                 let mut new_field = self.field.clone();
                 new_field.swap(selecting, next_swap);
                 Self {
@@ -194,11 +195,11 @@ fn actions_to_operations(actions: Vec<GridAction>) -> Vec<Operation> {
 /// ```
 /// // 10 00
 /// let grid = Grid::new(2, 1);
-/// let mut field = VecOnGrid::with_init(&grid, grid.pos(0, 0));
+/// let mut field = VecOnGrid::with_init(grid, grid.pos(0, 0));
 /// field[grid.pos(0, 0)] = grid.pos(1, 0);
 /// field[grid.pos(1, 0)] = grid.pos(0, 0);
 /// let path = resolve(
-///     &grid,
+///     grid,
 ///     &[
 ///         (grid.pos(0, 0), grid.pos(1, 0)),
 ///         (grid.pos(1, 0), grid.pos(0, 0)),
@@ -217,7 +218,7 @@ fn actions_to_operations(actions: Vec<GridAction>) -> Vec<Operation> {
 /// );
 /// ```
 pub(crate) fn resolve(
-    grid: &Grid,
+    grid: Grid,
     movements: &[(Pos, Pos)],
     select_limit: u8,
     swap_cost: u16,
@@ -226,12 +227,12 @@ pub(crate) fn resolve(
     if 36 <= grid.width() * grid.height() {
         return resolve_approximately(grid, movements, select_limit, swap_cost, select_cost);
     }
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(grid, movements);
+    let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let different_cells = DifferentCells::new(&nodes);
     let lower_bound = different_cells.0;
     let (path, _total_cost) = ida_star(
         GridCompleter {
-            field: nodes.clone(),
+            field: nodes,
             selecting: None,
             prev_action: None,
             different_cells,
@@ -246,49 +247,62 @@ pub(crate) fn resolve(
 
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の近似解を求める.
 fn resolve_approximately(
-    grid: &Grid,
+    grid: Grid,
     movements: &[(Pos, Pos)],
-    mut select_limit: u8,
+    select_limit: u8,
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    let EdgesNodes { mut nodes, .. } = EdgesNodes::new(grid, movements);
+    let Nodes { nodes, .. } = Nodes::new(grid, movements);
+    let operations_cost = |ops: &[Operation]| -> u32 {
+        ops.iter()
+            .map(|op| op.movements.len() as u32 * swap_cost as u32 + select_cost as u32)
+            .sum()
+    };
+    grid.all_pos()
+        .map(|pos| {
+            resolve_on_select(
+                grid,
+                nodes.clone(),
+                swap_cost,
+                select_cost,
+                select_limit,
+                pos,
+            )
+        })
+        .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
+        .unwrap()
+}
+
+fn resolve_on_select(
+    grid: Grid,
+    mut nodes: VecOnGrid<Pos>,
+    swap_cost: u16,
+    select_cost: u16,
+    mut select_limit: u8,
+    init_select: Pos,
+) -> Vec<Operation> {
     let mut solver = Solver::default();
     let mut all_actions = vec![];
     let mut selection = None;
 
-    let mut row_to_sort: Vec<_> = (0..grid.height()).collect();
-    for _ in 0..grid.height() - 1 {
-        let cost_to_sort_row = |y: u8| -> u32 {
-            (0..grid.width())
-                .map(move |x| grid.pos(x, y))
-                .map(|pos| grid.looping_manhattan_dist(pos, nodes[pos]))
-                .sum()
-        };
-        row_to_sort.sort_by(|&a, &b| cost_to_sort_row(a).cmp(&cost_to_sort_row(b)));
-        let y = row_to_sort.pop().unwrap();
-
-        for x in 0..grid.width() {
-            let target = grid.pos(x, y);
-            if target != nodes[target] {
-                let mut actions = solver.solve_row(target, &nodes, y);
-                for &action in &actions {
-                    match action {
-                        GridAction::Swap(mov) => {
-                            let select = selection.unwrap();
-                            let to = grid.move_pos_to(select, mov);
-                            nodes.swap(select, to);
-                            selection = Some(to);
-                        }
-                        GridAction::Select(sel) => selection = Some(sel),
-                    }
-                }
-                all_actions.append(&mut actions);
+    let mut actions = solver.solve(init_select, &nodes);
+    for &action in &actions {
+        match action {
+            GridAction::Swap(mov) => {
+                let select = selection.unwrap();
+                let to = BoardFinder::new(grid).move_pos_to(select, mov);
+                nodes.swap(select, to);
+                selection = Some(to);
+            }
+            GridAction::Select(sel) => {
+                selection = Some(sel);
+                select_limit -= 1;
             }
         }
-
-        eprintln!("sort result: {:?}", nodes);
     }
+    all_actions.append(&mut actions);
+
     let different_cells = DifferentCells::new(&nodes);
     let (mut actions, _total_cost) = ida_star(
         GridCompleter {

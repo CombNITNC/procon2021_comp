@@ -71,6 +71,24 @@ impl Movement {
         }
     }
 
+    pub(crate) fn turn_right(self) -> Self {
+        match self {
+            Movement::Up => Movement::Right,
+            Movement::Right => Movement::Down,
+            Movement::Down => Movement::Left,
+            Movement::Left => Movement::Up,
+        }
+    }
+
+    pub(crate) fn turn_left(self) -> Self {
+        match self {
+            Movement::Up => Movement::Left,
+            Movement::Right => Movement::Up,
+            Movement::Down => Movement::Right,
+            Movement::Left => Movement::Down,
+        }
+    }
+
     pub(crate) fn opposite(self) -> Self {
         match self {
             Movement::Up => Movement::Down,

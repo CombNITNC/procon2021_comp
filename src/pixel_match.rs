@@ -8,7 +8,7 @@ mod shaker;
 use double_side::fill_by_double_side;
 use shaker::shaker_fill;
 
-pub(crate) fn resolve<'g>(problem: &Problem, grid: &'g Grid) -> VecOnGrid<'g, Option<Fragment>> {
+pub(crate) fn resolve(problem: &Problem, grid: Grid) -> VecOnGrid<Option<Fragment>> {
     let mut fragments = Fragment::new_all(problem);
     let mut fragment_grid = VecOnGrid::<Option<Fragment>>::with_default(grid);
 

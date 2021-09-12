@@ -1,50 +1,61 @@
-use self::estimate::{estimate_solve_row, RowSolveEstimate};
+use self::estimate::estimate_solve_row;
 use super::GridAction;
 use crate::{
     basis::Movement,
-    grid::{board::Board, Pos, VecOnGrid},
+    grid::{
+        board::{Board, BoardFinder},
+        Pos, VecOnGrid,
+    },
 };
 
 mod estimate;
 mod route;
 
 #[derive(Debug, Default)]
-pub(crate) struct Solver {
-    estimate: Option<RowSolveEstimate>,
-}
+pub(crate) struct Solver {}
 
 impl Solver {
-    pub(super) fn solve_row(
-        &mut self,
-        select: Pos,
-        field: &VecOnGrid<Pos>,
-        target_row: u8,
-    ) -> Vec<GridAction> {
-        let estimate = estimate_solve_row(Board::new(select, field.clone()), target_row);
-        if let Some(worst_estimate) = &self.estimate {
-            if worst_estimate.worst_route_size < estimate.worst_route_size {
-                self.estimate.replace(estimate);
+    pub(super) fn solve(&mut self, select: Pos, field: &VecOnGrid<Pos>) -> Vec<GridAction> {
+        let mut board = Board::new(select, field.clone());
+        let mut finder = BoardFinder::new(field.grid);
+        let mut actions = vec![GridAction::Select(select)];
+        loop {
+            if finder.height() < finder.width() {
+                finder.rotate_to(3);
             }
-        } else {
-            self.estimate.replace(estimate);
-        }
-        let estimate = self.estimate.as_ref().unwrap();
+            if finder.width() <= 3 && finder.height() <= 3 {
+                break;
+            }
+            let targets = self.next_targets(&board, &finder);
+            if targets.contains(&board.forward(board.selected())) {
+                finder.rotate_to(3);
+                continue;
+            }
 
-        let mut actions = vec![];
-        if field
-            .grid
-            .looping_manhattan_dist(estimate.moves[0], estimate.moves[1])
-            != 1
-        {
-            actions.push(GridAction::Select(estimate.moves[0]));
-        }
-        for win in estimate.moves.windows(2) {
-            if field.grid.looping_manhattan_dist(win[0], win[1]) == 1 {
-                actions.push(GridAction::Swap(Movement::between_pos(win[0], win[1])));
-            } else {
-                actions.push(GridAction::Select(win[1]));
+            if !targets.is_empty() {
+                let estimate = estimate_solve_row(board.clone(), &finder, &targets);
+                if estimate.is_none() {
+                    return actions;
+                }
+                let estimate = estimate.unwrap();
+                for &pos in &estimate.moves {
+                    board.swap_to(pos);
+                }
+                for win in estimate.moves.windows(2) {
+                    let mov = Movement::between_pos(win[0], win[1]);
+                    actions.push(GridAction::Swap(mov));
+                }
             }
+            for pos in targets {
+                debug_assert_eq!(pos, board.forward(pos), "{:#?}", board);
+                board.lock(pos);
+            }
+            finder.slice_up();
         }
         actions
+    }
+
+    fn next_targets(&self, board: &Board, finder: &BoardFinder) -> Vec<Pos> {
+        finder.iter().filter(|&pos| !board.is_locked(pos)).collect()
     }
 }

@@ -1,7 +1,5 @@
 pub(crate) use vec_on_grid::*;
 
-use crate::basis::Movement;
-
 pub(crate) mod board;
 mod vec_on_grid;
 
@@ -81,7 +79,7 @@ impl Iterator for RangePos {
 }
 
 /// `Grid` は原画像を断片画像に分ける時の分割グリッドを表す. `Pos` はこれを介してのみ作成できる.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Grid {
     width: u8,
     height: u8,
@@ -112,53 +110,6 @@ impl Grid {
         debug_assert!(x < self.width);
         debug_assert!(y < self.height);
         Pos::new(x, y)
-    }
-
-    pub(crate) fn up_of(&self, pos: Pos) -> Pos {
-        if pos.y() == 0 {
-            Pos::new(pos.x(), self.height - 1)
-        } else {
-            Pos::new(pos.x(), pos.y() - 1)
-        }
-    }
-    pub(crate) fn right_of(&self, pos: Pos) -> Pos {
-        if pos.x() + 1 == self.width {
-            Pos::new(0, pos.y())
-        } else {
-            Pos::new(pos.x() + 1, pos.y())
-        }
-    }
-    pub(crate) fn down_of(&self, pos: Pos) -> Pos {
-        if pos.y() + 1 == self.height {
-            Pos::new(pos.x(), 0)
-        } else {
-            Pos::new(pos.x(), pos.y() + 1)
-        }
-    }
-    pub(crate) fn left_of(&self, pos: Pos) -> Pos {
-        if pos.x() == 0 {
-            Pos::new(self.width - 1, pos.y())
-        } else {
-            Pos::new(pos.x() - 1, pos.y())
-        }
-    }
-
-    pub(crate) fn around_of(&self, pos: Pos) -> [Pos; 4] {
-        [
-            self.up_of(pos),
-            self.right_of(pos),
-            self.down_of(pos),
-            self.left_of(pos),
-        ]
-    }
-
-    pub(crate) fn move_pos_to(&self, pos: Pos, to: Movement) -> Pos {
-        match to {
-            Movement::Up => self.up_of(pos),
-            Movement::Right => self.right_of(pos),
-            Movement::Down => self.down_of(pos),
-            Movement::Left => self.left_of(pos),
-        }
     }
 
     pub(crate) fn range(&self, up_left: Pos, down_right: Pos) -> RangePos {

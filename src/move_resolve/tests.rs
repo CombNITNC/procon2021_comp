@@ -1,7 +1,7 @@
-use super::{edges_nodes::EdgesNodes, resolve, DifferentCells};
+use super::{edges_nodes::Nodes, resolve, DifferentCells};
 use crate::{
     basis::{Movement::*, Operation},
-    grid::{Grid, Pos, VecOnGrid},
+    grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
 };
 
 #[test]
@@ -14,7 +14,7 @@ fn test_different_cells() {
         (grid.pos(1, 0), grid.pos(0, 1)),
         (grid.pos(1, 1), grid.pos(1, 0)),
     ];
-    let EdgesNodes { nodes: field, .. } = EdgesNodes::new(&grid, case);
+    let Nodes { nodes: field, .. } = Nodes::new(grid, case);
 
     let diff = DifferentCells(4);
     assert_eq!(diff.on_swap(&field, grid.pos(0, 1), grid.pos(1, 1)).0, 2);
@@ -25,12 +25,12 @@ fn test_different_cells() {
 fn smallest_case() {
     // 10 00
     let grid = Grid::new(2, 1);
-    let mut field = VecOnGrid::with_init(&grid, grid.pos(0, 0));
+    let mut field = VecOnGrid::with_init(grid, grid.pos(0, 0));
     field[grid.pos(0, 0)] = grid.pos(1, 0);
     field[grid.pos(1, 0)] = grid.pos(0, 0);
 
     let path = resolve(
-        &grid,
+        grid,
         &[
             (grid.pos(0, 0), grid.pos(1, 0)),
             (grid.pos(1, 0), grid.pos(0, 0)),
@@ -54,14 +54,14 @@ fn simple_case() {
     // 00 11
     // 10 01
     let grid = Grid::new(2, 2);
-    let mut field = VecOnGrid::with_init(&grid, grid.pos(0, 0));
+    let mut field = VecOnGrid::with_init(grid, grid.pos(0, 0));
     field[grid.pos(0, 0)] = grid.pos(0, 0);
     field[grid.pos(1, 0)] = grid.pos(1, 1);
     field[grid.pos(0, 1)] = grid.pos(1, 0);
     field[grid.pos(1, 1)] = grid.pos(0, 1);
 
     let path = resolve(
-        &grid,
+        grid,
         &[
             (grid.pos(1, 0), grid.pos(0, 1)),
             (grid.pos(0, 1), grid.pos(1, 1)),
@@ -125,7 +125,7 @@ fn case1() {
             movements: vec![Up],
         },
     ];
-    let actual = resolve(&grid, case, 2, 1, 2);
+    let actual = resolve(grid, case, 2, 1, 2);
     test_vec(expected, actual);
 }
 
@@ -150,7 +150,7 @@ fn case2() {
             movements: vec![Up, Right],
         },
     ];
-    let actual = resolve(&grid, case, 2, 1, 1);
+    let actual = resolve(grid, case, 2, 1, 1);
     test_vec(expected, actual);
 }
 
@@ -177,13 +177,46 @@ fn case3() {
             movements: vec![Right, Right, Up],
         },
     ];
-    let actual = resolve(&grid, case, 2, 2, 3);
+    let actual = resolve(grid, case, 2, 2, 3);
     test_vec(expected, actual);
 }
 
 #[test]
+fn large_case() {
+    // 00 10 20 55 40 50
+    // 01 30 21 31 41 51
+    // 02 12 22 32 42 52
+    // 03 13 23 33 43 53
+    // 04 14 24 34 44 54
+    // 05 15 25 35 45 11
+    let grid = Grid::new(6, 6);
+    let case = &[
+        (grid.pos(5, 5), grid.pos(3, 0)),
+        (grid.pos(3, 0), grid.pos(1, 1)),
+        (grid.pos(1, 1), grid.pos(5, 5)),
+    ];
+    let Nodes { mut nodes, .. } = Nodes::new(grid, case);
+    const SELECT_LIMIT: u8 = 3;
+    const SWAP_COST: u16 = 1;
+    const SELECT_COST: u16 = 8;
+
+    let result = resolve(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
+
+    let finder = BoardFinder::new(grid);
+    for Operation { select, movements } in result {
+        let mut current = select;
+        for movement in movements {
+            let to_swap = finder.move_pos_to(current, movement);
+            nodes.swap(current, to_swap);
+            current = to_swap;
+        }
+    }
+    assert!(grid.all_pos().zip(nodes.into_iter()).all(|(p, n)| p == n));
+}
+
+#[test]
 fn rand_case() {
-    fn gen_circular(grid: &Grid, rng: &mut rand::rngs::ThreadRng) -> Vec<Pos> {
+    fn gen_circular(grid: Grid, rng: &mut rand::rngs::ThreadRng) -> Vec<Pos> {
         use rand::{
             distributions::{Distribution, Uniform},
             seq::SliceRandom,
@@ -194,7 +227,7 @@ fn rand_case() {
         let taking = between.sample(rng);
         points.into_iter().take(taking).collect()
     }
-    const WIDTH: u8 = 5;
+    const WIDTH: u8 = 6;
     const HEIGHT: u8 = 6;
     const SELECT_LIMIT: u8 = 3;
     const SWAP_COST: u16 = 1;
@@ -202,23 +235,24 @@ fn rand_case() {
     let mut rng = rand::thread_rng();
 
     let grid = Grid::new(WIDTH, HEIGHT);
-    let circular = gen_circular(&grid, &mut rng);
+    let circular = gen_circular(grid, &mut rng);
     let mut case = vec![];
     for pair in circular.windows(2) {
         case.push((pair[0], pair[1]));
     }
     case.push((*circular.last().unwrap(), *circular.first().unwrap()));
 
-    let EdgesNodes { mut nodes, .. } = EdgesNodes::new(&grid, &case);
+    let Nodes { mut nodes, .. } = Nodes::new(grid, &case);
     eprintln!("before: {:#?}", nodes);
 
-    let result = resolve(&grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
+    let result = resolve(grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
+    let finder = BoardFinder::new(grid);
     eprintln!("operations: {:#?}", result);
     for Operation { select, movements } in result {
         let mut current = select;
         for movement in movements {
-            let to_swap = grid.move_pos_to(current, movement);
+            let to_swap = finder.move_pos_to(current, movement);
             nodes.swap(current, to_swap);
             current = to_swap;
         }

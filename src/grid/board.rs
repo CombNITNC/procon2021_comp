@@ -2,16 +2,20 @@ use std::collections::HashSet;
 
 use super::{Grid, Pos, VecOnGrid};
 
+mod finder;
+
+pub(crate) use finder::*;
+
 #[derive(Debug, Clone)]
-pub(crate) struct Board<'grid> {
+pub(crate) struct Board {
     select: Pos,
-    forward: VecOnGrid<'grid, Pos>,
-    reverse: VecOnGrid<'grid, Pos>,
+    forward: VecOnGrid<Pos>,
+    reverse: VecOnGrid<Pos>,
     locked: HashSet<Pos>,
 }
 
-impl<'grid> Board<'grid> {
-    pub(crate) fn new(select: Pos, field: VecOnGrid<'grid, Pos>) -> Board<'grid> {
+impl Board {
+    pub(crate) fn new(select: Pos, field: VecOnGrid<Pos>) -> Self {
         let mut reverse = field.clone();
         for (pos, &elem) in field.iter_with_pos() {
             reverse[elem] = pos;
@@ -24,12 +28,23 @@ impl<'grid> Board<'grid> {
         }
     }
 
-    pub(crate) fn grid(&self) -> &Grid {
+    pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
+        self.forward.grid.looping_manhattan_dist(a, b)
+    }
+
+    pub(crate) fn grid(&self) -> Grid {
         self.forward.grid
     }
 
     pub(crate) fn selected(&self) -> Pos {
         self.select
+    }
+
+    pub(crate) fn select(&mut self, to_select: Pos) {
+        if self.locked.contains(&to_select) {
+            panic!("the position was locked: {:?}", to_select);
+        }
+        self.select = to_select;
     }
 
     pub(crate) fn field(&self) -> &VecOnGrid<Pos> {
@@ -45,11 +60,11 @@ impl<'grid> Board<'grid> {
     }
 
     pub(crate) fn swap_to(&mut self, to_swap: Pos) {
-        let dist = self.grid().looping_manhattan_dist(self.select, to_swap);
+        let dist = self.looping_manhattan_dist(self.select, to_swap);
         if dist == 0 {
             return;
         }
-        if self.locked.contains(&to_swap) || self.locked.contains(&self.select) {
+        if self.locked.contains(&to_swap) {
             panic!("the position was locked: {:?}", to_swap);
         }
         assert_eq!(
@@ -69,33 +84,91 @@ impl<'grid> Board<'grid> {
         }
     }
 
+    fn width(&self) -> u8 {
+        self.forward.grid.width()
+    }
+    fn height(&self) -> u8 {
+        self.forward.grid.height()
+    }
+
+    fn up_of(&self, pos: Pos) -> Pos {
+        if pos.y() == 0 {
+            Pos::new(pos.x(), self.height() - 1)
+        } else {
+            Pos::new(pos.x(), pos.y() - 1)
+        }
+    }
+    fn right_of(&self, pos: Pos) -> Pos {
+        if pos.x() + 1 == self.width() {
+            Pos::new(0, pos.y())
+        } else {
+            Pos::new(pos.x() + 1, pos.y())
+        }
+    }
+    fn down_of(&self, pos: Pos) -> Pos {
+        if pos.y() + 1 == self.height() {
+            Pos::new(pos.x(), 0)
+        } else {
+            Pos::new(pos.x(), pos.y() + 1)
+        }
+    }
+    fn left_of(&self, pos: Pos) -> Pos {
+        if pos.x() == 0 {
+            Pos::new(self.width() - 1, pos.y())
+        } else {
+            Pos::new(pos.x() - 1, pos.y())
+        }
+    }
+
     pub(crate) fn around_of(&self, pos: Pos) -> Vec<Pos> {
-        self.grid()
-            .around_of(pos)
-            .iter()
-            .copied()
-            .filter(|pos| !self.locked.contains(pos))
-            .collect()
+        [
+            self.up_of(pos),
+            self.right_of(pos),
+            self.down_of(pos),
+            self.left_of(pos),
+        ]
+        .iter()
+        .copied()
+        .filter(|pos| !self.locked.contains(pos))
+        .collect()
+    }
+
+    pub(crate) fn is_locked(&self, pos: Pos) -> bool {
+        self.locked.contains(&pos)
     }
 
     pub(crate) fn lock(&mut self, pos: Pos) -> bool {
+        if pos == self.select {
+            panic!("tried to lock the selected pos: {:?}", pos);
+        }
         self.locked.insert(pos)
     }
 
     pub(crate) fn unlock(&mut self, pos: Pos) -> bool {
         self.locked.remove(&pos)
     }
+
+    pub(crate) fn first_unlocked(&self) -> Option<Pos> {
+        self.forward
+            .grid
+            .all_pos()
+            .find(|p| !self.locked.contains(p))
+    }
+
+    pub(crate) fn new_finder(&self) -> BoardFinder {
+        BoardFinder::new(self.grid())
+    }
 }
 
 #[test]
 fn test_reverse() {
-    use crate::move_resolve::edges_nodes::EdgesNodes;
+    use crate::move_resolve::edges_nodes::Nodes;
 
     // 10 11
     // 01 00
     let grid = Grid::new(2, 2);
-    let EdgesNodes { nodes, .. } = EdgesNodes::new(
-        &grid,
+    let Nodes { nodes, .. } = Nodes::new(
+        grid,
         &[
             (grid.pos(0, 0), grid.pos(1, 1)),
             (grid.pos(1, 1), grid.pos(1, 0)),

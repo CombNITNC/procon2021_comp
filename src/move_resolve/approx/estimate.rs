@@ -1,4 +1,10 @@
-use crate::grid::{board::Board, Pos};
+use crate::{
+    basis::Movement,
+    grid::{
+        board::{Board, BoardFinder},
+        Pos,
+    },
+};
 
 use super::route::{route_select_to_target, route_target_to_pos};
 
@@ -12,16 +18,28 @@ pub(super) struct RowSolveEstimate {
     pub(super) worst_swap_pos: Pos,
 }
 
-pub(super) fn estimate_solve_row(mut board: Board, target_row: u8) -> RowSolveEstimate {
-    let targets: Vec<_> = (0..board.grid().width())
-        .map(|x| board.grid().pos(x, target_row))
-        .collect();
+pub(super) fn estimate_solve_row(
+    mut board: Board,
+    finder: &BoardFinder,
+    targets: &[Pos],
+) -> Option<RowSolveEstimate> {
+    debug_assert_eq!(
+        board.looping_manhattan_dist(targets[targets.len() - 2], *targets.last().unwrap()),
+        1,
+        "board: {:#?}, targets: {:?}",
+        board,
+        targets
+    );
+
     let mut estimate = RowSolveEstimate::default();
 
-    let mut line_proc = estimate_line_without_edge(board.clone(), &targets[..targets.len() - 2]);
+    let without_corner = &targets[..targets.len() - 2];
+    let mut line_proc = estimate_line_without_corner(board.clone(), without_corner)
+        .expect("the route must be found");
     board.swap_many_to(&line_proc.moves);
     estimate.moves.append(&mut line_proc.moves);
-    for &p in &targets[..targets.len() - 2] {
+    for &p in without_corner {
+        debug_assert_eq!(p, board.forward(p), "{:#?}", board);
         board.lock(p);
     }
     if estimate.worst_route_size < line_proc.worst_route_size {
@@ -34,41 +52,53 @@ pub(super) fn estimate_solve_row(mut board: Board, target_row: u8) -> RowSolveEs
     {
         let edge_rd_estimate = estimate_edge_then_right_down(
             &board,
+            finder,
             (targets[targets.len() - 2], targets[targets.len() - 1]),
         );
         let edge_ld_estimate = estimate_edge_then_left_down(
             &board,
+            finder,
             (targets[targets.len() - 2], targets[targets.len() - 1]),
         );
-        let mut edge_estimate = if edge_rd_estimate.len() < edge_ld_estimate.len() {
-            edge_rd_estimate
-        } else {
-            edge_ld_estimate
+        let mut edge_estimate = match (edge_rd_estimate, edge_ld_estimate) {
+            (None, None) => return None,
+            (None, Some(ld)) => ld,
+            (Some(rd), None) => rd,
+            (Some(rd), Some(ld)) => {
+                if rd.len() < ld.len() {
+                    rd
+                } else {
+                    ld
+                }
+            }
         };
         estimate.moves.append(&mut edge_estimate);
     }
     estimate.moves.dedup();
-    estimate
+    Some(estimate)
 }
 
-fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEstimate {
+fn estimate_line_without_corner(mut board: Board, targets: &[Pos]) -> Option<RowSolveEstimate> {
     let mut estimate = RowSolveEstimate::default();
     for &target in targets {
-        let mut pos = board.reverse(target);
-        let route = route_target_to_pos(&board, pos, target).expect("the route must be found");
+        let pos = board.reverse(target);
+        if target == pos {
+            board.lock(pos);
+            continue;
+        }
+        let route = route_target_to_pos(&board, pos, target)?;
         let mut route_size = 0;
         for win in route.windows(2) {
             let way = win[0];
             let next = win[1];
             board.lock(way);
-            let mut route = route_select_to_target(&board, next);
+            let mut route = route_select_to_target(&board, next)?;
             board.swap_many_to(&route);
             estimate.moves.append(&mut route);
             route_size += route.len();
             board.unlock(way);
             estimate.moves.push(way);
             board.swap_to(way);
-            pos = way;
         }
         if estimate.worst_route_size < route_size {
             estimate.worst_route_size = route_size;
@@ -77,7 +107,7 @@ fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEsti
         board.lock(target);
     }
     estimate.moves.dedup();
-    estimate
+    Some(estimate)
 }
 
 /// ```text
@@ -85,25 +115,30 @@ fn estimate_line_without_edge(mut board: Board, targets: &[Pos]) -> RowSolveEsti
 /// ... ** b
 /// ```
 /// この形に変形してから `Right` → `Down` して行を完成させる経路を見積もる
-fn estimate_edge_then_right_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> {
+fn estimate_edge_then_right_down(
+    board: &Board,
+    finder: &BoardFinder,
+    (a, b): (Pos, Pos),
+) -> Option<Vec<Pos>> {
     let mut board = board.clone();
     let mut ret = vec![];
 
     let a_pos = board.reverse(a);
-    let a_goal = board.grid().right_of(a);
-    move_target_to_pos(&mut board, a_pos, a_goal, &mut ret);
+    let a_goal = finder.move_pos_to(a, Movement::Right);
+    move_target_to_pos(&mut board, a_pos, a_goal, &mut ret)?;
+    board.lock(a_goal);
 
     let b_pos = board.reverse(b);
-    let b_goal = board.grid().down_of(b);
-    move_target_to_pos(&mut board, b_pos, b_goal, &mut ret);
+    let b_goal = finder.move_pos_to(b, Movement::Down);
+    move_target_to_pos(&mut board, b_pos, b_goal, &mut ret)?;
+    board.lock(b_goal);
 
-    let select = board.selected();
     let select_goal = a;
-    move_target_to_pos(&mut board, select, select_goal, &mut ret);
+    move_select_to_target(&mut board, select_goal, &mut ret)?;
 
     ret.push(b);
     ret.push(b_goal);
-    ret
+    Some(ret)
 }
 
 /// ```text
@@ -111,28 +146,34 @@ fn estimate_edge_then_right_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> 
 /// ... a **
 /// ```
 /// この形に変形してから `Left` → `Down` して行を完成させる経路を見積もる
-fn estimate_edge_then_left_down(board: &Board, (a, b): (Pos, Pos)) -> Vec<Pos> {
+fn estimate_edge_then_left_down(
+    board: &Board,
+    finder: &BoardFinder,
+    (a, b): (Pos, Pos),
+) -> Option<Vec<Pos>> {
     let mut board = board.clone();
     let mut ret = vec![];
 
-    let a_pos = board.reverse(a);
-    let a_goal = board.grid().down_of(a);
-    move_target_to_pos(&mut board, a_pos, a_goal, &mut ret);
-
     let b_pos = board.reverse(b);
-    let b_goal = board.grid().left_of(b);
-    move_target_to_pos(&mut board, b_pos, b_goal, &mut ret);
+    let b_goal = finder.move_pos_to(b, Movement::Left);
+    move_target_to_pos(&mut board, b_pos, b_goal, &mut ret)?;
+    board.lock(b_goal);
 
-    let select = board.selected();
+    let a_pos = board.reverse(a);
+    let a_goal = finder.move_pos_to(a, Movement::Down);
+    move_target_to_pos(&mut board, a_pos, a_goal, &mut ret)?;
+    board.lock(a_goal);
+
     let select_goal = b;
-    move_target_to_pos(&mut board, select, select_goal, &mut ret);
+    move_select_to_target(&mut board, select_goal, &mut ret)?;
 
-    ret.push(b);
-    ret.push(b_goal);
-    ret
+    ret.push(a);
+    ret.push(a_goal);
+    Some(ret)
 }
 
-fn move_target_to_pos(board: &mut Board, target: Pos, pos: Pos, ret: &mut Vec<Pos>) {
+#[must_use]
+fn move_target_to_pos(board: &mut Board, target: Pos, pos: Pos, ret: &mut Vec<Pos>) -> Option<()> {
     let route = route_target_to_pos(board, target, pos).unwrap();
 
     for win in route.windows(2) {
@@ -140,11 +181,20 @@ fn move_target_to_pos(board: &mut Board, target: Pos, pos: Pos, ret: &mut Vec<Po
         let next = win[1];
         board.lock(way);
 
-        let mut route = route_select_to_target(board, next);
+        let mut route = route_select_to_target(board, next)?;
         board.swap_many_to(&route);
         ret.append(&mut route);
         board.unlock(way);
         board.swap_to(way);
         ret.push(way);
     }
+    Some(())
+}
+
+#[must_use]
+fn move_select_to_target(board: &mut Board, target: Pos, ret: &mut Vec<Pos>) -> Option<()> {
+    let mut route = route_select_to_target(board, target)?;
+    board.swap_many_to(&route);
+    ret.append(&mut route);
+    Some(())
 }

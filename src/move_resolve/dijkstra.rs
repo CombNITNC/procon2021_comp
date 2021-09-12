@@ -48,7 +48,6 @@ where
 {
     let mut shortest_cost = VecOnGrid::with_init(board.grid(), C::IDENTITY);
     let mut back_path = VecOnGrid::with_init(board.grid(), None);
-    let mut board = board.clone();
 
     shortest_cost[start.as_pos()] = start.cost();
     let mut heap = BinaryHeap::new();
