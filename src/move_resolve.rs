@@ -260,7 +260,7 @@ fn resolve_approximately(
             .sum()
     };
     grid.all_pos()
-        .map(|pos| {
+        .flat_map(|pos| {
             resolve_on_select(
                 grid,
                 nodes.clone(),
@@ -281,12 +281,12 @@ fn resolve_on_select(
     select_cost: u16,
     mut select_limit: u8,
     init_select: Pos,
-) -> Vec<Operation> {
+) -> Option<Vec<Operation>> {
     let mut solver = Solver::default();
     let mut all_actions = vec![];
     let mut selection = None;
 
-    let mut actions = solver.solve(init_select, &nodes);
+    let mut actions = solver.solve(init_select, &nodes)?;
     for &action in &actions {
         match action {
             GridAction::Swap(mov) => {
@@ -317,5 +317,5 @@ fn resolve_on_select(
         different_cells.0,
     );
     all_actions.append(&mut actions);
-    actions_to_operations(all_actions)
+    Some(actions_to_operations(all_actions))
 }
