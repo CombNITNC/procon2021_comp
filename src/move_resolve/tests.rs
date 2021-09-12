@@ -248,7 +248,7 @@ fn rand_case() {
     let result = resolve(grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
     let finder = BoardFinder::new(grid);
-    eprintln!("operations: {:#?}", result);
+    eprintln!("operations: {:?}", result);
     for Operation { select, movements } in result {
         let mut current = select;
         for movement in movements {
