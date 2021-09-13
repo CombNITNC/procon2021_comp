@@ -14,6 +14,7 @@ mod image;
 mod move_resolve;
 mod pixel_match;
 mod submit;
+mod kaitou;
 
 use crate::{
     basis::Color,
