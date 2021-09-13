@@ -13,7 +13,7 @@ pub(crate) fn ans(ope: &[Operation], rot: &[Rot]) -> String {
         };
         result += &format!("{}",r);
     }
-    result += &format!("/r/n");
+    result += "/r/n";
 
     //選択回数
     result += &format!("{}/r/n", ope.len());
@@ -26,16 +26,16 @@ pub(crate) fn ans(ope: &[Operation], rot: &[Rot]) -> String {
         result += &format!("{}/r/n", i.movements.len());
 
         //交換操作
-        for j in 0..(i.movements.len() - 1) {
-            let m = match i.movements[j] {
+        for j in &i.movements {
+            let m = match j {
                 Movement::Up => 'U',
                 Movement::Right => 'R',
                 Movement::Down => 'D',
                 Movement::Left => 'L',
             };
-            result += &format!("{}",m);
+            result.push(m);
         }
-        result += &format!("/r/n");
+        result += "/r/n";
     }
 
     result
