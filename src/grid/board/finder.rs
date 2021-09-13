@@ -110,7 +110,7 @@ impl BoardFinder {
         if rotation % 2 != 0 {
             std::mem::swap(&mut self.width, &mut self.height);
         }
-        eprintln!("rot: {}", self.rotation);
+
         self.offset = match self.rotation {
             0 => original_up_left,
             1 => grid.pos(original_up_left.x() + self.height - 1, original_up_left.y()),

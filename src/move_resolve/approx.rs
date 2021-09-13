@@ -15,7 +15,7 @@ mod route;
 pub(crate) struct Solver {}
 
 impl Solver {
-    pub(super) fn solve(&mut self, select: Pos, field: &VecOnGrid<Pos>) -> Vec<GridAction> {
+    pub(super) fn solve(&mut self, select: Pos, field: &VecOnGrid<Pos>) -> Option<Vec<GridAction>> {
         let mut board = Board::new(select, field.clone());
         let mut finder = BoardFinder::new(field.grid);
         let mut actions = vec![GridAction::Select(select)];
@@ -33,11 +33,7 @@ impl Solver {
             }
 
             if !targets.is_empty() {
-                let estimate = estimate_solve_row(board.clone(), &finder, &targets);
-                if estimate.is_none() {
-                    return actions;
-                }
-                let estimate = estimate.unwrap();
+                let estimate = estimate_solve_row(board.clone(), &finder, &targets)?;
                 for &pos in &estimate.moves {
                     board.swap_to(pos);
                 }
@@ -52,7 +48,7 @@ impl Solver {
             }
             finder.slice_up();
         }
-        actions
+        Some(actions)
     }
 
     fn next_targets(&self, board: &Board, finder: &BoardFinder) -> Vec<Pos> {

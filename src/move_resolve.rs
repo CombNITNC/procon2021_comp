@@ -1,3 +1,5 @@
+use easy_parallel::Parallel;
+
 use self::{
     edges_nodes::Nodes,
     ida_star::{ida_star, IdaStarState},
@@ -224,7 +226,7 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    if 36 <= grid.width() * grid.height() {
+    if 36 <= grid.width() as u32 * grid.height() as u32 {
         return resolve_approximately(grid, movements, select_limit, swap_cost, select_cost);
     }
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
@@ -259,8 +261,8 @@ fn resolve_approximately(
             .map(|op| op.movements.len() as u32 * swap_cost as u32 + select_cost as u32)
             .sum()
     };
-    grid.all_pos()
-        .map(|pos| {
+    Parallel::new()
+        .each(grid.all_pos(), |pos| {
             resolve_on_select(
                 grid,
                 nodes.clone(),
@@ -270,6 +272,9 @@ fn resolve_approximately(
                 pos,
             )
         })
+        .run()
+        .into_iter()
+        .flatten()
         .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
         .unwrap()
 }
@@ -281,12 +286,12 @@ fn resolve_on_select(
     select_cost: u16,
     mut select_limit: u8,
     init_select: Pos,
-) -> Vec<Operation> {
+) -> Option<Vec<Operation>> {
     let mut solver = Solver::default();
     let mut all_actions = vec![];
     let mut selection = None;
 
-    let mut actions = solver.solve(init_select, &nodes);
+    let mut actions = solver.solve(init_select, &nodes)?;
     for &action in &actions {
         match action {
             GridAction::Swap(mov) => {
@@ -317,5 +322,5 @@ fn resolve_on_select(
         different_cells.0,
     );
     all_actions.append(&mut actions);
-    actions_to_operations(all_actions)
+    Some(actions_to_operations(all_actions))
 }
