@@ -1,5 +1,7 @@
 use crate::basis::{Movement, Operation, Rot};
 
+const NEW_LINE: &str = "\r\n";
+
 pub(crate) fn ans(ope: &[Operation], rot: &[Rot]) -> String {
     let mut result = String::new();
 
@@ -11,19 +13,22 @@ pub(crate) fn ans(ope: &[Operation], rot: &[Rot]) -> String {
             Rot::R180 => 2,
             Rot::R270 => 3,
         };
-        result += &format!("{}", r);
+        result += &r.to_string();
     }
-    result += "/r/n";
+    result += NEW_LINE;
 
     //選択回数
-    result += &format!("{}/r/n", ope.len());
+    result += &ope.len().to_string();
+    result += NEW_LINE;
 
     for i in ope {
         //選択画像位置
-        result += &format!("{}{}/r/n", i.select.x(), i.select.y());
+        result += &format!("{:X}{:X}", i.select.x(), i.select.y());
+        result += NEW_LINE;
 
         //交換回数
-        result += &format!("{}/r/n", i.movements.len());
+        result += &i.movements.len().to_string();
+        result += NEW_LINE;
 
         //交換操作
         for j in &i.movements {
@@ -35,7 +40,7 @@ pub(crate) fn ans(ope: &[Operation], rot: &[Rot]) -> String {
             };
             result.push(m);
         }
-        result += "/r/n";
+        result += NEW_LINE;
     }
 
     result
