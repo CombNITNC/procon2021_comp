@@ -52,7 +52,7 @@ fn case1() {
 
     let grid = Grid::new(12, 2);
 
-    let expected = "01230320111103230210\r\n1\r\nA0\r\n3\r\nUDLR".to_owned();
+    let expected = "01230320111103230210\r\n1\r\nA1\r\n4\r\nUDLR\r\n".to_owned();
     let actual = ans(
         &[Operation {
             select: grid.pos(10, 1),
