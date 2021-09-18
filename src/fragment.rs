@@ -81,7 +81,6 @@ impl Fragment {
         self.edges.rotate(rot);
     }
 
-    #[allow(clippy::needless_range_loop)]
     pub(crate) fn pixels(&mut self) -> &[Color] {
         self.pixels.get(self.rot)
     }

@@ -8,7 +8,13 @@ use std::{
 
 use png::{BitDepth, ColorType, Compression, Encoder};
 use sdl2::{
-    keyboard::Keycode, pixels::PixelFormatEnum, rect::Rect, render::TextureQuery, surface::Surface,
+    event::WindowEvent,
+    keyboard::Keycode,
+    pixels::PixelFormatEnum,
+    rect::{Point, Rect},
+    render::TextureQuery,
+    surface::Surface,
+    video::DisplayMode,
 };
 
 mod basis;
@@ -52,6 +58,9 @@ fn main() {
         .build()
         .unwrap();
 
+    let mut window_width = 800;
+    let mut window_height = 800;
+
     let texture_creator = canvas.texture_creator();
 
     use sdl2::pixels::Color as SdlColor;
@@ -86,23 +95,6 @@ fn main() {
             .unwrap()
     };
 
-    let text_texture = {
-        let surface = font
-            .render("Hello Rust!")
-            .blended(SdlColor::RGBA(0, 0, 0, 0))
-            .unwrap();
-
-        texture_creator
-            .create_texture_from_surface(&surface)
-            .unwrap()
-    };
-
-    let TextureQuery {
-        width: text_width,
-        height: text_height,
-        ..
-    } = text_texture.query();
-
     'mainloop: loop {
         for event in sdl.event_pump().unwrap().poll_iter() {
             match event {
@@ -114,22 +106,66 @@ fn main() {
                     break 'mainloop;
                 }
 
+                sdl2::event::Event::Window {
+                    win_event: WindowEvent::Resized(w, h),
+                    ..
+                } => {
+                    window_width = w;
+                    window_height = h;
+                }
+
                 _ => {}
             }
         }
 
-        canvas.set_draw_color(SdlColor::RGBA(255, 255, 255, 0));
+        canvas.set_draw_color(SdlColor::RGB(0, 0, 0));
         canvas.clear();
 
-        canvas.copy(&recovered_image_texture, None, None).unwrap();
+        let image_size = {
+            let query = recovered_image_texture.query();
+            let src = (window_width as u32, window_height as u32);
+            let dst = (query.width as u32, query.height as u32);
+            let candidate_a = (
+                src.0,
+                ((src.0 as f64) / (dst.0 as f64) * (dst.1 as f64)) as u32,
+            );
+            let candidate_b = (
+                ((src.1 as f64) / (dst.1 as f64) * (dst.0 as f64)) as u32,
+                src.1,
+            );
+            if candidate_a.1 > src.1 {
+                candidate_b
+            } else {
+                candidate_a
+            }
+        };
+
         canvas
             .copy(
-                &text_texture,
+                &recovered_image_texture,
                 None,
-                Rect::new(0, 0, text_width, text_height),
+                Some(Rect::new(0, 0, image_size.0, image_size.1)),
             )
             .unwrap();
+
+        let cell_width = image_size.0 as i32 / problem.rows as i32;
+        let cell_height = image_size.1 as i32 / problem.cols as i32;
+
+        canvas.set_draw_color(SdlColor::RGB(255, 0, 0));
+        canvas
+            .draw_lines(&[
+                Point::new(0, 0),
+                Point::new(cell_width, 0),
+                Point::new(cell_width, cell_height),
+                Point::new(0, cell_height),
+                Point::new(0, 0),
+            ] as &[_])
+            .unwrap();
+
         canvas.present();
+
+        let ratio = image_size.0 as f64 / recovered_image_texture.query().width as f64;
+        println!("{}", ratio);
 
         std::thread::sleep(Duration::from_secs_f64(1.0 / 60.0));
     }
