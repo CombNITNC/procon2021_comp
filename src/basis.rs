@@ -107,7 +107,7 @@ pub(crate) struct Operation {
 }
 
 /// `Rot` はある断片画像を原画像の状態から時計回りに回転させた角度を表す.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Rot {
     R0,
     R90,
