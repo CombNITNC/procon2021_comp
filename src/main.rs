@@ -76,7 +76,9 @@ fn main() {
         for y in 0..grid.height() {
             for py in 0..side_length {
                 for x in 0..grid.width() {
-                    if let Some(ref mut x) = &mut recovered_image[(grid.pos(x, y))] {
+                    let grid_pos = grid.pos(x, y);
+
+                    if let Some(ref mut x) = &mut recovered_image[grid_pos] {
                         let pixels = x.pixels()
                             [(py * side_length) as usize..((py + 1) * side_length) as usize]
                             .iter()
@@ -95,18 +97,51 @@ fn main() {
             .unwrap()
     };
 
+    let mut selecting_cell_x: u32 = 0;
+    let mut selecting_cell_y: u32 = 0;
+
     'mainloop: loop {
         for event in sdl.event_pump().unwrap().poll_iter() {
+            use sdl2::event::Event::*;
+
             match event {
-                sdl2::event::Event::Quit { .. }
-                | sdl2::event::Event::KeyDown {
+                Quit { .. }
+                | KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => {
                     break 'mainloop;
                 }
 
-                sdl2::event::Event::Window {
+                KeyDown {
+                    keycode: Some(Keycode::Left),
+                    ..
+                } => selecting_cell_x = selecting_cell_x.saturating_sub(1),
+
+                KeyDown {
+                    keycode: Some(Keycode::Up),
+                    ..
+                } => selecting_cell_y = selecting_cell_y.saturating_sub(1),
+
+                KeyDown {
+                    keycode: Some(Keycode::Right),
+                    ..
+                } => {
+                    if selecting_cell_x < problem.rows as u32 {
+                        selecting_cell_x += 1;
+                    }
+                }
+
+                KeyDown {
+                    keycode: Some(Keycode::Down),
+                    ..
+                } => {
+                    if selecting_cell_y < problem.cols as u32 {
+                        selecting_cell_y += 1;
+                    }
+                }
+
+                Window {
                     win_event: WindowEvent::Resized(w, h),
                     ..
                 } => {
@@ -150,22 +185,21 @@ fn main() {
 
         let cell_width = image_size.0 as i32 / problem.rows as i32;
         let cell_height = image_size.1 as i32 / problem.cols as i32;
+        let offset_x = cell_width * selecting_cell_x as i32;
+        let offset_y = cell_height * selecting_cell_y as i32;
 
         canvas.set_draw_color(SdlColor::RGB(255, 0, 0));
         canvas
             .draw_lines(&[
-                Point::new(0, 0),
-                Point::new(cell_width, 0),
-                Point::new(cell_width, cell_height),
-                Point::new(0, cell_height),
-                Point::new(0, 0),
+                Point::new(offset_x, offset_y),
+                Point::new(cell_width + offset_x, offset_y),
+                Point::new(cell_width + offset_x, cell_height + offset_y),
+                Point::new(offset_x, cell_height + offset_y),
+                Point::new(offset_x, offset_y),
             ] as &[_])
             .unwrap();
 
         canvas.present();
-
-        let ratio = image_size.0 as f64 / recovered_image_texture.query().width as f64;
-        println!("{}", ratio);
 
         std::thread::sleep(Duration::from_secs_f64(1.0 / 60.0));
     }
