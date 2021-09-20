@@ -10,14 +10,16 @@ edition = "2018"
 anyhow = "1.0.40"
 easy-parallel = "3.1.0"
 png = "0.17.0"
-reqwest = { version = "0.11.4", features = ["blocking"] }
-
-[dev-dependencies]
+reqwest = { version = "0.11.4", features = ["blocking"], optional = true }
 rand = "0.8.4"
+
+[features]
+net = ["reqwest"]
 
 [profile.release]
 codegen-units = 1
 lto = "fat"
+debug = true
 
 [dependencies.sdl2]
 version = "0.34"

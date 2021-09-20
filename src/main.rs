@@ -2,20 +2,11 @@
 
 use std::{
     fs::File,
-    io::{BufReader, BufWriter},
-    time::Duration,
+    io::{BufWriter, Cursor},
 };
 
 use png::{BitDepth, ColorType, Compression, Encoder};
-use sdl2::{
-    event::WindowEvent,
-    keyboard::Keycode,
-    pixels::PixelFormatEnum,
-    rect::{Point, Rect},
-    render::TextureQuery,
-    surface::Surface,
-    video::DisplayMode,
-};
+use rand::prelude::*;
 
 mod basis;
 mod fragment;
@@ -23,186 +14,120 @@ mod grid;
 mod image;
 mod move_resolve;
 mod pixel_match;
+#[cfg(net)]
 mod submit;
 
 use crate::{
-    basis::Color,
+    basis::{Color, Image, Problem, Rot},
     fragment::Fragment,
     grid::{Grid, VecOnGrid},
 };
 
-fn main() {
-    let file = File::open("problem.ppm").expect("failed to open problem file");
-    let reader = BufReader::new(file);
-    let problem = image::read_problem(reader).unwrap();
-    let grid = Grid::new(problem.rows, problem.cols);
-    let fragments = fragment::Fragment::new_all(&problem);
-    let side_length = fragments[0].side_length();
-    let mut recovered_image = pixel_match::resolve(fragments, grid);
-    debug_image_output("recovered_image.png", grid, &mut recovered_image);
+fn biggest_case() -> Problem {
+    const ROWS: u8 = 16;
+    const COLS: u8 = ROWS;
 
-    let sdl = sdl2::init().unwrap();
-    let video = sdl.video().unwrap();
-    let ttf = sdl2::ttf::init().unwrap();
+    let decoder = png::Decoder::new(Cursor::new(include_bytes!("../test_cases/03_biggest.png")));
+    let mut reader = decoder.read_info().unwrap();
+    let mut buf = vec![0; reader.output_buffer_size()];
+    let info = reader.next_frame(&mut buf).unwrap();
 
-    let font = ttf.load_font("./mplus-1m-medium.ttf", 128).unwrap();
+    buf.truncate(info.buffer_size());
 
-    let mut canvas = video
-        .window("procon2021_comp", 800, 800)
-        .position_centered()
-        .resizable()
-        .opengl()
-        .build()
-        .unwrap()
-        .into_canvas()
-        .build()
-        .unwrap();
+    let buf = buf
+        .chunks(3)
+        .map(|a| Color {
+            r: a[0],
+            g: a[1],
+            b: a[2],
+        })
+        .collect::<Vec<_>>();
 
-    let mut window_width = 800;
-    let mut window_height = 800;
-
-    let texture_creator = canvas.texture_creator();
-
-    use sdl2::pixels::Color as SdlColor;
-
-    let recovered_image_texture = {
-        let width = (side_length * grid.width() as usize) as u32;
-        let height = (side_length * grid.height() as usize) as u32;
-        let mut surface = Surface::new(width, height, PixelFormatEnum::RGB24).unwrap();
-
-        let zeros = vec![0; side_length * 3];
-        let mut data = vec![];
-
-        for y in 0..grid.height() {
-            for py in 0..side_length {
-                for x in 0..grid.width() {
-                    let grid_pos = grid.pos(x, y);
-
-                    if let Some(ref mut x) = &mut recovered_image[grid_pos] {
-                        let pixels = x.pixels()
-                            [(py * side_length) as usize..((py + 1) * side_length) as usize]
-                            .iter()
-                            .flat_map(|x| [x.r, x.g, x.b]);
-                        data.extend(pixels);
-                    } else {
-                        data.extend_from_slice(&zeros);
-                    }
-                }
-            }
-        }
-
-        surface.with_lock_mut(|x| x.copy_from_slice(&data));
-        texture_creator
-            .create_texture_from_surface(surface)
-            .unwrap()
+    let source = Problem {
+        select_limit: 0,
+        select_cost: 0,
+        swap_cost: 0,
+        rows: ROWS,
+        cols: COLS,
+        image: Image {
+            width: info.width as _,
+            height: info.height as _,
+            pixels: buf,
+        },
     };
 
-    let mut selecting_cell_x: u32 = 0;
-    let mut selecting_cell_y: u32 = 0;
+    let mut fragments = fragment::Fragment::new_all(&source);
 
-    'mainloop: loop {
-        for event in sdl.event_pump().unwrap().poll_iter() {
-            use sdl2::event::Event::*;
+    // fixed rng for stabilize test results
+    let mut rng = StdRng::seed_from_u64(1);
 
-            match event {
-                Quit { .. }
-                | KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => {
-                    break 'mainloop;
-                }
+    let grid = Grid::new(ROWS, COLS);
+    let mut fragment_grid = VecOnGrid::with_default(grid);
 
-                KeyDown {
-                    keycode: Some(Keycode::Left),
-                    ..
-                } => selecting_cell_x = selecting_cell_x.saturating_sub(1),
+    for (pos, cell) in fragment_grid.iter_mut_with_pos() {
+        let index = rng.gen_range(0..fragments.len());
 
-                KeyDown {
-                    keycode: Some(Keycode::Up),
-                    ..
-                } => selecting_cell_y = selecting_cell_y.saturating_sub(1),
-
-                KeyDown {
-                    keycode: Some(Keycode::Right),
-                    ..
-                } => {
-                    if selecting_cell_x < problem.rows as u32 {
-                        selecting_cell_x += 1;
-                    }
-                }
-
-                KeyDown {
-                    keycode: Some(Keycode::Down),
-                    ..
-                } => {
-                    if selecting_cell_y < problem.cols as u32 {
-                        selecting_cell_y += 1;
-                    }
-                }
-
-                Window {
-                    win_event: WindowEvent::Resized(w, h),
-                    ..
-                } => {
-                    window_width = w;
-                    window_height = h;
-                }
-
-                _ => {}
-            }
-        }
-
-        canvas.set_draw_color(SdlColor::RGB(0, 0, 0));
-        canvas.clear();
-
-        let image_size = {
-            let query = recovered_image_texture.query();
-            let src = (window_width as u32, window_height as u32);
-            let dst = (query.width as u32, query.height as u32);
-            let candidate_a = (
-                src.0,
-                ((src.0 as f64) / (dst.0 as f64) * (dst.1 as f64)) as u32,
-            );
-            let candidate_b = (
-                ((src.1 as f64) / (dst.1 as f64) * (dst.0 as f64)) as u32,
-                src.1,
-            );
-            if candidate_a.1 > src.1 {
-                candidate_b
-            } else {
-                candidate_a
-            }
+        let rot = if pos == grid.pos(0, 0) {
+            Rot::R0
+        } else {
+            Rot::from_num(rng.gen_range(0..4))
         };
 
-        canvas
-            .copy(
-                &recovered_image_texture,
-                None,
-                Some(Rect::new(0, 0, image_size.0, image_size.1)),
-            )
-            .unwrap();
+        let mut fragment = fragments.remove(index);
+        fragment.rotate(rot);
+        fragment.apply_rotate();
+        fragment.pos = pos;
 
-        let cell_width = image_size.0 as i32 / problem.rows as i32;
-        let cell_height = image_size.1 as i32 / problem.cols as i32;
-        let offset_x = cell_width * selecting_cell_x as i32;
-        let offset_y = cell_height * selecting_cell_y as i32;
-
-        canvas.set_draw_color(SdlColor::RGB(255, 0, 0));
-        canvas
-            .draw_lines(&[
-                Point::new(offset_x, offset_y),
-                Point::new(cell_width + offset_x, offset_y),
-                Point::new(cell_width + offset_x, cell_height + offset_y),
-                Point::new(offset_x, cell_height + offset_y),
-                Point::new(offset_x, offset_y),
-            ] as &[_])
-            .unwrap();
-
-        canvas.present();
-
-        std::thread::sleep(Duration::from_secs_f64(1.0 / 60.0));
+        *cell = Some(fragment);
     }
+
+    println!("shuffle complete");
+
+    crate::debug_image_output("random.png", grid, &mut fragment_grid);
+    println!("debug_image_output() of shuffle result complete");
+
+    let side_length = (info.width / COLS as u32) as usize;
+    let zeros = vec![Color { r: 0, g: 0, b: 0 }; side_length];
+    let mut data = vec![];
+
+    for y in 0..grid.height() {
+        for py in 0..side_length {
+            for x in 0..grid.width() {
+                if let Some(ref mut x) = &mut fragment_grid[(grid.pos(x, y))] {
+                    let pixels =
+                        &x.pixels()[(py * side_length) as usize..((py + 1) * side_length) as usize];
+                    data.extend_from_slice(pixels);
+                } else {
+                    data.extend_from_slice(&zeros);
+                }
+            }
+        }
+    }
+
+    Problem {
+        select_limit: 0,
+        select_cost: 0,
+        swap_cost: 0,
+        rows: ROWS,
+        cols: COLS,
+        image: Image {
+            width: info.width as _,
+            height: info.height as _,
+            pixels: data,
+        },
+    }
+}
+
+fn main() {
+    let problem = biggest_case();
+    println!("got problem");
+
+    let grid = Grid::new(problem.rows, problem.cols);
+    let fragments = fragment::Fragment::new_all(&problem);
+
+    let mut recovered_image = pixel_match::resolve(fragments, grid);
+
+    debug_image_output("recovered_image.png", grid, &mut recovered_image);
 }
 
 fn debug_image_output(name: &str, grid: Grid, fragment_grid: &mut VecOnGrid<Option<Fragment>>) {

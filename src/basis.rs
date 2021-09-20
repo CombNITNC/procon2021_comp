@@ -117,7 +117,7 @@ pub(crate) enum Rot {
 
 impl Rot {
     #[inline]
-    fn as_num(self) -> u8 {
+    pub(crate) fn as_num(self) -> u8 {
         match self {
             Rot::R0 => 0,
             Rot::R90 => 1,
@@ -127,7 +127,7 @@ impl Rot {
     }
 
     #[inline]
-    fn from_num(rot: u8) -> Self {
+    pub(crate) fn from_num(rot: u8) -> Self {
         assert!(rot <= 3, "rot must be lower than 4");
         match rot {
             0 => Rot::R0,

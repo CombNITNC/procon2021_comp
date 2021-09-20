@@ -1,14 +1,70 @@
+use std::sync::mpsc;
+
 use crate::basis::{Color, Dir};
 use crate::fragment::Fragment;
 use crate::grid::{Grid, Pos, VecOnGrid};
+use crate::pixel_match::gui::{GuiRequest, GuiResponse};
 
 mod double_side;
+mod gui;
 mod shaker;
 
 use double_side::fill_by_double_side;
 use shaker::shaker_fill;
 
-pub(crate) fn resolve(mut fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<Fragment>> {
+pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<Fragment>> {
+    let (gtx, rx) = mpsc::channel();
+    let (tx, grx) = mpsc::channel();
+
+    let gui_thread = std::thread::Builder::new()
+        .name("GUI".into())
+        .spawn(|| gui::begin(gui::GuiContext { tx: gtx, rx: grx }))
+        .expect("failed to launch GUI thread");
+
+    let (recovered_image, root_pos) = solve(fragments.clone(), grid, None);
+
+    let mut result = recovered_image.clone();
+
+    tx.send(GuiResponse::Recalculated {
+        recovered_image,
+        root_pos,
+    })
+    .unwrap();
+
+    loop {
+        match rx.recv() {
+            Ok(GuiRequest::Recalculate { blacklist }) => {
+                let (recovered_image, root_pos) = solve(fragments.clone(), grid, Some(blacklist));
+                result = recovered_image.clone();
+                tx.send(GuiResponse::Recalculated {
+                    recovered_image,
+                    root_pos,
+                })
+                .unwrap();
+            }
+
+            Ok(GuiRequest::Quit) => break,
+
+            Err(_) => {
+                eprintln!("GUI thread channel unexpectedly closed. maybe it has panicked");
+                break;
+            }
+        }
+    }
+
+    if let Err(e) = gui_thread.join() {
+        std::panic::resume_unwind(e);
+    }
+
+    result
+}
+
+// returns: (recovered_image, root_pos)
+fn solve(
+    mut fragments: Vec<Fragment>,
+    grid: Grid,
+    _blacklist: Option<Vec<(Pos, Pos)>>,
+) -> (VecOnGrid<Option<Fragment>>, Pos) {
     let mut fragment_grid = VecOnGrid::<Option<Fragment>>::with_default(grid);
 
     // 必ず向きの正しい左上の断片を取得
@@ -85,7 +141,7 @@ pub(crate) fn resolve(mut fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Opt
         }
     }
 
-    fragment_grid
+    (fragment_grid, root_pos)
 }
 
 #[inline]

@@ -16,7 +16,7 @@ pub(crate) struct Edge {
 }
 
 /// `Edges` は断片画像の縁の四辺を表す. また, 断片画像を回転させたときでも同じように扱えるようにする.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Edges([Edge; 4]);
 
 impl Edges {
@@ -63,7 +63,7 @@ impl Edges {
 }
 
 /// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と回転させた向き `rot` と縁四辺 `edges` を表す.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Fragment {
     pub(crate) pos: Pos,
     pub(crate) rot: Rot,
@@ -83,6 +83,13 @@ impl Fragment {
 
     pub(crate) fn pixels(&mut self) -> &[Color] {
         self.pixels.get(self.rot)
+    }
+
+    pub(crate) fn apply_rotate(&mut self) {
+        let _ = self.pixels.get(self.rot);
+
+        self.pixels.rot = Rot::R0;
+        self.rot = Rot::R0;
     }
 
     pub(crate) fn new_all(
@@ -157,7 +164,7 @@ impl Fragment {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct LazyRotate {
     data: Vec<Color>,
     rot: Rot,
