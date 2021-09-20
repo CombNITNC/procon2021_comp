@@ -19,6 +19,7 @@ use sdl2::{
 };
 
 use crate::{
+    basis::Dir,
     fragment::Fragment,
     grid::{Grid, Pos, VecOnGrid},
 };
@@ -77,6 +78,7 @@ pub(super) fn begin(context: GuiContext) {
         window_size: (WINDOW_WIDTH, WINDOW_HEIGHT),
         image: ImageState::Waiting,
         ctx: context,
+        blacklist: vec![],
     };
 
     let mut recovered_image_preview: Option<RecoveredImagePreview> = None;
@@ -89,6 +91,10 @@ pub(super) fn begin(context: GuiContext) {
 
         if !state.running {
             break;
+        }
+
+        if let ImageState::Waiting = state.image {
+            recovered_image_preview = None;
         }
 
         canvas.set_draw_color(SdlColor::BLACK);
@@ -110,10 +116,10 @@ pub(super) fn begin(context: GuiContext) {
                         texture: create_image_texture(&mut recovered_image, &texture_creator),
                     });
 
-                    state.image = ImageState::Idle {
+                    state.image = ImageState::Idle(ImageStateIdle {
                         recovered_image,
                         root_pos,
-                    };
+                    });
                 }
 
                 Err(_) => {}
@@ -183,14 +189,18 @@ struct GuiState {
     ctx: GuiContext,
     image: ImageState,
     selecting_at: (u8, u8),
+
+    blacklist: Vec<(Pos, Pos)>,
+}
+
+struct ImageStateIdle {
+    recovered_image: VecOnGrid<Option<Fragment>>,
+    root_pos: Pos,
 }
 
 enum ImageState {
     Waiting,
-    Idle {
-        recovered_image: VecOnGrid<Option<Fragment>>,
-        root_pos: Pos,
-    },
+    Idle(ImageStateIdle),
 }
 
 impl GuiState {
@@ -217,7 +227,9 @@ impl GuiState {
             _ => {}
         }
 
-        if let Some(grid) = self.image.grid() {
+        if let Some(idle_state) = self.image.as_idle() {
+            let grid = idle_state.recovered_image.grid;
+
             match event {
                 KeyDown {
                     keycode: Some(Keycode::Left),
@@ -246,7 +258,52 @@ impl GuiState {
                     keycode: Some(Keycode::Space),
                     ..
                 } => {
-                    panic!("test panic")
+                    use Ordering::*;
+
+                    let root = idle_state.root_pos;
+                    let selecting = self.selecting_at;
+
+                    let side = match (root.x().cmp(&selecting.0), root.y().cmp(&selecting.1)) {
+                        (Equal, Greater) => Dir::South,
+                        (Equal, Less) => Dir::North,
+                        (Less, Equal) => Dir::West,
+                        (Greater, Equal) => Dir::East,
+
+                        (Less, Less) => Dir::North,
+                        (Less, Greater) => Dir::South,
+                        (Greater, Less) => Dir::North,
+                        (Greater, Greater) => Dir::South,
+                        (Equal, Equal) => return,
+                    };
+
+                    let reference_pos = match side {
+                        Dir::North => grid.pos(selecting.0, selecting.1 - 1),
+                        Dir::South => grid.pos(selecting.0, selecting.1 + 1),
+                        Dir::West => grid.pos(selecting.0 - 1, selecting.1),
+                        Dir::East => grid.pos(selecting.0 + 1, selecting.1),
+                    };
+
+                    let selecting = grid.pos(selecting.0, selecting.1);
+
+                    let selecting_fragment_pos =
+                        idle_state.recovered_image[selecting].as_ref().unwrap().pos;
+
+                    let reference_fragment_pos = idle_state.recovered_image[reference_pos]
+                        .as_ref()
+                        .unwrap()
+                        .pos;
+
+                    self.blacklist
+                        .push((selecting_fragment_pos, reference_fragment_pos));
+
+                    self.ctx
+                        .tx
+                        .send(GuiRequest::Recalculate {
+                            blacklist: self.blacklist.clone(),
+                        })
+                        .unwrap();
+
+                    self.image = ImageState::Waiting;
                 }
 
                 KeyDown {
@@ -265,20 +322,10 @@ impl GuiState {
 }
 
 impl ImageState {
-    fn grid(&self) -> Option<Grid> {
+    fn as_idle(&self) -> Option<&ImageStateIdle> {
         match self {
+            ImageState::Idle(ref t) => Some(t),
             ImageState::Waiting => None,
-            ImageState::Idle {
-                ref recovered_image,
-                ..
-            } => Some(recovered_image.grid),
-        }
-    }
-
-    fn root_pos(&self) -> Option<Pos> {
-        match self {
-            ImageState::Waiting => None,
-            ImageState::Idle { root_pos, .. } => Some(*root_pos),
         }
     }
 }
@@ -332,15 +379,16 @@ impl<'tc> RecoveredImagePreview<'tc> {
         state: &GuiState,
         image_size: (u32, u32),
     ) {
-        let grid = state
+        let image_state = state
             .image
-            .grid()
+            .as_idle()
             .expect("RecoveredImagePreview::render is called while waiting for recovered image");
+
+        let root = image_state.root_pos;
+        let grid = image_state.recovered_image.grid;
 
         let cell_side_length = image_size.0 as f64 / grid.width() as f64;
         let cell_size = (cell_side_length as i32, cell_side_length as i32);
-
-        let root = state.image.root_pos().unwrap();
 
         let offset_of = |p: u8| (cell_side_length * p as f64) as i32;
         let offset_of = |(x, y): (u8, u8)| (offset_of(x), offset_of(y));
@@ -351,30 +399,42 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
         let selecting_at = state.selecting_at;
 
-        canvas.set_draw_color(SdlColor::RED);
+        // selection
+        canvas.set_draw_color(SdlColor::GREEN);
+        canvas.draw_partial_rect(offset_of(selecting_at), cell_size, Sides::all());
+
+        use Ordering::*;
 
         if state.selecting_at == root.into() {
+            canvas.set_draw_color(SdlColor::RED);
             canvas.draw_partial_rect(offset_of(root.into()), cell_size, Sides::all());
             return;
         }
 
         if root.x() == selecting_at.0 || root.y() == selecting_at.1 {
-            use Ordering::*;
-
             let side = match (root.x().cmp(&selecting_at.0), root.y().cmp(&selecting_at.1)) {
-                (Equal, Greater) => Sides::TOP,
-                (Equal, Less) => Sides::BOTTOM,
-                (Less, Equal) => Sides::RIGHT,
-                (Greater, Equal) => Sides::LEFT,
+                (Equal, Greater) => Sides::BOTTOM,
+                (Equal, Less) => Sides::TOP,
+                (Less, Equal) => Sides::LEFT,
+                (Greater, Equal) => Sides::RIGHT,
                 _ => unreachable!(),
             };
 
+            canvas.set_draw_color(SdlColor::RED);
             canvas.draw_partial_rect(offset_of(selecting_at), cell_size, side);
             return;
         }
 
-        canvas.set_draw_color(SdlColor::GREEN);
-        canvas.draw_partial_rect(offset_of(selecting_at), cell_size, Sides::all());
+        let side = match (root.x().cmp(&selecting_at.0), root.y().cmp(&selecting_at.1)) {
+            (Less, Less) => Sides::LEFT | Sides::TOP,
+            (Less, Greater) => Sides::LEFT | Sides::BOTTOM,
+            (Greater, Less) => Sides::RIGHT | Sides::TOP,
+            (Greater, Greater) => Sides::RIGHT | Sides::BOTTOM,
+            _ => unreachable!(),
+        };
+
+        canvas.set_draw_color(SdlColor::RED);
+        canvas.draw_partial_rect(offset_of(selecting_at), cell_size, side);
     }
 }
 
@@ -396,7 +456,7 @@ impl CanvasExtension for Canvas<Window> {
     #[inline]
     fn draw_partial_rect(&mut self, (x, y): (i32, i32), (width, height): (i32, i32), sides: Sides) {
         if sides.is_all() {
-            self.draw_rect(Rect::new(x, y, width as _, height as _))
+            self.draw_rect(Rect::new(x, y, (width + 1) as _, (height + 1) as _))
                 .unwrap();
             return;
         }
