@@ -91,7 +91,7 @@ pub(super) fn begin(context: GuiContext) {
             break;
         }
 
-        canvas.set_draw_color(SdlColor::RGB(0, 0, 0));
+        canvas.set_draw_color(SdlColor::BLACK);
         canvas.clear();
 
         if let Some(ref preview) = recovered_image_preview {
@@ -338,100 +338,80 @@ impl<'tc> RecoveredImagePreview<'tc> {
             .expect("RecoveredImagePreview::render is called while waiting for recovered image");
 
         let cell_side_length = image_size.0 as f64 / grid.width() as f64;
+        let cell_size = (cell_side_length as i32, cell_side_length as i32);
 
-        {
-            let cell_height = image_size.1 as f64 / grid.height() as f64;
-            assert_eq!(cell_height, cell_side_length);
-        }
-
-        let root_pos = state.image.root_pos().unwrap();
+        let root = state.image.root_pos().unwrap();
 
         let offset_of = |p: u8| (cell_side_length * p as f64) as i32;
         let offset_of = |(x, y): (u8, u8)| (offset_of(x), offset_of(y));
 
-        let root_offset = offset_of(root_pos.into());
-
-        let cell_side_length = cell_side_length as u32;
-
         // root
         canvas.set_draw_color(SdlColor::BLUE);
-        canvas
-            .draw_rect(Rect::new(
-                root_offset.0,
-                root_offset.1,
-                cell_side_length,
-                cell_side_length,
-            ))
-            .unwrap();
+        canvas.draw_partial_rect(offset_of(root.into()), cell_size, Sides::all());
 
-        let selecting = state.selecting_at;
-        // let offset_x = (cell_width * state.selecting_at.0 as f64) as i32;
-        // let offset_y = (cell_height * state.selecting_at.1 as f64) as i32;
+        let selecting_at = state.selecting_at;
 
         canvas.set_draw_color(SdlColor::RED);
 
-        if selecting == (root_pos.x(), root_pos.y()) {
-            canvas
-                .draw_rect(Rect::new(
-                    root_offset.0,
-                    root_offset.1,
-                    cell_side_length,
-                    cell_side_length,
-                ))
-                .unwrap();
+        if state.selecting_at == root.into() {
+            canvas.draw_partial_rect(offset_of(root.into()), cell_size, Sides::all());
             return;
         }
 
-        if root_pos.x() == selecting.0 || root_pos.y() == selecting.1 {
+        if root.x() == selecting_at.0 || root.y() == selecting_at.1 {
             use Ordering::*;
 
-            let cell_side_length = cell_side_length as i32;
-            let sel_offset = offset_of(selecting);
-
-            let pos = match (
-                root_pos.x().cmp(&selecting.0),
-                root_pos.y().cmp(&selecting.1),
-            ) {
-                (Less, Less)
-                | (Less, Greater)
-                | (Greater, Less)
-                | (Greater, Greater)
-                | (Equal, Equal) => unreachable!(),
-
-                // rootより↑
-                (Equal, Greater) => (
-                    (sel_offset.0, sel_offset.1 + cell_side_length),
-                    (
-                        sel_offset.0 + cell_side_length,
-                        sel_offset.1 + cell_side_length,
-                    ),
-                ),
-
-                // ↓
-                (Equal, Less) => (sel_offset, (sel_offset.0 + cell_side_length, sel_offset.1)),
-
-                (Less, Equal) => (sel_offset, (sel_offset.0, sel_offset.1 + cell_side_length)),
-
-                (Greater, Equal) => (
-                    (sel_offset.0 + cell_side_length, sel_offset.1),
-                    (
-                        sel_offset.0 + cell_side_length,
-                        sel_offset.1 + cell_side_length,
-                    ),
-                ),
+            let side = match (root.x().cmp(&selecting_at.0), root.y().cmp(&selecting_at.1)) {
+                (Equal, Greater) => Sides::TOP,
+                (Equal, Less) => Sides::BOTTOM,
+                (Less, Equal) => Sides::RIGHT,
+                (Greater, Equal) => Sides::LEFT,
+                _ => unreachable!(),
             };
 
-            canvas.draw_line(pos.0, pos.1).unwrap();
-        } else {
-            let sel_offset = offset_of(selecting);
-            canvas.set_draw_color(SdlColor::GREEN);
-            canvas
-                .draw_rect(Rect::new(
-                    sel_offset.0,
-                    sel_offset.1,
-                    cell_side_length,
-                    cell_side_length,
-                ))
+            canvas.draw_partial_rect(offset_of(selecting_at), cell_size, side);
+            return;
+        }
+
+        canvas.set_draw_color(SdlColor::GREEN);
+        canvas.draw_partial_rect(offset_of(selecting_at), cell_size, Sides::all());
+    }
+}
+
+bitflags::bitflags! {
+    struct Sides: u8 {
+        const TOP =    0b0001;
+        const LEFT =   0b0010;
+        const RIGHT =  0b0100;
+        const BOTTOM = 0b1000;
+    }
+}
+
+trait CanvasExtension {
+    fn draw_partial_rect(&mut self, pos: (i32, i32), size: (i32, i32), sides: Sides);
+}
+
+impl CanvasExtension for Canvas<Window> {
+    /// 特定の辺のみの描画もできる draw_rect
+    #[inline]
+    fn draw_partial_rect(&mut self, (x, y): (i32, i32), (width, height): (i32, i32), sides: Sides) {
+        if sides.is_all() {
+            self.draw_rect(Rect::new(x, y, width as _, height as _))
+                .unwrap();
+            return;
+        }
+        if sides.intersects(Sides::TOP) {
+            self.draw_line((x, y), (x + width, y)).unwrap();
+        }
+        if sides.intersects(Sides::LEFT) {
+            self.draw_line((x, y), (x, y + height)).unwrap();
+        }
+        if sides.intersects(Sides::RIGHT) {
+            self.draw_line((x + width, y), (x + width, y + height))
+                .unwrap();
+        }
+        if sides.intersects(Sides::BOTTOM) {
+            self.draw_line((x, y + height), (x + width, y + height))
                 .unwrap();
         }
     }

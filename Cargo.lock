@@ -640,6 +640,7 @@ name = "procon2021_comp"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitflags",
  "easy-parallel",
  "png",
  "rand",
