@@ -59,7 +59,7 @@ fn biggest_case() -> Problem {
     let mut fragments = fragment::Fragment::new_all(&source);
 
     // fixed rng for stabilize test results
-    let mut rng = StdRng::seed_from_u64(1);
+    let mut rng = StdRng::seed_from_u64(0);
 
     let grid = Grid::new(ROWS, COLS);
     let mut fragment_grid = VecOnGrid::with_default(grid);

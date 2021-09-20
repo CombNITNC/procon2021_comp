@@ -1,4 +1,6 @@
 use std::{
+    cell,
+    cmp::Ordering,
     sync::mpsc::{Receiver, Sender},
     time::Duration,
 };
@@ -157,7 +159,8 @@ fn create_image_texture<'t>(
                     data.extend(
                         x.pixels()[(py * side_length) as usize..((py + 1) * side_length) as usize]
                             .iter()
-                            .flat_map(|x| [x.r, x.g, x.b]),
+                            .flat_map(|x| [x.r, x.g, x.b])
+                            .map(|x| ((x as f32) * 0.7) as u8),
                     );
                 } else {
                     data.extend(std::iter::repeat(0).take(side_length));
@@ -199,8 +202,8 @@ impl GuiState {
                 win_event: WindowEvent::Resized(w, h),
                 ..
             } => {
-                self.window_size.0 += w as u32;
-                self.window_size.1 += h as u32;
+                self.window_size.0 = w as u32;
+                self.window_size.1 = h as u32;
             }
 
             Quit { .. }
@@ -271,6 +274,13 @@ impl ImageState {
             } => Some(recovered_image.grid),
         }
     }
+
+    fn root_pos(&self) -> Option<Pos> {
+        match self {
+            ImageState::Waiting => None,
+            ImageState::Idle { root_pos, .. } => Some(*root_pos),
+        }
+    }
 }
 
 struct RecoveredImagePreview<'tc> {
@@ -313,10 +323,10 @@ impl<'tc> RecoveredImagePreview<'tc> {
             )
             .unwrap();
 
-        self.render_selection_box(canvas, state, image_size);
+        self.render_selection_and_root(canvas, state, image_size);
     }
 
-    fn render_selection_box(
+    fn render_selection_and_root(
         &self,
         canvas: &mut Canvas<Window>,
         state: &GuiState,
@@ -327,27 +337,103 @@ impl<'tc> RecoveredImagePreview<'tc> {
             .grid()
             .expect("RecoveredImagePreview::render is called while waiting for recovered image");
 
-        let cell_width = image_size.0 as f64 / grid.width() as f64;
-        let cell_height = image_size.1 as f64 / grid.height() as f64;
+        let cell_side_length = image_size.0 as f64 / grid.width() as f64;
 
-        let offset_x = (cell_width * state.selecting_at.0 as f64) as i32;
-        let offset_y = (cell_height * state.selecting_at.1 as f64) as i32;
+        {
+            let cell_height = image_size.1 as f64 / grid.height() as f64;
+            assert_eq!(cell_height, cell_side_length);
+        }
 
-        let point = |x, y| Point::new(offset_x + x, offset_y + y);
+        let root_pos = state.image.root_pos().unwrap();
 
-        let cell_width = cell_width as i32;
-        let cell_height = cell_height as i32;
+        let offset_of = |p: u8| (cell_side_length * p as f64) as i32;
+        let offset_of = |(x, y): (u8, u8)| (offset_of(x), offset_of(y));
 
-        canvas.set_draw_color(SdlColor::RGB(255, 0, 0));
+        let root_offset = offset_of(root_pos.into());
+
+        let cell_side_length = cell_side_length as u32;
+
+        // root
+        canvas.set_draw_color(SdlColor::BLUE);
         canvas
-            .draw_lines(&[
-                point(0, 0),
-                point(cell_width, 0),
-                point(cell_width, cell_height),
-                point(0, cell_height),
-                point(0, 0),
-            ] as &[_])
+            .draw_rect(Rect::new(
+                root_offset.0,
+                root_offset.1,
+                cell_side_length,
+                cell_side_length,
+            ))
             .unwrap();
+
+        let selecting = state.selecting_at;
+        // let offset_x = (cell_width * state.selecting_at.0 as f64) as i32;
+        // let offset_y = (cell_height * state.selecting_at.1 as f64) as i32;
+
+        canvas.set_draw_color(SdlColor::RED);
+
+        if selecting == (root_pos.x(), root_pos.y()) {
+            canvas
+                .draw_rect(Rect::new(
+                    root_offset.0,
+                    root_offset.1,
+                    cell_side_length,
+                    cell_side_length,
+                ))
+                .unwrap();
+            return;
+        }
+
+        if root_pos.x() == selecting.0 || root_pos.y() == selecting.1 {
+            use Ordering::*;
+
+            let cell_side_length = cell_side_length as i32;
+            let sel_offset = offset_of(selecting);
+
+            let pos = match (
+                root_pos.x().cmp(&selecting.0),
+                root_pos.y().cmp(&selecting.1),
+            ) {
+                (Less, Less)
+                | (Less, Greater)
+                | (Greater, Less)
+                | (Greater, Greater)
+                | (Equal, Equal) => unreachable!(),
+
+                // rootより↑
+                (Equal, Greater) => (
+                    (sel_offset.0, sel_offset.1 + cell_side_length),
+                    (
+                        sel_offset.0 + cell_side_length,
+                        sel_offset.1 + cell_side_length,
+                    ),
+                ),
+
+                // ↓
+                (Equal, Less) => (sel_offset, (sel_offset.0 + cell_side_length, sel_offset.1)),
+
+                (Less, Equal) => (sel_offset, (sel_offset.0, sel_offset.1 + cell_side_length)),
+
+                (Greater, Equal) => (
+                    (sel_offset.0 + cell_side_length, sel_offset.1),
+                    (
+                        sel_offset.0 + cell_side_length,
+                        sel_offset.1 + cell_side_length,
+                    ),
+                ),
+            };
+
+            canvas.draw_line(pos.0, pos.1).unwrap();
+        } else {
+            let sel_offset = offset_of(selecting);
+            canvas.set_draw_color(SdlColor::GREEN);
+            canvas
+                .draw_rect(Rect::new(
+                    sel_offset.0,
+                    sel_offset.1,
+                    cell_side_length,
+                    cell_side_length,
+                ))
+                .unwrap();
+        }
     }
 }
 
