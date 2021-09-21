@@ -42,6 +42,16 @@ impl Edges {
         ])
     }
 
+    #[cfg(test)]
+    pub(crate) fn new_for_test(
+        north: Vec<Color>,
+        east: Vec<Color>,
+        south: Vec<Color>,
+        west: Vec<Color>,
+    ) -> Self {
+        Self::new(north, east, south, west)
+    }
+
     fn rotate(&mut self, rot: Rot) {
         for edge in &mut self.0 {
             edge.dir = edge.dir.rotate(rot);
