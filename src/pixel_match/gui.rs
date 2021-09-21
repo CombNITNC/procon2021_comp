@@ -27,8 +27,8 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub(super) struct EdgePos {
-    pos: Pos,
-    dir: Dir,
+    pub(super) pos: Pos,
+    pub(super) dir: Dir,
 }
 
 const WINDOW_WIDTH: u32 = 800;
@@ -37,7 +37,7 @@ const WINDOW_HEIGHT: u32 = 800;
 pub(super) enum GuiRequest {
     Recalculate {
         /// 0 と .1 の示す Edge が隣り合わないことを示す
-        blacklist: Vec<(EdgePos, EdgePos)>,
+        blacklist: Vec<(Pos, EdgePos)>,
     },
 
     Quit,
@@ -190,7 +190,7 @@ fn create_image_texture<'tc>(
                         x.pixels()[(py * side_length) as usize..((py + 1) * side_length) as usize]
                             .iter()
                             .flat_map(|x| [x.r, x.g, x.b])
-                            .map(|x| ((x as f32) * 0.5) as u8),
+                            .map(|x| ((x as f32) * 0.8) as u8),
                     );
                 } else {
                     data.extend(std::iter::repeat(0).take(side_length * 3));
@@ -217,7 +217,7 @@ struct GuiState {
     image: ImageState,
     selecting_at: (u8, u8),
 
-    blacklist: Vec<(EdgePos, EdgePos)>,
+    blacklist: Vec<(Pos, EdgePos)>,
 }
 
 struct ImageStateIdle {
@@ -296,6 +296,22 @@ impl GuiState {
                 }
 
                 KeyDown {
+                    keycode: Some(Keycode::U),
+                    ..
+                } => {
+                    self.blacklist.pop();
+
+                    self.ctx
+                        .tx
+                        .send(GuiRequest::Recalculate {
+                            blacklist: self.blacklist.clone(),
+                        })
+                        .unwrap();
+
+                    self.image = ImageState::Waiting;
+                }
+
+                KeyDown {
                     keycode: Some(Keycode::Space),
                     ..
                 } => {
@@ -353,9 +369,7 @@ impl GuiState {
                     let entry1 = to_entry(reference_fragment, reference_side.opposite());
                     let entry2 = to_entry(selecting_fragment, reference_side);
 
-                    println!("{:?}, {:?}", entry1, entry2);
-
-                    self.blacklist.push((entry1, entry2));
+                    self.blacklist.push(dbg!((reference_fragment.pos, entry2)));
 
                     self.ctx
                         .tx

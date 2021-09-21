@@ -35,7 +35,9 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
         match rx.recv() {
             Ok(GuiRequest::Recalculate { blacklist }) => {
                 let (recovered_image, root_pos) = solve(fragments.clone(), grid, blacklist);
+
                 result = recovered_image.clone();
+
                 tx.send(GuiResponse::Recalculated {
                     recovered_image,
                     root_pos,
@@ -63,7 +65,7 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
 fn solve(
     mut fragments: Vec<Fragment>,
     grid: Grid,
-    _blacklist: Vec<(EdgePos, EdgePos)>,
+    blacklist: Vec<(Pos, EdgePos)>,
 ) -> (VecOnGrid<Option<Fragment>>, Pos) {
     let mut fragment_grid = VecOnGrid::<Option<Fragment>>::with_default(grid);
 
@@ -71,8 +73,8 @@ fn solve(
     let root = find_and_remove(&mut fragments, grid.pos(0, 0)).unwrap();
 
     // そこから上下左右に伸ばす形で探索
-    let (up, down) = shaker_fill(grid.height(), &mut fragments, Dir::North, &root);
-    let (left, right) = shaker_fill(grid.width(), &mut fragments, Dir::West, &root);
+    let (up, down) = shaker_fill(grid.height(), &mut fragments, Dir::North, &root, &blacklist);
+    let (left, right) = shaker_fill(grid.width(), &mut fragments, Dir::West, &root, &blacklist);
 
     // root から上下左右に何個断片が有るかわかったので、rootのあるべき座標が分かる
     let root_pos = grid.pos(left.len() as _, up.len() as _);
