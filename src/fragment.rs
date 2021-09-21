@@ -14,7 +14,7 @@ pub(crate) struct Edge {
 }
 
 /// `Edges` は断片画像の縁の四辺を表す. また, 断片画像を回転させたときでも同じように扱えるようにする.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Edges([Edge; 4]);
 
 impl Edges {
@@ -71,7 +71,7 @@ impl Edges {
 }
 
 /// `Fragment` は原画像から切り取った断片画像を表す.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Fragment {
     /// 原画像におけるこの断片画像の座標.
     pub(crate) pos: Pos,
