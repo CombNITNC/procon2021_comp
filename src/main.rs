@@ -12,7 +12,6 @@ mod fragment;
 mod grid;
 mod image;
 mod kaitou;
-mod map_fragment;
 mod move_resolve;
 mod pixel_match;
 mod submit;

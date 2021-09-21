@@ -1,3 +1,4 @@
+pub(crate) mod map_fragment;
 #[cfg(test)]
 mod tests;
 
