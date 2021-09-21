@@ -3,7 +3,7 @@ use std::sync::mpsc;
 use crate::basis::{Color, Dir};
 use crate::fragment::Fragment;
 use crate::grid::{Grid, Pos, VecOnGrid};
-use crate::pixel_match::gui::{GuiRequest, GuiResponse};
+use crate::pixel_match::gui::{EdgePos, GuiRequest, GuiResponse};
 
 mod double_side;
 mod gui;
@@ -21,7 +21,7 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
         .spawn(|| gui::begin(gui::GuiContext { tx: gtx, rx: grx }))
         .expect("failed to launch GUI thread");
 
-    let (recovered_image, root_pos) = solve(fragments.clone(), grid, None);
+    let (recovered_image, root_pos) = solve(fragments.clone(), grid, vec![]);
 
     let mut result = recovered_image.clone();
 
@@ -34,7 +34,7 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
     loop {
         match rx.recv() {
             Ok(GuiRequest::Recalculate { blacklist }) => {
-                let (recovered_image, root_pos) = solve(fragments.clone(), grid, Some(blacklist));
+                let (recovered_image, root_pos) = solve(fragments.clone(), grid, blacklist);
                 result = recovered_image.clone();
                 tx.send(GuiResponse::Recalculated {
                     recovered_image,
@@ -63,7 +63,7 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
 fn solve(
     mut fragments: Vec<Fragment>,
     grid: Grid,
-    _blacklist: Option<Vec<(Pos, Pos)>>,
+    _blacklist: Vec<(EdgePos, EdgePos)>,
 ) -> (VecOnGrid<Option<Fragment>>, Pos) {
     let mut fragment_grid = VecOnGrid::<Option<Fragment>>::with_default(grid);
 

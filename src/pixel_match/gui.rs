@@ -1,6 +1,7 @@
 use std::{
-    cell,
+    borrow::Cow,
     cmp::Ordering,
+    ops::{Deref, DerefMut},
     sync::mpsc::{Receiver, Sender},
     time::Duration,
 };
@@ -10,8 +11,8 @@ use sdl2::{
     keyboard::Keycode,
     pixels::Color as SdlColor,
     pixels::PixelFormatEnum,
-    rect::{Point, Rect},
-    render::{Canvas, Texture, TextureCreator, TextureQuery},
+    rect::Rect,
+    render::{Canvas, Texture, TextureCreator},
     rwops::RWops,
     surface::Surface,
     ttf::Font,
@@ -19,18 +20,24 @@ use sdl2::{
 };
 
 use crate::{
-    basis::Dir,
+    basis::{Dir, Rot},
     fragment::Fragment,
-    grid::{Grid, Pos, VecOnGrid},
+    grid::{Pos, VecOnGrid},
 };
+
+#[derive(Clone)]
+pub(super) struct EdgePos {
+    pos: Pos,
+    rot: Rot,
+}
 
 const WINDOW_WIDTH: u32 = 800;
 const WINDOW_HEIGHT: u32 = 800;
 
 pub(super) enum GuiRequest {
     Recalculate {
-        /// pos に .0 と .1 を持つ Fragment が隣り合わないことを示す
-        blacklist: Vec<(Pos, Pos)>,
+        /// 0 と .1 の示す Edge が隣り合わないことを示す
+        blacklist: Vec<(EdgePos, EdgePos)>,
     },
 
     Quit,
@@ -48,15 +55,21 @@ pub(super) struct GuiContext {
     pub(super) rx: Receiver<GuiResponse>,
 }
 
-pub(super) fn begin(context: GuiContext) {
+pub(super) fn begin(ctx: GuiContext) {
     let sdl = sdl2::init().expect("failed to initialize sdl");
     let video = sdl.video().expect("failed to initialize video subsystem");
     let ttf = sdl2::ttf::init().expect("failed to initialize ttf subsystem");
 
-    let font_ttf = RWops::from_bytes(include_bytes!("../../mplus-1m-medium.ttf"))
-        .expect("failed to create rwops");
-    let font = ttf
+    let ttf_bytes = include_bytes!("../../mplus-1m-medium.ttf");
+
+    let font_ttf = RWops::from_bytes(ttf_bytes).expect("failed to create rwops");
+    let big_font = ttf
         .load_font_from_rwops(font_ttf, 30)
+        .expect("failed to load font");
+
+    let font_ttf = RWops::from_bytes(ttf_bytes).expect("failed to create rwops");
+    let small_font = ttf
+        .load_font_from_rwops(font_ttf, 12)
         .expect("failed to load font");
 
     let mut canvas = video
@@ -77,12 +90,19 @@ pub(super) fn begin(context: GuiContext) {
         selecting_at: (0, 0),
         window_size: (WINDOW_WIDTH, WINDOW_HEIGHT),
         image: ImageState::Waiting,
-        ctx: context,
+        ctx,
         blacklist: vec![],
     };
 
+    let mut renderer = Renderer {
+        canvas: &mut canvas,
+        texture_creator: &texture_creator,
+        big_font: &big_font,
+        small_font: &small_font,
+        text_cache: vec![],
+    };
+
     let mut recovered_image_preview: Option<RecoveredImagePreview> = None;
-    let processing_message = WaitingMessage::new(&font, &texture_creator);
 
     loop {
         for event in sdl.event_pump().unwrap().poll_iter() {
@@ -97,13 +117,13 @@ pub(super) fn begin(context: GuiContext) {
             recovered_image_preview = None;
         }
 
-        canvas.set_draw_color(SdlColor::BLACK);
-        canvas.clear();
+        renderer.set_draw_color(SdlColor::BLACK);
+        renderer.clear();
 
         if let Some(ref preview) = recovered_image_preview {
-            preview.render(&mut canvas, &state);
+            preview.render(&mut renderer, &state, &small_font);
         } else {
-            processing_message.render(&mut canvas);
+            WaitingMessage.render(&mut renderer);
 
             // not to forget to process other GuiResponse
             #[allow(clippy::single_match)]
@@ -126,7 +146,7 @@ pub(super) fn begin(context: GuiContext) {
             }
         }
 
-        canvas.present();
+        renderer.present();
 
         std::thread::sleep(Duration::from_secs_f64(1.0 / 60.0));
     }
@@ -166,7 +186,7 @@ fn create_image_texture<'t>(
                         x.pixels()[(py * side_length) as usize..((py + 1) * side_length) as usize]
                             .iter()
                             .flat_map(|x| [x.r, x.g, x.b])
-                            .map(|x| ((x as f32) * 0.7) as u8),
+                            .map(|x| ((x as f32) * 0.5) as u8),
                     );
                 } else {
                     data.extend(std::iter::repeat(0).take(side_length));
@@ -190,7 +210,7 @@ struct GuiState {
     image: ImageState,
     selecting_at: (u8, u8),
 
-    blacklist: Vec<(Pos, Pos)>,
+    blacklist: Vec<(EdgePos, EdgePos)>,
 }
 
 struct ImageStateIdle {
@@ -293,8 +313,7 @@ impl GuiState {
                         .unwrap()
                         .pos;
 
-                    self.blacklist
-                        .push((selecting_fragment_pos, reference_fragment_pos));
+                    self.blacklist.push((todo!(), todo!()));
 
                     self.ctx
                         .tx
@@ -339,7 +358,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
         Self { texture }
     }
 
-    fn render(&self, canvas: &mut Canvas<Window>, state: &GuiState) {
+    fn render(&self, renderer: &mut Renderer<'_>, state: &GuiState, font: &Font) {
         let image_size = {
             let query = self.texture.query();
 
@@ -362,7 +381,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
             }
         };
 
-        canvas
+        renderer
             .copy(
                 &self.texture,
                 None,
@@ -370,14 +389,15 @@ impl<'tc> RecoveredImagePreview<'tc> {
             )
             .unwrap();
 
-        self.render_selection_and_root(canvas, state, image_size);
+        self.render_selection_and_root(renderer, state, image_size, font);
     }
 
     fn render_selection_and_root(
         &self,
-        canvas: &mut Canvas<Window>,
+        renderer: &mut Renderer<'_>,
         state: &GuiState,
         image_size: (u32, u32),
+        font: &Font,
     ) {
         let image_state = state
             .image
@@ -394,20 +414,20 @@ impl<'tc> RecoveredImagePreview<'tc> {
         let offset_of = |(x, y): (u8, u8)| (offset_of(x), offset_of(y));
 
         // root
-        canvas.set_draw_color(SdlColor::BLUE);
-        canvas.draw_partial_rect(offset_of(root.into()), cell_size, Sides::all());
+        renderer.set_draw_color(SdlColor::BLUE);
+        renderer.draw_partial_rect(offset_of(root.into()), cell_size, Sides::all());
 
         let selecting_at = state.selecting_at;
 
         // selection
-        canvas.set_draw_color(SdlColor::GREEN);
-        canvas.draw_partial_rect(offset_of(selecting_at), cell_size, Sides::all());
+        renderer.set_draw_color(SdlColor::GREEN);
+        renderer.draw_partial_rect(offset_of(selecting_at), cell_size, Sides::all());
 
         use Ordering::*;
 
         if state.selecting_at == root.into() {
-            canvas.set_draw_color(SdlColor::RED);
-            canvas.draw_partial_rect(offset_of(root.into()), cell_size, Sides::all());
+            renderer.set_draw_color(SdlColor::RED);
+            renderer.draw_partial_rect(offset_of(root.into()), cell_size, Sides::all());
             return;
         }
 
@@ -420,8 +440,8 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 _ => unreachable!(),
             };
 
-            canvas.set_draw_color(SdlColor::RED);
-            canvas.draw_partial_rect(offset_of(selecting_at), cell_size, side);
+            renderer.set_draw_color(SdlColor::RED);
+            renderer.draw_partial_rect(offset_of(selecting_at), cell_size, side);
             return;
         }
 
@@ -433,8 +453,22 @@ impl<'tc> RecoveredImagePreview<'tc> {
             _ => unreachable!(),
         };
 
-        canvas.set_draw_color(SdlColor::RED);
-        canvas.draw_partial_rect(offset_of(selecting_at), cell_size, side);
+        renderer.set_draw_color(SdlColor::RED);
+        renderer.draw_partial_rect(offset_of(selecting_at), cell_size, side);
+
+        for x in 0..grid.width() {
+            for y in 0..grid.height() {
+                let pos = grid.pos(x, y);
+                let fragment = image_state.recovered_image[pos].as_ref().unwrap();
+
+                renderer.render_text(
+                    format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
+                    offset_of((x, y)),
+                    SdlColor::GREEN,
+                    false,
+                );
+            }
+        }
     }
 }
 
@@ -477,26 +511,90 @@ impl CanvasExtension for Canvas<Window> {
     }
 }
 
-struct WaitingMessage<'tc> {
-    msg_texture: Texture<'tc>,
+struct WaitingMessage;
+
+impl WaitingMessage {
+    fn render(&self, canvas: &mut Renderer<'_>) {
+        canvas.render_text("Waiting for recovered image", (0, 0), SdlColor::WHITE, true);
+    }
 }
 
-impl<'tc> WaitingMessage<'tc> {
-    fn new(font: &Font, tc: &'tc TextureCreator<WindowContext>) -> Self {
-        let surface = font
-            .render("Waiting for recovered image")
-            .blended(SdlColor::RGB(255, 255, 255))
-            .unwrap();
+struct Renderer<'a> {
+    canvas: &'a mut Canvas<Window>,
+    texture_creator: &'a TextureCreator<WindowContext>,
+    big_font: &'a Font<'a, 'a>,
+    small_font: &'a Font<'a, 'a>,
+    text_cache: Vec<TextEntry<'a>>,
+}
 
-        let msg_texture = tc.create_texture_from_surface(surface).unwrap();
+struct TextEntry<'a> {
+    text: String,
+    color: SdlColor,
+    big: bool,
+    texture: Texture<'a>,
+}
 
-        Self { msg_texture }
+impl Deref for Renderer<'_> {
+    type Target = Canvas<Window>;
+
+    fn deref(&self) -> &Self::Target {
+        self.canvas
     }
+}
 
-    fn render(&self, canvas: &mut Canvas<Window>) {
-        let TextureQuery { width, height, .. } = self.msg_texture.query();
-        canvas
-            .copy(&self.msg_texture, None, Rect::new(0, 0, width, height))
+impl DerefMut for Renderer<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.canvas
+    }
+}
+
+impl Renderer<'_> {
+    fn render_text<'a>(
+        &'a mut self,
+        text: impl Into<Cow<'a, str>>,
+        pos: (i32, i32),
+        color: SdlColor,
+        big: bool,
+    ) {
+        let text = text.into();
+
+        let mut cache_entry = self
+            .text_cache
+            .iter()
+            .find(|&x| x.text == text && x.color == color && x.big == big);
+
+        if cache_entry.is_none() {
+            let font = if big {
+                &self.big_font
+            } else {
+                &self.small_font
+            };
+
+            let surface = font.render(&text).blended(color).unwrap();
+            let new_texture = self
+                .texture_creator
+                .create_texture_from_surface(surface)
+                .unwrap();
+
+            self.text_cache.push(TextEntry {
+                text: text.into_owned(),
+                color,
+                big,
+                texture: new_texture,
+            });
+
+            cache_entry = Some(self.text_cache.last().unwrap());
+        }
+
+        let texture = &cache_entry.unwrap().texture;
+        let query = texture.query();
+
+        self.canvas
+            .copy(
+                texture,
+                None,
+                Rect::new(pos.0, pos.1, query.width, query.height),
+            )
             .unwrap();
     }
 }
