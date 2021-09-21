@@ -25,10 +25,10 @@ use crate::{
     grid::{Pos, VecOnGrid},
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(super) struct EdgePos {
     pos: Pos,
-    rot: Rot,
+    dir: Dir,
 }
 
 const WINDOW_WIDTH: u32 = 800;
@@ -87,6 +87,7 @@ pub(super) fn begin(ctx: GuiContext) {
 
     let mut state = GuiState {
         running: true,
+        show_fragment_debug: false,
         selecting_at: (0, 0),
         window_size: (WINDOW_WIDTH, WINDOW_HEIGHT),
         image: ImageState::Waiting,
@@ -210,6 +211,7 @@ fn create_image_texture<'tc>(
 struct GuiState {
     running: bool,
     window_size: (u32, u32),
+    show_fragment_debug: bool,
 
     ctx: GuiContext,
     image: ImageState,
@@ -280,6 +282,20 @@ impl GuiState {
                 }
 
                 KeyDown {
+                    keycode: Some(Keycode::LShift),
+                    ..
+                } => {
+                    self.show_fragment_debug = true;
+                }
+
+                KeyUp {
+                    keycode: Some(Keycode::LShift),
+                    ..
+                } => {
+                    self.show_fragment_debug = false;
+                }
+
+                KeyDown {
                     keycode: Some(Keycode::Space),
                     ..
                 } => {
@@ -288,20 +304,21 @@ impl GuiState {
                     let root = idle_state.root_pos;
                     let selecting = self.selecting_at;
 
-                    let side = match (root.x().cmp(&selecting.0), root.y().cmp(&selecting.1)) {
-                        (Equal, Greater) => Dir::South,
-                        (Equal, Less) => Dir::North,
-                        (Less, Equal) => Dir::West,
-                        (Greater, Equal) => Dir::East,
+                    let reference_side =
+                        match (root.x().cmp(&selecting.0), root.y().cmp(&selecting.1)) {
+                            (Equal, Greater) => Dir::South,
+                            (Equal, Less) => Dir::North,
+                            (Less, Equal) => Dir::West,
+                            (Greater, Equal) => Dir::East,
 
-                        (Less, Less) => Dir::North,
-                        (Less, Greater) => Dir::South,
-                        (Greater, Less) => Dir::North,
-                        (Greater, Greater) => Dir::South,
-                        (Equal, Equal) => return,
-                    };
+                            (Less, Less) => Dir::North,
+                            (Less, Greater) => Dir::South,
+                            (Greater, Less) => Dir::North,
+                            (Greater, Greater) => Dir::South,
+                            (Equal, Equal) => return,
+                        };
 
-                    let reference_pos = match side {
+                    let reference_pos = match reference_side {
                         Dir::North => grid.pos(selecting.0, selecting.1 - 1),
                         Dir::South => grid.pos(selecting.0, selecting.1 + 1),
                         Dir::West => grid.pos(selecting.0 - 1, selecting.1),
@@ -310,15 +327,35 @@ impl GuiState {
 
                     let selecting = grid.pos(selecting.0, selecting.1);
 
-                    let selecting_fragment_pos =
-                        idle_state.recovered_image[selecting].as_ref().unwrap().pos;
+                    let selecting_fragment =
+                        idle_state.recovered_image[selecting].as_ref().unwrap();
 
-                    let reference_fragment_pos = idle_state.recovered_image[reference_pos]
-                        .as_ref()
-                        .unwrap()
-                        .pos;
+                    let reference_fragment =
+                        idle_state.recovered_image[reference_pos].as_ref().unwrap();
 
-                    self.blacklist.push((todo!(), todo!()));
+                    let to_entry = |f: &Fragment, side: Dir| {
+                        let mut table = [Dir::North, Dir::East, Dir::South, Dir::West];
+                        table.rotate_right(f.rot.as_num() as usize);
+
+                        let index = match side {
+                            Dir::North => 0,
+                            Dir::East => 1,
+                            Dir::South => 2,
+                            Dir::West => 3,
+                        };
+
+                        EdgePos {
+                            pos: f.pos,
+                            dir: table[index],
+                        }
+                    };
+
+                    let entry1 = to_entry(reference_fragment, reference_side.opposite());
+                    let entry2 = to_entry(selecting_fragment, reference_side);
+
+                    println!("{:?}, {:?}", entry1, entry2);
+
+                    self.blacklist.push((entry1, entry2));
 
                     self.ctx
                         .tx
@@ -366,17 +403,16 @@ impl<'tc> RecoveredImagePreview<'tc> {
         let mut surface = Surface::new(13, 13, PixelFormatEnum::RGB888).unwrap();
         surface.with_lock_mut(|surface_data| {
             for (i, c) in bitmap.chars().filter(|&x| x == '.' || x == '#').enumerate() {
-                let mut write = |r, g, b, a| {
+                let mut write = |r, g, b| {
                     let i = i * 4;
                     surface_data[i] = r;
                     surface_data[i + 1] = g;
                     surface_data[i + 2] = b;
-                    surface_data[i + 3] = a;
                 };
 
                 match c {
-                    '.' => write(0, 0, 0, 0),
-                    '#' => write(0, 255, 0, 255),
+                    '.' => write(0, 0, 0),
+                    '#' => write(0, 255, 0),
                     _ => unreachable!(),
                 }
             }
@@ -423,6 +459,10 @@ impl<'tc> RecoveredImagePreview<'tc> {
             .unwrap();
 
         self.render_selection_and_root(renderer, state, image_size);
+
+        if state.show_fragment_debug {
+            self.render_fragment_debug(renderer, state, image_size);
+        }
     }
 
     fn render_selection_and_root(
@@ -434,7 +474,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
         let image_state = state
             .image
             .as_idle()
-            .expect("RecoveredImagePreview::render is called while waiting for recovered image");
+            .expect("called while waiting for recovered image");
 
         let root = image_state.root_pos;
         let grid = image_state.recovered_image.grid;
@@ -487,6 +527,25 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
         renderer.set_draw_color(SdlColor::RED);
         renderer.draw_partial_rect(offset_of(selecting_at), cell_size, side);
+    }
+
+    fn render_fragment_debug(
+        &self,
+        renderer: &mut Renderer<'_>,
+        state: &GuiState,
+        image_size: (u32, u32),
+    ) {
+        let image_state = state
+            .image
+            .as_idle()
+            .expect("called while waiting for recovered image");
+
+        let grid = image_state.recovered_image.grid;
+
+        let cell_side_length = image_size.0 as f64 / grid.width() as f64;
+
+        let offset_of = |p: u8| (cell_side_length * p as f64) as i32;
+        let offset_of = |(x, y): (u8, u8)| (offset_of(x), offset_of(y));
 
         for x in 0..grid.width() {
             for y in 0..grid.height() {
@@ -500,13 +559,19 @@ impl<'tc> RecoveredImagePreview<'tc> {
                     false,
                 );
 
-                let mut query = self.arrow_texture.query();
-                query.width *= 3;
-                query.height *= 3;
+                // assuming arrow is always square.
+                let arrow_side_length = 20;
                 let arrow_pos = offset_of((x + 1, y + 1));
                 let arrow_pos = (
-                    arrow_pos.0 - query.width as i32,
-                    arrow_pos.1 - query.height as i32,
+                    arrow_pos.0 - arrow_side_length as i32,
+                    arrow_pos.1 - arrow_side_length as i32,
+                );
+
+                let rect = Rect::new(
+                    arrow_pos.0,
+                    arrow_pos.1,
+                    arrow_side_length,
+                    arrow_side_length,
                 );
                 let angle = match fragment.rot {
                     Rot::R0 => 0.0,
@@ -516,20 +581,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 };
 
                 renderer
-                    .copy_ex(
-                        &self.arrow_texture,
-                        None,
-                        Some(Rect::new(
-                            arrow_pos.0,
-                            arrow_pos.1,
-                            query.width,
-                            query.height,
-                        )),
-                        angle,
-                        None,
-                        false,
-                        false,
-                    )
+                    .copy_ex(&self.arrow_texture, None, rect, angle, None, false, false)
                     .unwrap();
             }
         }
@@ -652,13 +704,11 @@ impl Renderer<'_> {
 
         let texture = &cache_entry.unwrap().texture;
         let query = texture.query();
+        let rect = Rect::new(pos.0, pos.1, query.width, query.height);
 
-        self.canvas
-            .copy(
-                texture,
-                None,
-                Rect::new(pos.0, pos.1, query.width, query.height),
-            )
-            .unwrap();
+        self.canvas.set_draw_color(SdlColor::BLACK);
+        self.canvas.fill_rect(rect).unwrap();
+        self.canvas.set_draw_color(color);
+        self.canvas.copy(texture, None, rect).unwrap();
     }
 }
