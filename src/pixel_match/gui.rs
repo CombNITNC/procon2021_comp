@@ -121,7 +121,7 @@ pub(super) fn begin(ctx: GuiContext) {
         renderer.clear();
 
         if let Some(ref preview) = recovered_image_preview {
-            preview.render(&mut renderer, &state, &small_font);
+            preview.render(&mut renderer, &state);
         } else {
             WaitingMessage.render(&mut renderer);
 
@@ -132,9 +132,13 @@ pub(super) fn begin(ctx: GuiContext) {
                     mut recovered_image,
                     root_pos,
                 }) => {
-                    recovered_image_preview = Some(RecoveredImagePreview {
-                        texture: create_image_texture(&mut recovered_image, &texture_creator),
-                    });
+                    let recovered_image_texture =
+                        create_image_texture(&mut renderer, &mut recovered_image);
+
+                    recovered_image_preview = Some(RecoveredImagePreview::new(
+                        &mut renderer,
+                        recovered_image_texture,
+                    ));
 
                     state.image = ImageState::Idle(ImageStateIdle {
                         recovered_image,
@@ -154,10 +158,10 @@ pub(super) fn begin(ctx: GuiContext) {
     state.ctx.tx.send(GuiRequest::Quit).unwrap();
 }
 
-fn create_image_texture<'t>(
+fn create_image_texture<'tc>(
+    renderer: &mut Renderer<'tc>,
     fragment_grid: &mut VecOnGrid<Option<Fragment>>,
-    texture_creator: &'t TextureCreator<WindowContext>,
-) -> Texture<'t> {
+) -> Texture<'tc> {
     let grid = fragment_grid.grid;
     let side_length = fragment_grid[grid.pos(0, 0)]
         .as_ref()
@@ -166,7 +170,6 @@ fn create_image_texture<'t>(
 
     let width = (side_length * grid.width() as usize) as u32;
     let height = (side_length * grid.height() as usize) as u32;
-    let mut surface = Surface::new(width, height, PixelFormatEnum::RGB24).unwrap();
 
     let mut data = Vec::with_capacity(
         side_length
@@ -189,15 +192,17 @@ fn create_image_texture<'t>(
                             .map(|x| ((x as f32) * 0.5) as u8),
                     );
                 } else {
-                    data.extend(std::iter::repeat(0).take(side_length));
+                    data.extend(std::iter::repeat(0).take(side_length * 3));
                 }
             }
         }
     }
 
+    let mut surface = Surface::new(width, height, PixelFormatEnum::RGB24).unwrap();
     surface.with_lock_mut(|x| x.copy_from_slice(&data));
 
-    texture_creator
+    renderer
+        .texture_creator
         .create_texture_from_surface(surface)
         .unwrap()
 }
@@ -350,17 +355,48 @@ impl ImageState {
 }
 
 struct RecoveredImagePreview<'tc> {
-    texture: Texture<'tc>,
+    recovered_image_texture: Texture<'tc>,
+    arrow_texture: Texture<'tc>,
 }
 
 impl<'tc> RecoveredImagePreview<'tc> {
-    fn new(texture: Texture<'tc>) -> Self {
-        Self { texture }
+    fn new(renderer: &mut Renderer<'tc>, recovered_image_texture: Texture<'tc>) -> Self {
+        let bitmap = include_str!("./arrow.ascii");
+
+        let mut surface = Surface::new(13, 13, PixelFormatEnum::RGB888).unwrap();
+        surface.with_lock_mut(|surface_data| {
+            println!("len: {}", surface_data.len());
+            for (i, c) in bitmap.chars().filter(|&x| x == '.' || x == '#').enumerate() {
+                println!("{} {}", i, c);
+                let mut write = |r, g, b, a| {
+                    let i = i * 3;
+                    surface_data[i] = r;
+                    surface_data[i + 1] = g;
+                    surface_data[i + 2] = b;
+                    println!("i: {} {} {}", i, i + 1, i + 2);
+                    // surface_data[i + 3] = a;
+                };
+
+                match c {
+                    '.' => write(0, 0, 0, 0),
+                    '#' => write(0, 255, 0, 255),
+                    _ => unreachable!(),
+                }
+            }
+        });
+
+        Self {
+            recovered_image_texture,
+            arrow_texture: renderer
+                .texture_creator
+                .create_texture_from_surface(surface)
+                .unwrap(),
+        }
     }
 
-    fn render(&self, renderer: &mut Renderer<'_>, state: &GuiState, font: &Font) {
+    fn render(&self, renderer: &mut Renderer<'_>, state: &GuiState) {
         let image_size = {
-            let query = self.texture.query();
+            let query = self.recovered_image_texture.query();
 
             let src = state.window_size;
             let dst = (query.width as u32, query.height as u32);
@@ -383,13 +419,13 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
         renderer
             .copy(
-                &self.texture,
+                &self.recovered_image_texture,
                 None,
                 Some(Rect::new(0, 0, image_size.0, image_size.1)),
             )
             .unwrap();
 
-        self.render_selection_and_root(renderer, state, image_size, font);
+        self.render_selection_and_root(renderer, state, image_size);
     }
 
     fn render_selection_and_root(
@@ -397,7 +433,6 @@ impl<'tc> RecoveredImagePreview<'tc> {
         renderer: &mut Renderer<'_>,
         state: &GuiState,
         image_size: (u32, u32),
-        font: &Font,
     ) {
         let image_state = state
             .image
@@ -461,12 +496,37 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 let pos = grid.pos(x, y);
                 let fragment = image_state.recovered_image[pos].as_ref().unwrap();
 
-                renderer.render_text(
-                    format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
-                    offset_of((x, y)),
-                    SdlColor::GREEN,
-                    false,
+                // renderer.render_text(
+                //     format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
+                //     offset_of((x, y)),
+                //     SdlColor::GREEN,
+                //     false,
+                // );
+
+                let query = self.arrow_texture.query();
+                let arrow_pos = offset_of((x + 1, y + 1));
+                let arrow_pos = (
+                    arrow_pos.0 as u32 - query.width,
+                    arrow_pos.1 as u32 - query.height,
                 );
+                let angle = match fragment.rot {
+                    Rot::R0 => 0.0,
+                    Rot::R90 => 90.0,
+                    Rot::R180 => 180.0,
+                    Rot::R270 => 270.0,
+                };
+
+                renderer
+                    .copy_ex(
+                        &self.arrow_texture,
+                        None,
+                        Some(Rect::new(0, 0, arrow_pos.0, arrow_pos.1)),
+                        angle,
+                        None,
+                        false,
+                        false,
+                    )
+                    .unwrap();
             }
         }
     }
