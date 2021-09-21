@@ -365,16 +365,13 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
         let mut surface = Surface::new(13, 13, PixelFormatEnum::RGB888).unwrap();
         surface.with_lock_mut(|surface_data| {
-            println!("len: {}", surface_data.len());
             for (i, c) in bitmap.chars().filter(|&x| x == '.' || x == '#').enumerate() {
-                println!("{} {}", i, c);
                 let mut write = |r, g, b, a| {
-                    let i = i * 3;
+                    let i = i * 4;
                     surface_data[i] = r;
                     surface_data[i + 1] = g;
                     surface_data[i + 2] = b;
-                    println!("i: {} {} {}", i, i + 1, i + 2);
-                    // surface_data[i + 3] = a;
+                    surface_data[i + 3] = a;
                 };
 
                 match c {
@@ -496,18 +493,20 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 let pos = grid.pos(x, y);
                 let fragment = image_state.recovered_image[pos].as_ref().unwrap();
 
-                // renderer.render_text(
-                //     format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
-                //     offset_of((x, y)),
-                //     SdlColor::GREEN,
-                //     false,
-                // );
+                renderer.render_text(
+                    format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
+                    offset_of((x, y)),
+                    SdlColor::GREEN,
+                    false,
+                );
 
-                let query = self.arrow_texture.query();
+                let mut query = self.arrow_texture.query();
+                query.width *= 3;
+                query.height *= 3;
                 let arrow_pos = offset_of((x + 1, y + 1));
                 let arrow_pos = (
-                    arrow_pos.0 as u32 - query.width,
-                    arrow_pos.1 as u32 - query.height,
+                    arrow_pos.0 - query.width as i32,
+                    arrow_pos.1 - query.height as i32,
                 );
                 let angle = match fragment.rot {
                     Rot::R0 => 0.0,
@@ -520,7 +519,12 @@ impl<'tc> RecoveredImagePreview<'tc> {
                     .copy_ex(
                         &self.arrow_texture,
                         None,
-                        Some(Rect::new(0, 0, arrow_pos.0, arrow_pos.1)),
+                        Some(Rect::new(
+                            arrow_pos.0,
+                            arrow_pos.1,
+                            query.width,
+                            query.height,
+                        )),
                         angle,
                         None,
                         false,
