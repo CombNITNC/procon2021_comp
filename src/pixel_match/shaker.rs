@@ -2,7 +2,6 @@ use super::{average_distance, find_and_remove, find_with, gui::EdgePos, DiffEntr
 use crate::{
     basis::Dir,
     fragment::{Edge, Fragment},
-    grid::Pos,
 };
 
 fn find_by_single_side<'a, B>(

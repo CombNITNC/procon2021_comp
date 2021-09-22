@@ -12,6 +12,8 @@ mod shaker;
 use double_side::fill_by_double_side;
 use shaker::shaker_fill;
 
+use self::gui::RecalculateArtifact;
+
 pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<Fragment>> {
     let (gtx, rx) = mpsc::channel();
     let (tx, grx) = mpsc::channel();
@@ -25,10 +27,10 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
 
     let mut result = recovered_image.clone();
 
-    tx.send(GuiResponse::Recalculated {
+    tx.send(GuiResponse::Recalculated(RecalculateArtifact {
         recovered_image,
         root_pos,
-    })
+    }))
     .unwrap();
 
     loop {
@@ -38,10 +40,10 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
 
                 result = recovered_image.clone();
 
-                tx.send(GuiResponse::Recalculated {
+                tx.send(GuiResponse::Recalculated(RecalculateArtifact {
                     recovered_image,
                     root_pos,
-                })
+                }))
                 .unwrap();
             }
 
