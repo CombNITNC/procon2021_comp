@@ -147,7 +147,7 @@ impl AddAssign for Rot {
 }
 
 /// `Dir` はある断片画像において辺が位置する向きを表す.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Dir {
     North,
     East,

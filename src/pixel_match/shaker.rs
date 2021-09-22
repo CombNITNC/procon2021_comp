@@ -1,4 +1,4 @@
-use super::{average_distance, find_and_remove, find_with, gui::EdgePos, DiffEntry};
+use super::{average_distance, find_and_remove, find_with, gui::EdgePos, DiffEntry, ResolveHints};
 use crate::{
     basis::Dir,
     fragment::{Edge, Fragment},
@@ -37,33 +37,58 @@ pub(super) fn shaker_fill(
     fragments: &mut Vec<Fragment>,
     left_dir: Dir,
     root_ref: &Fragment,
-    blacklist: &[(Pos, EdgePos)],
+    hints: &mut ResolveHints,
 ) -> (Vec<Fragment>, Vec<Fragment>) {
+    let num_fragment = num_fragment as usize;
+
     let right_dir = left_dir.opposite();
     let (mut left, mut right) = (vec![], vec![]);
     let (mut left_fragment_ref, mut right_fragment_ref) = (root_ref, root_ref);
 
-    while right.len() + left.len() + 1 != num_fragment as usize {
-        let left_blacklist = blacklist
-            .iter()
-            .filter(|(x, _)| *x == left_fragment_ref.pos)
-            .map(|(_, x)| x);
+    while right.len() + left.len() + (1/* for root */) != num_fragment {
+        if let Some(pairs) = hints.confirmed_pairs(EdgePos::new(left_fragment_ref.pos, left_dir)) {
+            if right.len() + left.len() + pairs.len() + 1 > num_fragment {
+                println!("shaker_fill: couldn't apply confirmed_pairs because of size overrun");
+            } else {
+                println!("applying {} confirmed pairs", pairs.len());
+                for (pos, rot) in pairs {
+                    let mut fragment = find_and_remove(fragments, pos).unwrap();
+                    fragment.rotate(rot);
+                    left.push(fragment);
+                }
+                left_fragment_ref = left.last().unwrap();
+            }
+        }
 
-        let right_blacklist = blacklist
-            .iter()
-            .filter(|(x, _)| *x == right_fragment_ref.pos)
-            .map(|(_, x)| x);
+        if let Some(pairs) = hints.confirmed_pairs(EdgePos::new(right_fragment_ref.pos, right_dir))
+        {
+            if right.len() + left.len() + pairs.len() + 1 > num_fragment {
+                println!("shaker_fill: couldn't apply confirmed_pairs because of size overrun");
+            } else {
+                println!("applying {} confirmed pairs", pairs.len());
+                for (pos, rot) in pairs {
+                    let mut fragment = find_and_remove(fragments, pos).unwrap();
+                    fragment.rotate(rot);
+                    right.push(fragment);
+                }
+                right_fragment_ref = right.last().unwrap();
+            }
+        }
+
+        if right.len() + left.len() + 1 == num_fragment {
+            break;
+        }
 
         let right_score = find_by_single_side(
             fragments,
             right_fragment_ref.edges.edge(right_dir),
-            right_blacklist,
+            hints.blacklist_of(right_fragment_ref),
         );
 
         let left_score = find_by_single_side(
             fragments,
             left_fragment_ref.edges.edge(left_dir),
-            left_blacklist,
+            hints.blacklist_of(left_fragment_ref),
         );
 
         if right_score.score < left_score.score {

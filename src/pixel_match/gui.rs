@@ -25,21 +25,26 @@ use crate::{
     grid::{Pos, VecOnGrid},
 };
 
-#[derive(Clone, Debug)]
+use super::ResolveHints;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct EdgePos {
     pub(super) pos: Pos,
     pub(super) dir: Dir,
+}
+
+impl EdgePos {
+    #[inline]
+    pub(super) fn new(pos: Pos, dir: Dir) -> Self {
+        Self { pos, dir }
+    }
 }
 
 const WINDOW_WIDTH: u32 = 800;
 const WINDOW_HEIGHT: u32 = 800;
 
 pub(super) enum GuiRequest {
-    Recalculate {
-        /// 0 と .1 の示す Edge が隣り合わないことを示す
-        blacklist: Vec<(Pos, EdgePos)>,
-    },
-
+    Recalculate(ResolveHints),
     Quit,
 }
 
@@ -92,7 +97,8 @@ pub(super) fn begin(ctx: GuiContext) {
         window_size: (WINDOW_WIDTH, WINDOW_HEIGHT),
         image: ImageState::Waiting,
         ctx,
-        blacklist: vec![],
+        hints: ResolveHints::default(),
+        hints_edit_history: vec![],
     };
 
     let mut renderer = Renderer {
@@ -217,7 +223,13 @@ struct GuiState {
     image: ImageState,
     selecting_at: (u8, u8),
 
-    blacklist: Vec<(Pos, EdgePos)>,
+    hints: ResolveHints,
+    hints_edit_history: Vec<HintsEditKind>,
+}
+
+enum HintsEditKind {
+    Blacklist,
+    ConfirmedPairs,
 }
 
 struct ImageStateIdle {
@@ -259,17 +271,19 @@ impl GuiState {
 
             match event {
                 KeyDown {
-                    keycode: Some(Keycode::Left),
-                    ..
-                } => {
-                    self.selecting_at.0 = self.selecting_at.0.saturating_sub(1);
-                }
-
-                KeyDown {
                     keycode: Some(Keycode::Up),
                     ..
                 } => {
                     self.selecting_at.1 = self.selecting_at.1.saturating_sub(1);
+                }
+
+                KeyDown {
+                    keycode: Some(Keycode::Down),
+                    ..
+                } => {
+                    if self.selecting_at.1 < grid.height() - 1 {
+                        self.selecting_at.1 += 1;
+                    }
                 }
 
                 KeyDown {
@@ -279,6 +293,13 @@ impl GuiState {
                     if self.selecting_at.0 < grid.width() - 1 {
                         self.selecting_at.0 += 1;
                     }
+                }
+
+                KeyDown {
+                    keycode: Some(Keycode::Left),
+                    ..
+                } => {
+                    self.selecting_at.0 = self.selecting_at.0.saturating_sub(1);
                 }
 
                 KeyDown {
@@ -299,16 +320,19 @@ impl GuiState {
                     keycode: Some(Keycode::U),
                     ..
                 } => {
-                    self.blacklist.pop();
+                    match self.hints_edit_history.pop() {
+                        Some(HintsEditKind::Blacklist) => {
+                            self.hints.blacklist.pop();
+                        }
 
-                    self.ctx
-                        .tx
-                        .send(GuiRequest::Recalculate {
-                            blacklist: self.blacklist.clone(),
-                        })
-                        .unwrap();
+                        Some(HintsEditKind::ConfirmedPairs) => {
+                            self.hints.confirmed_pairs.pop();
+                        }
 
-                    self.image = ImageState::Waiting;
+                        None => return,
+                    };
+
+                    self.send_recalculate_request();
                 }
 
                 KeyDown {
@@ -346,53 +370,42 @@ impl GuiState {
                     let selecting_fragment =
                         idle_state.recovered_image[selecting].as_ref().unwrap();
 
+                    let mut table = [Dir::North, Dir::East, Dir::South, Dir::West];
+                    table.rotate_right(selecting_fragment.rot.as_num() as usize);
+
+                    let index = match reference_side {
+                        Dir::North => 0,
+                        Dir::East => 1,
+                        Dir::South => 2,
+                        Dir::West => 3,
+                    };
+
+                    let entry = EdgePos {
+                        pos: selecting_fragment.pos,
+                        dir: table[index],
+                    };
+
                     let reference_fragment =
                         idle_state.recovered_image[reference_pos].as_ref().unwrap();
 
-                    let to_entry = |f: &Fragment, side: Dir| {
-                        let mut table = [Dir::North, Dir::East, Dir::South, Dir::West];
-                        table.rotate_right(f.rot.as_num() as usize);
+                    self.hints.blacklist.push((reference_fragment.pos, entry));
+                    self.hints_edit_history.push(HintsEditKind::Blacklist);
 
-                        let index = match side {
-                            Dir::North => 0,
-                            Dir::East => 1,
-                            Dir::South => 2,
-                            Dir::West => 3,
-                        };
-
-                        EdgePos {
-                            pos: f.pos,
-                            dir: table[index],
-                        }
-                    };
-
-                    let entry1 = to_entry(reference_fragment, reference_side.opposite());
-                    let entry2 = to_entry(selecting_fragment, reference_side);
-
-                    self.blacklist.push(dbg!((reference_fragment.pos, entry2)));
-
-                    self.ctx
-                        .tx
-                        .send(GuiRequest::Recalculate {
-                            blacklist: self.blacklist.clone(),
-                        })
-                        .unwrap();
-
-                    self.image = ImageState::Waiting;
-                }
-
-                KeyDown {
-                    keycode: Some(Keycode::Down),
-                    ..
-                } => {
-                    if self.selecting_at.1 < grid.height() - 1 {
-                        self.selecting_at.1 += 1;
-                    }
+                    self.send_recalculate_request();
                 }
 
                 _ => {}
             }
         }
+    }
+
+    fn send_recalculate_request(&mut self) {
+        self.ctx
+            .tx
+            .send(GuiRequest::Recalculate(self.hints.clone()))
+            .unwrap();
+
+        self.image = ImageState::Waiting;
     }
 }
 

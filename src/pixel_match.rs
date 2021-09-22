@@ -1,6 +1,6 @@
 use std::sync::mpsc;
 
-use crate::basis::{Color, Dir};
+use crate::basis::{Color, Dir, Rot};
 use crate::fragment::Fragment;
 use crate::grid::{Grid, Pos, VecOnGrid};
 use crate::pixel_match::gui::{EdgePos, GuiRequest, GuiResponse};
@@ -21,7 +21,7 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
         .spawn(|| gui::begin(gui::GuiContext { tx: gtx, rx: grx }))
         .expect("failed to launch GUI thread");
 
-    let (recovered_image, root_pos) = solve(fragments.clone(), grid, vec![]);
+    let (recovered_image, root_pos) = solve(fragments.clone(), grid, ResolveHints::default());
 
     let mut result = recovered_image.clone();
 
@@ -33,8 +33,8 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
 
     loop {
         match rx.recv() {
-            Ok(GuiRequest::Recalculate { blacklist }) => {
-                let (recovered_image, root_pos) = solve(fragments.clone(), grid, blacklist);
+            Ok(GuiRequest::Recalculate(hint)) => {
+                let (recovered_image, root_pos) = solve(fragments.clone(), grid, hint);
 
                 result = recovered_image.clone();
 
@@ -65,7 +65,7 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
 fn solve(
     mut fragments: Vec<Fragment>,
     grid: Grid,
-    blacklist: Vec<(Pos, EdgePos)>,
+    mut hints: ResolveHints,
 ) -> (VecOnGrid<Option<Fragment>>, Pos) {
     let mut fragment_grid = VecOnGrid::<Option<Fragment>>::with_default(grid);
 
@@ -73,8 +73,8 @@ fn solve(
     let root = find_and_remove(&mut fragments, grid.pos(0, 0)).unwrap();
 
     // そこから上下左右に伸ばす形で探索
-    let (up, down) = shaker_fill(grid.height(), &mut fragments, Dir::North, &root, &blacklist);
-    let (left, right) = shaker_fill(grid.width(), &mut fragments, Dir::West, &root, &blacklist);
+    let (up, down) = shaker_fill(grid.height(), &mut fragments, Dir::North, &root, &mut hints);
+    let (left, right) = shaker_fill(grid.width(), &mut fragments, Dir::West, &root, &mut hints);
 
     // root から上下左右に何個断片が有るかわかったので、rootのあるべき座標が分かる
     let root_pos = grid.pos(left.len() as _, up.len() as _);
@@ -225,4 +225,30 @@ fn average_distance<'a>(
 #[inline]
 fn find_and_remove(vec: &mut Vec<Fragment>, pos: Pos) -> Option<Fragment> {
     Some(vec.remove(vec.iter().position(|x| x.pos == pos)?))
+}
+
+#[derive(Debug, Default, Clone)]
+struct ResolveHints {
+    blacklist: Vec<(Pos, EdgePos)>,
+    confirmed_pairs: Vec<(EdgePos, Vec<(Pos, Rot)>)>,
+}
+
+impl ResolveHints {
+    fn blacklist_of<'a>(
+        &'a self,
+        fragment: &'a Fragment,
+    ) -> impl Iterator<Item = &'a EdgePos> + Clone + 'a {
+        self.blacklist
+            .iter()
+            .filter(move |&(x, _)| *x == fragment.pos)
+            .map(|(_, x)| x)
+    }
+
+    fn confirmed_pairs(&mut self, pos: EdgePos) -> Option<Vec<(Pos, Rot)>> {
+        Some(
+            self.confirmed_pairs
+                .remove(self.confirmed_pairs.iter().position(|x| x.0 == pos)?)
+                .1,
+        )
+    }
 }
