@@ -1,3 +1,4 @@
+pub(crate) mod map_fragment;
 #[cfg(test)]
 mod tests;
 
@@ -14,7 +15,7 @@ pub(crate) struct Edge {
 }
 
 /// `Edges` は断片画像の縁の四辺を表す. また, 断片画像を回転させたときでも同じように扱えるようにする.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Edges([Edge; 4]);
 
 impl Edges {
@@ -60,11 +61,14 @@ impl Edges {
     }
 }
 
-/// `Fragment` は原画像から切り取った断片画像を表す. その座標 `pos` と回転させた向き `rot` と縁四辺 `edges` を表す.
-#[derive(Debug)]
+/// `Fragment` は原画像から切り取った断片画像を表す.
+#[derive(Debug, Clone)]
 pub(crate) struct Fragment {
+    /// 原画像におけるこの断片画像の座標.
     pub(crate) pos: Pos,
+    /// この断片画像のを元の原画像から回転させている座標.
     pub(crate) rot: Rot,
+    /// この断片画像の縁四辺.
     pub(crate) edges: Edges,
     pixels: Vec<Color>,
 }
