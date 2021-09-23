@@ -36,7 +36,7 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragmen
     loop {
         match rx.recv() {
             Ok(GuiRequest::Recalculate(hint)) => {
-                let (recovered_image, root_pos) = solve(fragments.clone(), grid, hint);
+                let (recovered_image, root_pos) = solve(fragments.clone(), grid, dbg!(hint));
 
                 result = recovered_image.clone();
 
@@ -253,11 +253,14 @@ impl ResolveHints {
             .map(|(_, x)| x)
     }
 
-    fn confirmed_pairs(&mut self, pos: EdgePos) -> Option<Vec<(Pos, Rot)>> {
-        Some(
-            self.confirmed_pairs
-                .remove(self.confirmed_pairs.iter().position(|x| x.0 == pos)?)
-                .1,
-        )
+    fn confirmed_pairs_of(&mut self, pos: EdgePos) -> Option<Vec<(Pos, Rot)>> {
+        let (index, _) = self
+            .confirmed_pairs
+            .iter()
+            .enumerate()
+            .filter(|(_, (p, _))| *p == pos)
+            .max_by_key(|(_, (_, v))| v.len())?;
+
+        Some(self.confirmed_pairs.remove(index).1)
     }
 }

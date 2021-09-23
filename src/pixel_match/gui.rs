@@ -197,14 +197,14 @@ impl GuiState {
     }
 
     fn pop_hints(&mut self) {
-        self.hints_updated = true;
-
         match self.hints_edit_history.pop() {
             Some(HintsEditKind::Blacklist) => {
+                self.hints_updated = true;
                 self.hints.blacklist.pop();
             }
 
             Some(HintsEditKind::ConfirmedPairs) => {
+                self.hints_updated = true;
                 self.hints.confirmed_pairs.pop();
             }
 
@@ -227,6 +227,10 @@ impl GuiState {
             Quit { .. }
             | KeyDown {
                 keycode: Some(Keycode::Escape),
+                ..
+            }
+            | KeyDown {
+                keycode: Some(Keycode::Q),
                 ..
             } => {
                 self.running = false;

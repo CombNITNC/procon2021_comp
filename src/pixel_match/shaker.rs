@@ -45,7 +45,8 @@ pub(super) fn shaker_fill(
     let (mut left_fragment_ref, mut right_fragment_ref) = (root_ref, root_ref);
 
     while right.len() + left.len() + (1/* for root */) != num_fragment {
-        if let Some(pairs) = hints.confirmed_pairs(EdgePos::new(left_fragment_ref.pos, left_dir)) {
+        if let Some(pairs) = hints.confirmed_pairs_of(EdgePos::new(left_fragment_ref.pos, left_dir))
+        {
             if right.len() + left.len() + pairs.len() + 1 > num_fragment {
                 println!("shaker_fill: couldn't apply confirmed_pairs because of size overrun");
             } else {
@@ -59,7 +60,8 @@ pub(super) fn shaker_fill(
             }
         }
 
-        if let Some(pairs) = hints.confirmed_pairs(EdgePos::new(right_fragment_ref.pos, right_dir))
+        if let Some(pairs) =
+            hints.confirmed_pairs_of(EdgePos::new(right_fragment_ref.pos, right_dir))
         {
             if right.len() + left.len() + pairs.len() + 1 > num_fragment {
                 println!("shaker_fill: couldn't apply confirmed_pairs because of size overrun");

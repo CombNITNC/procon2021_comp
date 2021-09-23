@@ -33,7 +33,7 @@ impl<T> VecOnGrid<T> {
     }
 
     pub(crate) fn from_vec(grid: Grid, vec: Vec<T>) -> Option<Self> {
-        if vec.len() != (grid.width * grid.height) as usize {
+        if vec.len() != grid.width as usize * grid.height as usize {
             return None;
         }
 
