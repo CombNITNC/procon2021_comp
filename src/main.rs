@@ -83,9 +83,6 @@ fn biggest_case() -> Problem {
 
     println!("shuffle complete");
 
-    crate::debug_image_output("random.png", grid, &mut fragment_grid);
-    println!("debug_image_output() of shuffle result complete");
-
     let side_length = (info.width / COLS as u32) as usize;
     let zeros = vec![Color { r: 0, g: 0, b: 0 }; side_length];
     let mut data = vec![];
@@ -130,14 +127,8 @@ fn main() {
     debug_image_output("recovered_image.png", grid, &mut recovered_image);
 }
 
-fn debug_image_output(name: &str, grid: Grid, fragment_grid: &mut VecOnGrid<Option<Fragment>>) {
-    let side_length = fragment_grid
-        .iter()
-        .next()
-        .unwrap()
-        .as_ref()
-        .unwrap()
-        .side_length();
+fn debug_image_output(name: &str, grid: Grid, fragment_grid: &mut VecOnGrid<Fragment>) {
+    let side_length = fragment_grid.iter().next().unwrap().side_length();
 
     let f = File::create(name).unwrap();
     let f = BufWriter::new(f);
@@ -154,21 +145,17 @@ fn debug_image_output(name: &str, grid: Grid, fragment_grid: &mut VecOnGrid<Opti
 
     let mut writer = encoder.write_header().unwrap();
 
-    let zeros = vec![0; side_length * 3];
     let mut data = vec![];
 
     for y in 0..grid.height() {
         for py in 0..side_length {
             for x in 0..grid.width() {
-                if let Some(ref mut x) = &mut fragment_grid[(grid.pos(x, y))] {
-                    let pixels = x.pixels()
+                data.extend(
+                    fragment_grid[(grid.pos(x, y))].pixels()
                         [(py * side_length) as usize..((py + 1) * side_length) as usize]
                         .iter()
-                        .flat_map(|x| [x.r, x.g, x.b]);
-                    data.extend(pixels);
-                } else {
-                    data.extend_from_slice(&zeros);
-                }
+                        .flat_map(|x| [x.r, x.g, x.b]),
+                );
             }
         }
     }

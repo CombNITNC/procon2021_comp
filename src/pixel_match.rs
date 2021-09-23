@@ -14,7 +14,7 @@ use shaker::shaker_fill;
 
 use self::gui::RecalculateArtifact;
 
-pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<Fragment>> {
+pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragment> {
     let (gtx, rx) = mpsc::channel();
     let (tx, grx) = mpsc::channel();
 
@@ -60,7 +60,14 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Option<
         std::panic::resume_unwind(e);
     }
 
-    result
+    VecOnGrid::from_vec(
+        grid,
+        result
+            .into_iter()
+            .map(|x| x.expect("there were not filled fragment on grid"))
+            .collect(),
+    )
+    .unwrap()
 }
 
 // returns: (recovered_image, root_pos)

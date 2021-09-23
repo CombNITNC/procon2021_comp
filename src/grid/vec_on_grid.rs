@@ -32,6 +32,14 @@ impl<T> VecOnGrid<T> {
         }
     }
 
+    pub(crate) fn from_vec(grid: Grid, vec: Vec<T>) -> Option<Self> {
+        if vec.len() != (grid.width * grid.height) as usize {
+            return None;
+        }
+
+        Some(Self { grid, vec })
+    }
+
     /// `a` の位置と `b` の位置の要素を入れ替える.
     pub(crate) fn swap(&mut self, a: Pos, b: Pos) {
         self.vec
