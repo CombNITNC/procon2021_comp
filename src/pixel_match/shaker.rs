@@ -50,7 +50,6 @@ pub(super) fn shaker_fill(
             if right.len() + left.len() + pairs.len() + 1 > num_fragment {
                 println!("shaker_fill: couldn't apply confirmed_pairs because of size overrun");
             } else {
-                println!("applying {} confirmed pairs", pairs.len());
                 for (pos, rot) in pairs {
                     let mut fragment = find_and_remove(fragments, pos).unwrap();
                     fragment.rotate(rot);
@@ -66,7 +65,6 @@ pub(super) fn shaker_fill(
             if right.len() + left.len() + pairs.len() + 1 > num_fragment {
                 println!("shaker_fill: couldn't apply confirmed_pairs because of size overrun");
             } else {
-                println!("applying {} confirmed pairs", pairs.len());
                 for (pos, rot) in pairs {
                     let mut fragment = find_and_remove(fragments, pos).unwrap();
                     fragment.rotate(rot);

@@ -36,7 +36,7 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragmen
     loop {
         match rx.recv() {
             Ok(GuiRequest::Recalculate(hint)) => {
-                let (recovered_image, root_pos) = solve(fragments.clone(), grid, dbg!(hint));
+                let (recovered_image, root_pos) = solve(fragments.clone(), grid, hint);
 
                 result = recovered_image.clone();
 

@@ -111,6 +111,7 @@ pub(super) fn begin(ctx: GuiContext) {
     };
 
     let mut preview: Option<RecoveredImagePreview> = None;
+    let mut prev_selecting_at = None;
 
     loop {
         for event in sdl.event_pump().unwrap().poll_iter() {
@@ -126,7 +127,8 @@ pub(super) fn begin(ctx: GuiContext) {
         }
 
         if state.hints_updated {
-            preview = None;
+            let preview = preview.take();
+            prev_selecting_at = preview.map(|x| x.selecting_at);
             state.send_recalculate_request();
         }
 
@@ -142,7 +144,11 @@ pub(super) fn begin(ctx: GuiContext) {
             #[allow(clippy::single_match)]
             match state.ctx.rx.try_recv() {
                 Ok(GuiResponse::Recalculated(a)) => {
-                    preview = Some(RecoveredImagePreview::new(&mut renderer, a));
+                    preview = Some(RecoveredImagePreview::new(
+                        &mut renderer,
+                        a,
+                        prev_selecting_at,
+                    ));
                 }
 
                 Err(_) => {}
@@ -181,15 +187,15 @@ enum Hint {
 
 impl GuiState {
     fn push_hint(&mut self, hint: Hint) {
-        self.hints_updated = true;
-
         match hint {
             Hint::Blacklist(p, e) => {
+                self.hints_updated = true;
                 self.hints_edit_history.push(HintsEditKind::Blacklist);
                 self.hints.blacklist.push((p, e));
             }
 
             Hint::ConfirmedPair(e, t) => {
+                // ここでは再計算をしない
                 self.hints_edit_history.push(HintsEditKind::ConfirmedPairs);
                 self.hints.confirmed_pairs.push((e, t));
             }

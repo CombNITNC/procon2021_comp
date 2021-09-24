@@ -1,7 +1,4 @@
-use std::{
-    cmp::Ordering,
-    ops::{Add, AddAssign, Range, Sub, SubAssign},
-};
+use std::cmp::Ordering;
 
 use sdl2::{
     event::Event, keyboard::Keycode, pixels::Color as SdlColor, pixels::PixelFormatEnum,
@@ -22,19 +19,23 @@ pub(super) struct RecoveredImagePreview<'tc> {
     recovered_image_texture: Texture<'tc>,
     arrow_texture: Texture<'tc>,
 
-    selecting_at: (u8, u8),
+    pub(super) selecting_at: (u8, u8),
     dragging_from: Option<(u8, u8)>,
     show_fragment_debug: bool,
 }
 
 impl<'tc> RecoveredImagePreview<'tc> {
-    pub(super) fn new(renderer: &mut Renderer<'tc>, mut image: RecalculateArtifact) -> Self {
+    pub(super) fn new(
+        renderer: &mut Renderer<'tc>,
+        mut image: RecalculateArtifact,
+        prev_selecting_at: Option<(u8, u8)>,
+    ) -> Self {
         Self {
             recovered_image_texture: create_image_texture(renderer, &mut image.recovered_image),
             arrow_texture: arrow_texture(renderer.texture_creator),
             image,
 
-            selecting_at: (0, 0),
+            selecting_at: prev_selecting_at.unwrap_or((0, 0)),
             dragging_from: None,
             show_fragment_debug: false,
         }
