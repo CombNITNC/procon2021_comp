@@ -123,3 +123,38 @@ impl<V: OnGrid + Index<Pos> + IndexMut<Pos>> OnGrid for FlipY<V> {
         self.0.grid()
     }
 }
+
+#[test]
+fn case1() {
+    let grid = Grid::new(3, 4);
+    let mut vec = VecOnGrid::with_default(grid);
+    vec.iter_mut()
+        .enumerate()
+        .for_each(|(idx, elem)| *elem = idx);
+    assert_eq!(vec.grid(), Grid::new(3, 4));
+    assert_eq!(
+        vec.iter().copied().collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    );
+
+    let vec = vec.transpose();
+    assert_eq!(vec.grid(), Grid::new(4, 3));
+    assert_eq!(
+        vec.grid().all_pos().map(|pos| vec[pos]).collect::<Vec<_>>(),
+        vec![0, 3, 6, 9, 1, 4, 7, 10, 2, 5, 8, 11],
+    );
+
+    let vec = vec.flip_y();
+    assert_eq!(vec.grid(), Grid::new(4, 3));
+    assert_eq!(
+        vec.grid().all_pos().map(|pos| vec[pos]).collect::<Vec<_>>(),
+        vec![2, 5, 8, 11, 1, 4, 7, 10, 0, 3, 6, 9],
+    );
+
+    let vec = vec.flip_x();
+    assert_eq!(vec.grid(), Grid::new(4, 3));
+    assert_eq!(
+        vec.grid().all_pos().map(|pos| vec[pos]).collect::<Vec<_>>(),
+        vec![11, 8, 5, 2, 10, 7, 4, 1, 9, 6, 3, 0],
+    );
+}
