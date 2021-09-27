@@ -2,7 +2,9 @@ use std::ops::{Index, IndexMut};
 
 use super::{Grid, Pos, VecOnGrid};
 
+/// `VecOnGrid` 及びその派生系に座標変換を提供する.
 pub(crate) trait OnGrid: Index<Pos> + IndexMut<Pos> {
+    /// この座標変換をした系のサイズである `Grid` を返す.
     fn grid(&self) -> Grid;
 
     fn get(&self, index: Pos) -> Option<&<Self as Index<Pos>>::Output> {
@@ -15,6 +17,7 @@ pub(crate) trait OnGrid: Index<Pos> + IndexMut<Pos> {
             .then(move || &mut self[index])
     }
 
+    /// 系全体を転置するように座標変換する.
     fn transpose(self) -> Transpose<Self>
     where
         Self: Sized,
@@ -22,6 +25,7 @@ pub(crate) trait OnGrid: Index<Pos> + IndexMut<Pos> {
         Transpose(self)
     }
 
+    /// 系全体を X 軸で反転するように座標変換する.
     fn flip_x(self) -> FlipX<Self>
     where
         Self: Sized,
@@ -29,6 +33,7 @@ pub(crate) trait OnGrid: Index<Pos> + IndexMut<Pos> {
         FlipX(self)
     }
 
+    /// 系全体を Y 軸で反転するように座標変換する.
     fn flip_y(self) -> FlipY<Self>
     where
         Self: Sized,
@@ -36,6 +41,7 @@ pub(crate) trait OnGrid: Index<Pos> + IndexMut<Pos> {
         FlipY(self)
     }
 
+    /// 系全体を反時計回りに 90 度回すように座標変換する.
     fn rotate_to_left(self) -> FlipY<Transpose<Self>>
     where
         Self: Sized,
@@ -43,6 +49,7 @@ pub(crate) trait OnGrid: Index<Pos> + IndexMut<Pos> {
         FlipY(Transpose(self))
     }
 
+    /// 系全体を時計回りに 90 度回すように座標変換する.
     fn rotate_to_right(self) -> Transpose<FlipY<Self>>
     where
         Self: Sized,
