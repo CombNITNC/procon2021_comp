@@ -35,6 +35,20 @@ pub(crate) trait OnGrid: Index<Pos> + IndexMut<Pos> {
     {
         FlipY(self)
     }
+
+    fn rotate_to_left(self) -> FlipY<Transpose<Self>>
+    where
+        Self: Sized,
+    {
+        FlipY(Transpose(self))
+    }
+
+    fn rotate_to_right(self) -> Transpose<FlipY<Self>>
+    where
+        Self: Sized,
+    {
+        Transpose(FlipY(self))
+    }
 }
 
 impl<T> OnGrid for VecOnGrid<T> {
