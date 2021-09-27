@@ -1,0 +1,125 @@
+use std::ops::{Index, IndexMut};
+
+use super::{Grid, Pos, VecOnGrid};
+
+pub(crate) trait OnGrid: Index<Pos> + IndexMut<Pos> {
+    fn grid(&self) -> Grid;
+
+    fn get(&self, index: Pos) -> Option<&<Self as Index<Pos>>::Output> {
+        self.grid().is_pos_valid(index).then(move || &self[index])
+    }
+
+    fn get_mut(&mut self, index: Pos) -> Option<&mut <Self as Index<Pos>>::Output> {
+        self.grid()
+            .is_pos_valid(index)
+            .then(move || &mut self[index])
+    }
+
+    fn transpose(self) -> Transpose<Self>
+    where
+        Self: Sized,
+    {
+        Transpose(self)
+    }
+
+    fn flip_x(self) -> FlipX<Self>
+    where
+        Self: Sized,
+    {
+        FlipX(self)
+    }
+
+    fn flip_y(self) -> FlipY<Self>
+    where
+        Self: Sized,
+    {
+        FlipY(self)
+    }
+}
+
+impl<T> OnGrid for VecOnGrid<T> {
+    fn grid(&self) -> Grid {
+        self.grid
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Transpose<V>(V);
+
+impl<V: OnGrid + Index<Pos>> Index<Pos> for Transpose<V> {
+    type Output = V::Output;
+
+    fn index(&self, index: Pos) -> &Self::Output {
+        let x = index.x();
+        let y = index.y();
+        self.0.index(self.0.grid().pos(y, x))
+    }
+}
+
+impl<V: OnGrid + IndexMut<Pos>> IndexMut<Pos> for Transpose<V> {
+    fn index_mut(&mut self, index: Pos) -> &mut Self::Output {
+        let x = index.x();
+        let y = index.y();
+        self.0.index_mut(self.0.grid().pos(y, x))
+    }
+}
+
+impl<V: OnGrid + Index<Pos> + IndexMut<Pos>> OnGrid for Transpose<V> {
+    fn grid(&self) -> Grid {
+        let width = self.0.grid().width();
+        let height = self.0.grid().height();
+        Grid::new(height, width)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct FlipX<V>(V);
+
+impl<V: OnGrid + Index<Pos>> Index<Pos> for FlipX<V> {
+    type Output = V::Output;
+
+    fn index(&self, index: Pos) -> &Self::Output {
+        let width = self.0.grid().width();
+        self.0
+            .index(self.0.grid().pos(width - index.x() - 1, index.y()))
+    }
+}
+
+impl<V: OnGrid + IndexMut<Pos>> IndexMut<Pos> for FlipX<V> {
+    fn index_mut(&mut self, index: Pos) -> &mut Self::Output {
+        let width = self.0.grid().width();
+        self.0
+            .index_mut(self.0.grid().pos(width - index.x() - 1, index.y()))
+    }
+}
+impl<V: OnGrid + Index<Pos> + IndexMut<Pos>> OnGrid for FlipX<V> {
+    fn grid(&self) -> Grid {
+        self.0.grid()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct FlipY<V>(V);
+
+impl<V: OnGrid + Index<Pos>> Index<Pos> for FlipY<V> {
+    type Output = V::Output;
+
+    fn index(&self, index: Pos) -> &Self::Output {
+        let height = self.0.grid().height();
+        self.0
+            .index(self.0.grid().pos(index.x(), height - index.y() - 1))
+    }
+}
+
+impl<V: OnGrid + IndexMut<Pos>> IndexMut<Pos> for FlipY<V> {
+    fn index_mut(&mut self, index: Pos) -> &mut Self::Output {
+        let height = self.0.grid().height();
+        self.0
+            .index_mut(self.0.grid().pos(index.x(), height - index.y() - 1))
+    }
+}
+impl<V: OnGrid + Index<Pos> + IndexMut<Pos>> OnGrid for FlipY<V> {
+    fn grid(&self) -> Grid {
+        self.0.grid()
+    }
+}
