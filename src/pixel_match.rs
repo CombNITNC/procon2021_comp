@@ -36,6 +36,17 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragmen
     loop {
         match rx.recv() {
             Ok(GuiRequest::Recalculate(hint)) => {
+                println!("recalculating. blacklists: {{");
+                for h in &hint.blacklist {
+                    println!("    {:?}", h);
+                }
+                println!("}}");
+                println!("whitelists: {{");
+                for h in &hint.confirmed_pairs {
+                    println!("    {:?}", h);
+                }
+                println!("}}");
+
                 let (recovered_image, root_pos) = solve(fragments.clone(), grid, hint);
 
                 result = recovered_image.clone();

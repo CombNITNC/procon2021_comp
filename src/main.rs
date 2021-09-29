@@ -2,7 +2,7 @@
 
 use std::{
     fs::File,
-    io::{BufWriter, Cursor},
+    io::{BufReader, BufWriter, Cursor},
 };
 
 use png::{BitDepth, ColorType, Compression, Encoder};
@@ -27,7 +27,7 @@ fn biggest_case() -> Problem {
     const ROWS: u8 = 16;
     const COLS: u8 = ROWS;
 
-    let decoder = png::Decoder::new(Cursor::new(include_bytes!("../test_cases/03_biggest.png")));
+    let decoder = png::Decoder::new(Cursor::new(include_bytes!("../problem.png")));
     let mut reader = decoder.read_info().unwrap();
     let mut buf = vec![0; reader.output_buffer_size()];
     let info = reader.next_frame(&mut buf).unwrap();
@@ -116,15 +116,16 @@ fn biggest_case() -> Problem {
 }
 
 fn main() {
-    let problem = biggest_case();
-    println!("got problem");
-
+    let file = File::open("problem.ppm").expect("failed to open problem file");
+    let reader = BufReader::new(file);
+    let problem = image::read_problem(reader).unwrap();
     let grid = Grid::new(problem.rows, problem.cols);
+
     let fragments = fragment::Fragment::new_all(&problem);
 
     let mut recovered_image = pixel_match::resolve(fragments, grid);
 
-    debug_image_output("recovered_image.png", grid, &mut recovered_image);
+    // debug_image_output("recovered_image.png", grid, &mut recovered_image);
 }
 
 fn debug_image_output(name: &str, grid: Grid, fragment_grid: &mut VecOnGrid<Fragment>) {

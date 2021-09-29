@@ -180,6 +180,7 @@ enum HintsEditKind {
     ConfirmedPairs,
 }
 
+#[derive(Debug)]
 enum Hint {
     Blacklist(Pos, EdgePos),
     ConfirmedPair(EdgePos, Vec<(Pos, Rot)>),
@@ -351,11 +352,6 @@ impl Renderer<'_> {
 
     /// 特定の辺のみの描画もできる draw_rect
     fn draw_partial_rect(&mut self, (x, y): (i32, i32), (width, height): (i32, i32), sides: Sides) {
-        if sides.is_all() {
-            self.draw_rect(Rect::new(x, y, (width + 1) as _, (height + 1) as _))
-                .unwrap();
-            return;
-        }
         if sides.intersects(Sides::TOP) {
             self.draw_line((x, y), (x + width, y)).unwrap();
         }

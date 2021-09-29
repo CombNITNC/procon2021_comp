@@ -24,6 +24,11 @@ pub(super) struct RecoveredImagePreview<'tc> {
     show_fragment_debug: bool,
 }
 
+enum Axis {
+    X,
+    Y,
+}
+
 impl<'tc> RecoveredImagePreview<'tc> {
     pub(super) fn new(
         renderer: &mut Renderer<'tc>,
@@ -41,6 +46,14 @@ impl<'tc> RecoveredImagePreview<'tc> {
         }
     }
 
+    fn dragging_axis(&self, dragging_from: (u8, u8)) -> Axis {
+        match dragging_from {
+            (x, _) if x == self.selecting_at.0 => Axis::Y,
+            (_, y) if y == self.selecting_at.1 => Axis::X,
+            _ => panic!("called selecting_axis on invalid dragging state, dragging_from: {:?}, selecting_at: {:?}", self.dragging_from, self.selecting_at),
+        }
+    }
+
     pub(super) fn process_sdl_event(&mut self, event: Event, global_state: &mut GuiState) {
         use Event::*;
         let grid = self.image.recovered_image.grid;
@@ -50,6 +63,10 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 keycode: Some(Keycode::Up),
                 ..
             } => {
+                if matches!(self.dragging_from, Some(x) if x.0 != self.selecting_at.0) {
+                    return;
+                }
+
                 self.selecting_at.1 = self.selecting_at.1.saturating_sub(1);
             }
 
@@ -57,6 +74,10 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 keycode: Some(Keycode::Down),
                 ..
             } => {
+                if matches!(self.dragging_from, Some(x) if x.0 != self.selecting_at.0) {
+                    return;
+                }
+
                 if self.selecting_at.1 < grid.height() - 1 {
                     self.selecting_at.1 += 1;
                 }
@@ -66,7 +87,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 keycode: Some(Keycode::Right),
                 ..
             } => {
-                if self.dragging_from.is_some() {
+                if matches!(self.dragging_from, Some(x) if x.1 != self.selecting_at.1) {
                     return;
                 }
 
@@ -79,7 +100,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 keycode: Some(Keycode::Left),
                 ..
             } => {
-                if self.dragging_from.is_some() {
+                if matches!(self.dragging_from, Some(x) if x.1 != self.selecting_at.1) {
                     return;
                 }
 
@@ -120,11 +141,19 @@ impl<'tc> RecoveredImagePreview<'tc> {
             } => {
                 let dragging_from = self.dragging_from.take().unwrap();
                 let root_pos = self.image.root_pos.into();
+                let grid = self.image.recovered_image.grid;
 
                 // Ctrl押しただけ
                 if dragging_from == self.selecting_at {
                     return;
                 }
+
+                let dragging_axis = self.dragging_axis(dragging_from);
+                let (x_mapper, y_mapper) = (|x: (u8, u8)| x.0, |x: (u8, u8)| x.1);
+                let into_axis = match dragging_axis {
+                    Axis::X => &x_mapper as &dyn Fn((u8, u8)) -> u8,
+                    Axis::Y => &y_mapper as _,
+                };
 
                 /*
                     rootを跨ぐことは出来ない
@@ -142,7 +171,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 */
                 {
                     let mut table = [self.selecting_at, root_pos, dragging_from];
-                    table.sort_unstable_by_key(|x| x.1);
+                    table.sort_unstable_by_key(|x| into_axis(*x));
                     if table[0] != table[1] && table[1] != table[2] && table[1] == root_pos {
                         println!("rootを跨げません");
                         return;
@@ -150,46 +179,52 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 }
 
                 let mut table = [self.selecting_at, dragging_from];
-                table.sort_by_key(|a| i8::abs(a.1 as i8 - root_pos.1 as i8));
+                table.sort_by_key(|a| i8::abs(into_axis(*a) as i8 - into_axis(root_pos) as i8));
+                let [near_to_root, far_from_root] = table;
 
-                let near_to_root = table[0];
-                let far_from_root = table[1];
-
-                let reference_side = Self::calc_reference_side(self.image.root_pos, near_to_root);
-
+                // into_axis(near_to_root)..=into_axis(far_from_root)のイテレータがほしいだけ。
+                // わざわざこうしているのは、Rangeがそのままでは逆順に走査できないため。
+                // (例: 3..=5 は [3, 4, 5] だが、 5..=3 は [] になる。ここでは 5..=3 であっても [5, 4, 3] になってほしい。)
                 let mut iter = (
-                    near_to_root.1..=far_from_root.1,
-                    (far_from_root.1..=near_to_root.1).rev(),
+                    into_axis(near_to_root)..=into_axis(far_from_root),
+                    (into_axis(far_from_root)..=into_axis(near_to_root)).rev(),
                 );
 
-                let list = if near_to_root.1 > far_from_root.1 {
+                let list = if into_axis(near_to_root) > into_axis(far_from_root) {
                     &mut iter.1 as &mut dyn Iterator<Item = u8>
                 } else {
                     &mut iter.0 as _
                 }
-                .map(|y| {
-                    let fragment = self.image.recovered_image
-                        [self.image.recovered_image.grid.pos(near_to_root.0, y)]
-                    .as_ref()
-                    .unwrap();
+                .map(|x| {
+                    let pos = match dragging_axis {
+                        Axis::X => grid.pos(x, near_to_root.1),
+                        Axis::Y => grid.pos(near_to_root.0, x),
+                    };
 
+                    let fragment = self.image.recovered_image[pos].as_ref().unwrap();
                     (fragment.pos, fragment.rot)
                 })
                 .collect::<Vec<_>>();
 
-                let left = EdgePos {
-                    pos: {
-                        let pos = Self::move_on_grid(
-                            self.image.recovered_image.grid,
-                            near_to_root,
-                            reference_side,
-                        );
-                        self.image.recovered_image[pos].as_ref().unwrap().pos
-                    },
+                let reference_side = Self::calc_reference_side(self.image.root_pos, near_to_root);
+                let reference_pos = Self::move_on_grid(
+                    self.image.recovered_image.grid,
+                    near_to_root,
+                    reference_side,
+                );
+
+                // 復元*前*の画像での位置
+                let reference_image_pos = self.image.recovered_image[reference_pos]
+                    .as_ref()
+                    .unwrap()
+                    .pos;
+
+                let edgepos = EdgePos {
+                    pos: reference_image_pos,
                     dir: reference_side.opposite(),
                 };
 
-                global_state.push_hint(Hint::ConfirmedPair(left, list));
+                global_state.push_hint(Hint::ConfirmedPair(edgepos, list));
             }
 
             KeyDown {
@@ -326,54 +361,64 @@ impl<'tc> RecoveredImagePreview<'tc> {
         // drag
         if matches!(self.dragging_from, Some(from) if from != selecting_at) {
             let from = self.dragging_from.unwrap();
-            let range = if from.1 > selecting_at.1 {
-                selecting_at.1..=from.1
-            } else {
-                from.1..=selecting_at.1
+            let dragging_axis = self.dragging_axis(from);
+
+            let range = {
+                let a: u8;
+                let b: u8;
+
+                match dragging_axis {
+                    Axis::X => {
+                        a = from.0;
+                        b = selecting_at.0;
+                    }
+                    Axis::Y => {
+                        a = from.1;
+                        b = selecting_at.1;
+                    }
+                }
+
+                if a > b {
+                    b..=a
+                } else {
+                    a..=b
+                }
+            };
+
+            let (x_mapper, y_mapper) = (|x: u8| (x, from.1), |x: u8| (from.0, x));
+            let into_axis = match dragging_axis {
+                Axis::X => &x_mapper as &dyn Fn(u8) -> (u8, u8),
+                Axis::Y => &y_mapper as _,
             };
 
             renderer.set_draw_color(SdlColor::MAGENTA);
-            for y in range {
-                renderer.draw_partial_rect(offset_of((from.0, y)), cell_size, Sides::all());
+            for x in range {
+                renderer.draw_partial_rect(offset_of(into_axis(x)), cell_size, Sides::all());
             }
         }
 
         // selection
-        renderer.set_draw_color(SdlColor::GREEN);
-        renderer.draw_partial_rect(offset_of(selecting_at), cell_size, Sides::all());
-
-        if self.selecting_at == root.into() {
-            renderer.set_draw_color(SdlColor::RED);
-            renderer.draw_partial_rect(offset_of(root.into()), cell_size, Sides::all());
-            return;
-        }
 
         use Ordering::*;
 
-        if root.x() == selecting_at.0 || root.y() == selecting_at.1 {
-            let side = match (root.x().cmp(&selecting_at.0), root.y().cmp(&selecting_at.1)) {
-                (Equal, Greater) => Sides::BOTTOM,
-                (Equal, Less) => Sides::TOP,
-                (Less, Equal) => Sides::LEFT,
-                (Greater, Equal) => Sides::RIGHT,
-                _ => unreachable!(),
-            };
-
-            renderer.set_draw_color(SdlColor::RED);
-            renderer.draw_partial_rect(offset_of(selecting_at), cell_size, side);
-            return;
-        }
-
-        let side = match (root.x().cmp(&selecting_at.0), root.y().cmp(&selecting_at.1)) {
+        let sides = match (root.x().cmp(&selecting_at.0), root.y().cmp(&selecting_at.1)) {
             (Less, Less) => Sides::LEFT | Sides::TOP,
             (Less, Greater) => Sides::LEFT | Sides::BOTTOM,
             (Greater, Less) => Sides::RIGHT | Sides::TOP,
             (Greater, Greater) => Sides::RIGHT | Sides::BOTTOM,
-            _ => unreachable!(),
+
+            (Equal, Greater) => Sides::BOTTOM,
+            (Equal, Less) => Sides::TOP,
+            (Less, Equal) => Sides::LEFT,
+            (Greater, Equal) => Sides::RIGHT,
+
+            (Equal, Equal) => Sides::all(),
         };
 
         renderer.set_draw_color(SdlColor::RED);
-        renderer.draw_partial_rect(offset_of(selecting_at), cell_size, side);
+        renderer.draw_partial_rect(offset_of(selecting_at), cell_size, sides);
+        renderer.set_draw_color(SdlColor::GREEN);
+        renderer.draw_partial_rect(offset_of(selecting_at), cell_size, !sides);
     }
 
     fn render_fragment_debug(&self, renderer: &mut Renderer<'_>, image_size: (u32, u32)) {
