@@ -1,6 +1,7 @@
 pub(crate) use vec_on_grid::*;
 
 pub(crate) mod board;
+pub(crate) mod on_grid;
 mod vec_on_grid;
 
 /// `Pos` は `Grid` に存在する座標を表す.

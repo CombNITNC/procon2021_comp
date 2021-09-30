@@ -107,11 +107,13 @@ impl<T> VecOnGrid<T> {
 
     /// 要素にアクセスする.
     pub(crate) fn get(&self, pos: Pos) -> Option<&T> {
+        assert!(self.grid.is_pos_valid(pos));
         self.vec.get(self.grid.pos_as_index(pos))
     }
 
     /// 可変要素にアクセスする.
     pub(crate) fn get_mut(&mut self, pos: Pos) -> Option<&mut T> {
+        assert!(self.grid.is_pos_valid(pos));
         self.vec.get_mut(self.grid.pos_as_index(pos))
     }
 
