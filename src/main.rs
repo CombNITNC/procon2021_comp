@@ -12,6 +12,7 @@ mod basis;
 mod fragment;
 mod grid;
 mod image;
+mod kaitou;
 mod move_resolve;
 mod pixel_match;
 #[cfg(net)]
