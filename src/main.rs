@@ -5,6 +5,7 @@ use std::{
     io::{BufReader, BufWriter, Cursor},
 };
 
+use cfg_if::cfg_if;
 use png::{BitDepth, ColorType, Compression, Encoder};
 use rand::prelude::*;
 
@@ -15,7 +16,7 @@ mod image;
 mod kaitou;
 mod move_resolve;
 mod pixel_match;
-#[cfg(net)]
+#[cfg(feature = "net")]
 mod submit;
 
 use crate::{
@@ -23,6 +24,88 @@ use crate::{
     fragment::Fragment,
     grid::{Grid, VecOnGrid},
 };
+
+fn main() {
+    cfg_if! {
+        if #[cfg(feature = "net")] {
+            dotenv::dotenv().ok();
+            let submit_token =
+                std::env::var("TOKEN").expect("set TOKEN environment variable for auto submit");
+        }
+    }
+
+    let file = File::open("problem.ppm").expect("failed to open problem file");
+    let reader = BufReader::new(file);
+    let problem = image::read_problem(reader).unwrap();
+    let grid = Grid::new(problem.rows, problem.cols);
+    let fragments = fragment::Fragment::new_all(&problem);
+
+    let mut recovered_image = pixel_match::resolve(fragments, grid);
+    println!("pixel_match::resolve() done");
+
+    let movements = fragment::map_fragment::map_fragment(&recovered_image);
+    println!("{:#?}", movements);
+
+    let ops = move_resolve::resolve(
+        grid,
+        &movements,
+        problem.select_limit,
+        problem.swap_cost,
+        problem.select_cost,
+    );
+    println!("{:#?}", ops);
+
+    println!("move_resolve::resolve() done");
+    println!("submitting");
+
+    let rots = recovered_image.iter().map(|x| x.rot).collect::<Vec<_>>();
+    let result = kaitou::ans(&ops, &rots);
+
+    println!("{}", result);
+
+    cfg_if! {
+        if #[cfg(feature = "net")] {
+            let submit_result = submit::submit(&submit_token, &result);
+            println!("submit result: {:#?}", submit_result);
+        }
+    }
+}
+
+fn debug_image_output(name: &str, grid: Grid, fragment_grid: &mut VecOnGrid<Fragment>) {
+    let side_length = fragment_grid.iter().next().unwrap().side_length();
+
+    let f = File::create(name).unwrap();
+    let f = BufWriter::new(f);
+
+    let mut encoder = Encoder::new(
+        f,
+        (side_length * grid.width() as usize) as u32,
+        (side_length * grid.height() as usize) as u32,
+    );
+
+    encoder.set_color(ColorType::Rgb);
+    encoder.set_depth(BitDepth::Eight);
+    encoder.set_compression(Compression::Fast);
+
+    let mut writer = encoder.write_header().unwrap();
+
+    let mut data = vec![];
+
+    for y in 0..grid.height() {
+        for py in 0..side_length {
+            for x in 0..grid.width() {
+                data.extend(
+                    fragment_grid[(grid.pos(x, y))].pixels()
+                        [(py * side_length) as usize..((py + 1) * side_length) as usize]
+                        .iter()
+                        .flat_map(|x| [x.r, x.g, x.b]),
+                );
+            }
+        }
+    }
+
+    writer.write_image_data(&data).unwrap();
+}
 
 fn biggest_case() -> Problem {
     const ROWS: u8 = 16;
@@ -114,53 +197,4 @@ fn biggest_case() -> Problem {
             pixels: data,
         },
     }
-}
-
-fn main() {
-    let file = File::open("problem.ppm").expect("failed to open problem file");
-    let reader = BufReader::new(file);
-    let problem = image::read_problem(reader).unwrap();
-    let grid = Grid::new(problem.rows, problem.cols);
-
-    let fragments = fragment::Fragment::new_all(&problem);
-
-    let mut recovered_image = pixel_match::resolve(fragments, grid);
-
-    // debug_image_output("recovered_image.png", grid, &mut recovered_image);
-}
-
-fn debug_image_output(name: &str, grid: Grid, fragment_grid: &mut VecOnGrid<Fragment>) {
-    let side_length = fragment_grid.iter().next().unwrap().side_length();
-
-    let f = File::create(name).unwrap();
-    let f = BufWriter::new(f);
-
-    let mut encoder = Encoder::new(
-        f,
-        (side_length * grid.width() as usize) as u32,
-        (side_length * grid.height() as usize) as u32,
-    );
-
-    encoder.set_color(ColorType::Rgb);
-    encoder.set_depth(BitDepth::Eight);
-    encoder.set_compression(Compression::Fast);
-
-    let mut writer = encoder.write_header().unwrap();
-
-    let mut data = vec![];
-
-    for y in 0..grid.height() {
-        for py in 0..side_length {
-            for x in 0..grid.width() {
-                data.extend(
-                    fragment_grid[(grid.pos(x, y))].pixels()
-                        [(py * side_length) as usize..((py + 1) * side_length) as usize]
-                        .iter()
-                        .flat_map(|x| [x.r, x.g, x.b]),
-                );
-            }
-        }
-    }
-
-    writer.write_image_data(&data).unwrap();
 }

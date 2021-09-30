@@ -1,5 +1,6 @@
 use anyhow::{bail, ensure, Context as _, Result};
 
+#[derive(Debug)]
 pub(crate) struct SubmitResult {
     pub(crate) pos_mismatch_count: usize,
     pub(crate) rot_mismatch_count: usize,
