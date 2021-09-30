@@ -2,6 +2,7 @@ use super::{edges_nodes::Nodes, resolve, DifferentCells};
 use crate::{
     basis::{Movement::*, Operation},
     grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
+    move_resolve::{ida_star::ida_star, GridAction, GridCompleter},
 };
 
 #[test]
@@ -19,6 +20,59 @@ fn test_different_cells() {
     let diff = DifferentCells(4);
     assert_eq!(diff.on_swap(&field, grid.pos(0, 1), grid.pos(1, 1)).0, 2);
     assert_eq!(diff.on_swap(&field, grid.pos(0, 1), grid.pos(0, 0)).0, 4);
+}
+
+#[test]
+fn completer_case1() {
+    // (00) (10) (32) (41) (31) (50) (60) (70) (80) (90)
+    // (01) (11) (40) (21) (42) (51) (61) (71) (81) (91)
+    // (02) (12) (30) (20) (22) (52) (62) (72) (82) (92)
+    // (03) (13) (23) (33) (43) (53) (63) (73) (83) (93)
+    let grid = Grid::new(10, 4);
+    let case = &[
+        (grid.pos(3, 2), grid.pos(2, 0)),
+        (grid.pos(4, 1), grid.pos(3, 0)),
+        (grid.pos(3, 1), grid.pos(4, 0)),
+        (grid.pos(4, 0), grid.pos(2, 1)),
+        (grid.pos(2, 1), grid.pos(3, 1)),
+        (grid.pos(4, 2), grid.pos(4, 1)),
+        (grid.pos(3, 0), grid.pos(2, 2)),
+        (grid.pos(2, 0), grid.pos(3, 2)),
+        (grid.pos(2, 2), grid.pos(4, 2)),
+    ];
+    let Nodes { mut nodes, .. } = Nodes::new(grid, case);
+    const SELECT_LIMIT: u8 = 10;
+    const SWAP_COST: u16 = 10;
+    const SELECT_COST: u16 = 4;
+
+    let selection = grid.pos(3, 2);
+    let different_cells = DifferentCells::new(&nodes);
+    let (actions, _total_cost) = ida_star(
+        GridCompleter {
+            field: nodes.clone(),
+            selecting: Some(selection),
+            prev_action: Some(GridAction::Select(selection)),
+            different_cells,
+            swap_cost: SWAP_COST,
+            select_cost: SELECT_COST,
+            remaining_select: SELECT_LIMIT,
+        },
+        different_cells.0,
+    );
+
+    let mut selection = selection;
+    let finder = BoardFinder::new(grid);
+    for action in actions {
+        match action {
+            GridAction::Swap(mov) => {
+                let dst = finder.move_pos_to(selection, mov);
+                nodes.swap(selection, dst);
+                selection = dst;
+            }
+            GridAction::Select(pos) => selection = pos,
+        }
+    }
+    assert!(grid.all_pos().zip(nodes.into_iter()).all(|(p, n)| p == n));
 }
 
 #[test]
