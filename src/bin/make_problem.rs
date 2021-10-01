@@ -1,4 +1,4 @@
-use image::{io::Reader, ImageFormat};
+use image::io::Reader;
 use std::{
     env,
     fs::File,
