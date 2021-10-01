@@ -174,7 +174,7 @@ fn estimate_edge_then_left_down(
 
 #[must_use]
 fn move_target_to_pos(board: &mut Board, target: Pos, pos: Pos, ret: &mut Vec<Pos>) -> Option<()> {
-    let route = route_target_to_pos(board, target, pos).unwrap();
+    let route = route_target_to_pos(board, target, pos)?;
 
     for win in route.windows(2) {
         let way = win[0];
