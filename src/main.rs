@@ -8,6 +8,7 @@ use std::{
 use png::{BitDepth, ColorType, Compression, Encoder};
 
 mod basis;
+mod fetch;
 mod fragment;
 mod grid;
 mod image;
