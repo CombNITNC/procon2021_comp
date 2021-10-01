@@ -43,7 +43,7 @@ fn smallest_case() {
     assert_eq!(
         Operation {
             select: grid.pos(1, 0),
-            movements: vec![Right],
+            movements: vec![Left],
         },
         path[0]
     );
@@ -118,7 +118,7 @@ fn case1() {
     let expected = vec![
         Operation {
             select: grid.pos(2, 0),
-            movements: vec![Left, Up, Left, Left],
+            movements: vec![Left, Down, Left, Left],
         },
         Operation {
             select: grid.pos(1, 1),
