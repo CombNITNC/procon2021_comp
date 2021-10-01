@@ -24,6 +24,7 @@ pub(super) struct RecoveredImagePreview<'tc> {
     show_fragment_debug: bool,
 }
 
+#[derive(Clone, Copy, Debug)]
 enum Axis {
     X,
     Y,
@@ -364,19 +365,10 @@ impl<'tc> RecoveredImagePreview<'tc> {
             let dragging_axis = self.dragging_axis(from);
 
             let range = {
-                let a: u8;
-                let b: u8;
-
-                match dragging_axis {
-                    Axis::X => {
-                        a = from.0;
-                        b = selecting_at.0;
-                    }
-                    Axis::Y => {
-                        a = from.1;
-                        b = selecting_at.1;
-                    }
-                }
+                let (a, b) = match (dragging_axis, from, selecting_at) {
+                    (Axis::X, (a, _), (b, _)) => (a, b),
+                    (Axis::Y, (_, a), (_, b)) => (a, b),
+                };
 
                 if a > b {
                     b..=a
@@ -385,15 +377,13 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 }
             };
 
-            let (x_mapper, y_mapper) = (|x: u8| (x, from.1), |x: u8| (from.0, x));
-            let into_axis = match dragging_axis {
-                Axis::X => &x_mapper as &dyn Fn(u8) -> (u8, u8),
-                Axis::Y => &y_mapper as _,
-            };
-
             renderer.set_draw_color(SdlColor::MAGENTA);
             for x in range {
-                renderer.draw_partial_rect(offset_of(into_axis(x)), cell_size, Sides::all());
+                let pos = match (dragging_axis, from) {
+                    (Axis::X, (_, a)) => (x, a),
+                    (Axis::Y, (a, _)) => (a, x),
+                };
+                renderer.draw_partial_rect(offset_of(pos), cell_size, Sides::all());
             }
         }
 
