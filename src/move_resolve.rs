@@ -6,7 +6,10 @@ use self::{
 };
 use crate::{
     basis::{Movement, Operation},
-    grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
+    grid::{
+        board::{Board, BoardFinder},
+        Grid, Pos, VecOnGrid,
+    },
     move_resolve::approx::Solver,
 };
 
@@ -51,8 +54,7 @@ impl DifferentCells {
 
 #[derive(Clone)]
 struct GridCompleter {
-    field: VecOnGrid<Pos>,
-    selecting: Option<Pos>,
+    board: Board,
     prev_action: Option<GridAction>,
     different_cells: DifferentCells,
     swap_cost: u16,
@@ -63,8 +65,7 @@ struct GridCompleter {
 impl std::fmt::Debug for GridCompleter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridState")
-            .field("field", &self.field)
-            .field("selecting", &self.selecting)
+            .field("board", &self.board)
             .field("different_cells", &self.different_cells)
             .field("remaining_select", &self.remaining_select)
             .finish()
@@ -82,29 +83,32 @@ impl IdaStarState for GridCompleter {
     fn apply(&self, action: Self::A) -> Self {
         match action {
             GridAction::Swap(mov) => {
-                let selecting = self.selecting.unwrap();
-                let finder = BoardFinder::new(self.field.grid);
-                let next_swap = finder.move_pos_to(selecting, mov);
-                let mut new_field = self.field.clone();
-                new_field.swap(selecting, next_swap);
+                let selected = self.board.selected();
+                let finder = BoardFinder::new(self.board.grid());
+                let next_swap = finder.move_pos_to(selected, mov);
+                let mut new_board = self.board.clone();
+                new_board.swap_to(next_swap);
                 Self {
-                    selecting: Some(next_swap),
-                    field: new_field,
+                    board: new_board,
                     different_cells: self.different_cells.on_swap(
-                        &self.field,
-                        selecting,
+                        self.board.field(),
+                        selected,
                         next_swap,
                     ),
                     prev_action: Some(action),
                     ..self.clone()
                 }
             }
-            GridAction::Select(sel) => Self {
-                selecting: Some(sel),
-                remaining_select: self.remaining_select - 1,
-                prev_action: Some(action),
-                ..self.clone()
-            },
+            GridAction::Select(sel) => {
+                let mut new_board = self.board.clone();
+                new_board.select(sel);
+                Self {
+                    board: new_board,
+                    remaining_select: self.remaining_select - 1,
+                    prev_action: Some(action),
+                    ..self.clone()
+                }
+            }
         }
     }
 
@@ -112,34 +116,24 @@ impl IdaStarState for GridCompleter {
     fn next_actions(&self) -> Self::AS {
         // 揃っているマスどうしは入れ替えない
         let different_cells = self
-            .field
+            .board
+            .field()
             .iter_with_pos()
             .filter(|&(pos, &cell)| pos != cell)
             .map(|(_, &cell)| cell);
-        if self.selecting.is_none() {
+        if self.prev_action.is_none() {
             return different_cells.map(GridAction::Select).collect();
         }
-        let selecting = self.selecting.unwrap();
+        let selected = self.board.selected();
         let prev = self.prev_action.unwrap();
-        let swapping_states = [
-            Movement::Up,
-            Movement::Right,
-            Movement::Down,
-            Movement::Left,
-        ]
-        .iter()
-        .copied()
-        .filter(|&around| {
-            if let GridAction::Swap(dir) = prev {
-                around != dir.opposite()
-            } else {
-                true
-            }
-        })
-        .map(GridAction::Swap);
+        let swapping_states = self
+            .board
+            .around_of(selected)
+            .into_iter()
+            .map(|to| GridAction::Swap(Movement::between_pos(selected, to)));
         if matches!(prev, GridAction::Swap(_)) && 1 <= self.remaining_select {
             let selecting_states = different_cells
-                .filter(|&p| p != selecting)
+                .filter(|&p| p != selected)
                 .map(GridAction::Select);
             swapping_states.chain(selecting_states).collect()
         } else {
@@ -232,18 +226,25 @@ pub(crate) fn resolve(
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let different_cells = DifferentCells::new(&nodes);
     let lower_bound = different_cells.0;
-    let (path, _total_cost) = ida_star(
-        GridCompleter {
-            field: nodes,
-            selecting: None,
-            prev_action: None,
-            different_cells,
-            swap_cost,
-            select_cost,
-            remaining_select: select_limit,
-        },
-        lower_bound,
-    );
+
+    let (path, _) = Parallel::new()
+        .each(grid.all_pos(), |pos| {
+            ida_star(
+                GridCompleter {
+                    board: Board::new(pos, nodes),
+                    prev_action: None,
+                    different_cells,
+                    swap_cost,
+                    select_cost,
+                    remaining_select: select_limit,
+                },
+                lower_bound,
+            )
+        })
+        .run()
+        .into_iter()
+        .min_by(|a, b| a.1.cmp(&b.1))
+        .unwrap();
     actions_to_operations(path)
 }
 
@@ -289,19 +290,18 @@ fn resolve_on_select(
 ) -> Option<Vec<Operation>> {
     let mut solver = Solver::default();
     let mut all_actions = vec![];
-    let mut selection = None;
+    let mut selection = init_select;
 
     let mut actions = solver.solve(init_select, &nodes)?;
     for &action in &actions {
         match action {
             GridAction::Swap(mov) => {
-                let select = selection.unwrap();
-                let to = BoardFinder::new(grid).move_pos_to(select, mov);
-                nodes.swap(select, to);
-                selection = Some(to);
+                let to = BoardFinder::new(grid).move_pos_to(selection, mov);
+                nodes.swap(selection, to);
+                selection = to;
             }
             GridAction::Select(sel) => {
-                selection = Some(sel);
+                selection = sel;
                 select_limit -= 1;
             }
         }
@@ -311,8 +311,7 @@ fn resolve_on_select(
     let different_cells = DifferentCells::new(&nodes);
     let (mut actions, _total_cost) = ida_star(
         GridCompleter {
-            field: nodes.clone(),
-            selecting: selection,
+            board: Board::new(selection, nodes),
             prev_action: all_actions.last().copied(),
             different_cells,
             swap_cost,
