@@ -1,7 +1,10 @@
 use super::{edges_nodes::Nodes, resolve, DifferentCells};
 use crate::{
     basis::{Movement::*, Operation},
-    grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
+    grid::{
+        board::{Board, BoardFinder},
+        Grid, Pos, VecOnGrid,
+    },
     move_resolve::{ida_star::ida_star, GridAction, GridCompleter},
 };
 
@@ -47,10 +50,16 @@ fn completer_case1() {
 
     let selection = grid.pos(3, 2);
     let different_cells = DifferentCells::new(&nodes);
+    let mut board = Board::new(selection, nodes.clone());
+    grid.range(grid.pos(0, 0), grid.pos(1, 3))
+        .chain(grid.range(grid.pos(5, 0), grid.pos(9, 3)))
+        .for_each(|pos| {
+            board.lock(pos);
+        });
+
     let (actions, _total_cost) = ida_star(
         GridCompleter {
-            field: nodes.clone(),
-            selecting: Some(selection),
+            board,
             prev_action: Some(GridAction::Select(selection)),
             different_cells,
             swap_cost: SWAP_COST,
