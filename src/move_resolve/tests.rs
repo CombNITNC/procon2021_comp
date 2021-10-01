@@ -282,6 +282,7 @@ fn large_case2() {
 
 #[test]
 fn large_case3() {
+    // test_cases/03.ppm の movements が元です.
     let grid = Grid::new(10, 4);
     let case = &[
         (grid.pos(0, 0), grid.pos(8, 0)),
