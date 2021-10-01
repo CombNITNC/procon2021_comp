@@ -121,6 +121,9 @@ impl IdaStarState for GridCompleter {
             .iter_with_pos()
             .filter(|&(pos, &cell)| pos != cell)
             .map(|(_, &cell)| cell);
+        if self.prev_action.is_none() {
+            return different_cells.map(GridAction::Select).collect();
+        }
         let selected = self.board.selected();
         let prev = self.prev_action.unwrap();
         let swapping_states = self
