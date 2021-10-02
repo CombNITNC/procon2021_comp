@@ -1,4 +1,4 @@
-use crate::basis::{Color, Dir, Problem};
+use crate::basis::{Color, Dir};
 use crate::fragment::Fragment;
 use crate::grid::{Grid, Pos, VecOnGrid};
 
@@ -8,8 +8,7 @@ mod shaker;
 use double_side::fill_by_double_side;
 use shaker::shaker_fill;
 
-pub(crate) fn resolve(problem: &Problem, grid: Grid) -> VecOnGrid<Option<Fragment>> {
-    let mut fragments = Fragment::new_all(problem);
+pub(crate) fn resolve(mut fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragment> {
     let mut fragment_grid = VecOnGrid::<Option<Fragment>>::with_default(grid);
 
     // 必ず向きの正しい左上の断片を取得
@@ -86,7 +85,14 @@ pub(crate) fn resolve(problem: &Problem, grid: Grid) -> VecOnGrid<Option<Fragmen
         }
     }
 
-    fragment_grid
+    VecOnGrid::from_vec(
+        grid,
+        fragment_grid
+            .into_iter()
+            .map(|x| x.expect("there were not filled fragment on grid"))
+            .collect(),
+    )
+    .unwrap()
 }
 
 #[inline]

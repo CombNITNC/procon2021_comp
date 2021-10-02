@@ -2,88 +2,96 @@
 
 use std::{
     fs::File,
-    io::{BufReader, BufWriter},
+    io::Write,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
-use png::{BitDepth, ColorType, Compression, Encoder};
-
 mod basis;
-mod fetch;
 mod fragment;
 mod grid;
 mod image;
 mod kaitou;
 mod move_resolve;
 mod pixel_match;
+
+#[cfg(feature = "net")]
+mod fetch;
+#[cfg(feature = "net")]
 mod submit;
 
-use crate::{
-    basis::Color,
-    fragment::Fragment,
-    grid::{Grid, VecOnGrid},
-};
+use crate::grid::Grid;
 
 fn main() {
-    let file = File::open("problem.ppm").expect("failed to open problem file");
-    let reader = BufReader::new(file);
-    let problem = image::read_problem(reader).unwrap();
+    #[cfg(feature = "net")]
+    let (token, endpoint) = {
+        dotenv::dotenv().ok();
+        (
+            std::env::var("TOKEN").expect("set TOKEN environment variable for auto submit"),
+            std::env::var("SERVER_ENDPOINT")
+                .expect("set SERVER_ENDPOINT environment variable for auto submit"),
+        )
+    };
+
+    let epoch = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    #[cfg(not(feature = "net"))]
+    let problem = {
+        let file = File::open("problem.ppm").expect("failed to open problem file");
+        let reader = std::io::BufReader::new(file);
+        image::read_problem(reader).unwrap()
+    };
+
+    #[cfg(feature = "net")]
+    let problem = {
+        let data = fetch::fetch_ppm(&endpoint).unwrap();
+        println!("fetch::fetch_ppm() done");
+
+        use bytes::Buf;
+
+        let filename = format!("problem-{}.ppm", epoch);
+        File::create(&filename).unwrap().write_all(&data).unwrap();
+        println!("saved the problem to {}", filename);
+
+        image::read_problem(data.reader()).unwrap()
+    };
+
     let grid = Grid::new(problem.rows, problem.cols);
+    let fragments = fragment::Fragment::new_all(&problem);
 
-    let recovered_image = pixel_match::resolve(&problem, grid);
-    debug_image_output("recovered_image.png", grid, recovered_image);
-}
+    let recovered_image = pixel_match::resolve(fragments, grid);
+    println!("pixel_match::resolve() done");
 
-fn debug_image_output(name: &str, grid: Grid, fragment_grid: VecOnGrid<Option<Fragment>>) {
-    let mut colors_grid: VecOnGrid<Option<Vec<Color>>> = VecOnGrid::with_default(grid);
+    let movements = fragment::map_fragment::map_fragment(&recovered_image);
 
-    let side_length = fragment_grid
-        .iter()
-        .next()
-        .unwrap()
-        .as_ref()
-        .unwrap()
-        .side_length();
-
-    for (pos, data) in fragment_grid.into_iter_with_pos() {
-        colors_grid[pos] = Some(data.unwrap().pixels());
-    }
-
-    let f = File::create(name).unwrap();
-    let f = BufWriter::new(f);
-
-    let mut encoder = Encoder::new(
-        f,
-        (side_length * grid.width() as usize) as u32,
-        (side_length * grid.height() as usize) as u32,
+    let ops = move_resolve::resolve(
+        grid,
+        &movements,
+        problem.select_limit,
+        problem.swap_cost,
+        problem.select_cost,
     );
+    println!("move_resolve::resolve() done");
 
-    encoder.set_color(ColorType::Rgb);
-    encoder.set_depth(BitDepth::Eight);
-    encoder.set_compression(Compression::Fast);
+    let rots = recovered_image.iter().map(|x| x.rot).collect::<Vec<_>>();
+    let answer = kaitou::ans(&ops, &rots);
 
-    let mut writer = encoder.write_header().unwrap();
-
-    let zeros = vec![Color { r: 0, g: 0, b: 0 }; side_length];
-    let mut data = vec![];
-
-    for y in 0..grid.height() {
-        for py in 0..side_length {
-            for x in 0..grid.width() {
-                if let Some(t) = &colors_grid[(grid.pos(x, y))] {
-                    data.extend_from_slice(
-                        &t[(py * side_length) as usize..((py + 1) * side_length) as usize],
-                    );
-                } else {
-                    data.extend_from_slice(&zeros);
-                }
-            }
-        }
+    #[cfg(not(feature = "net"))]
+    {
+        let filename = &format!("answer-{}.txt", epoch);
+        File::create(filename)
+            .unwrap()
+            .write_all(answer.as_bytes())
+            .unwrap();
+        println!("saved answer to {}", filename);
     }
 
-    let data = data
-        .into_iter()
-        .flat_map(|x| [x.r, x.g, x.b])
-        .collect::<Vec<_>>();
-
-    writer.write_image_data(&data).unwrap();
+    #[cfg(feature = "net")]
+    {
+        println!("submitting");
+        let submit_result = submit::submit(&endpoint, &token, answer);
+        println!("submit result: {:#?}", submit_result);
+    }
 }

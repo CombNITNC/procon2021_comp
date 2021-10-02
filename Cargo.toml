@@ -3,6 +3,7 @@ name = "procon2021_comp"
 version = "0.1.0"
 authors = ["combnitnc"]
 edition = "2018"
+default-run = "procon2021_comp"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,8 +11,16 @@ edition = "2018"
 anyhow = "1.0.40"
 easy-parallel = "3.1.0"
 image = "0.23.14"
-png = "0.17.0"
-reqwest = { version = "0.11.4", features = ["blocking"] }
+
+reqwest = { version = "0.11.4", features = ["blocking"], optional = true }
+dotenv = { version = "0.15.0", optional = true }
+bytes = { version = "1.1.0", optional = true }
+
+[features]
+net = ["reqwest", "dotenv", "bytes"]
+
+# comment out next line if you want to compile faster
+default = ["net"]
 
 [dev-dependencies]
 rand = "0.8.4"

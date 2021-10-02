@@ -160,13 +160,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "deflate"
-version = "0.9.1"
+name = "dotenv"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f95bf05dffba6e6cce8dfbb30def788154949ccd9aed761b472119c21e01c70"
-dependencies = [
- "adler32",
-]
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "easy-parallel"
@@ -420,7 +417,7 @@ dependencies = [
  "num-iter",
  "num-rational 0.3.2",
  "num-traits",
- "png 0.16.8",
+ "png",
  "scoped_threadpool",
  "tiff",
 ]
@@ -749,20 +746,8 @@ checksum = "3c3287920cb847dee3de33d301c463fba14dda99db24214ddf93f83d3021f4c6"
 dependencies = [
  "bitflags",
  "crc32fast",
- "deflate 0.8.6",
+ "deflate",
  "miniz_oxide 0.3.7",
-]
-
-[[package]]
-name = "png"
-version = "0.17.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "641fb192b191c2cb8f35985f47eb1e78cf1d464542f9fe5d1dbc5ee8f989288d"
-dependencies = [
- "bitflags",
- "crc32fast",
- "deflate 0.9.1",
- "miniz_oxide 0.4.4",
 ]
 
 [[package]]
@@ -785,9 +770,10 @@ name = "procon2021_comp"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
+ "dotenv",
  "easy-parallel",
  "image",
- "png 0.17.1",
  "rand",
  "reqwest",
 ]

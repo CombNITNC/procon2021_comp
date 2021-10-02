@@ -22,7 +22,9 @@ fn main() {
     let src_path = args.next().expect("the source image path must be provided");
     let src_path = Path::new(&src_path);
     let src = File::open(src_path).expect("the source image path must be valid");
-    let reader = Reader::new(BufReader::new(src)).with_guessed_format().unwrap();
+    let reader = Reader::new(BufReader::new(src))
+        .with_guessed_format()
+        .unwrap();
     let img = reader
         .decode()
         .expect("the source image format is not supported");

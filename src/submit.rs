@@ -1,20 +1,19 @@
 use anyhow::{bail, ensure, Context as _, Result};
 
+#[derive(Debug)]
 pub(crate) struct SubmitResult {
     pub(crate) pos_mismatch_count: usize,
     pub(crate) rot_mismatch_count: usize,
     pub(crate) request_id: Option<String>,
 }
 
-const ENDPOINT: &str = "https://proco32-practice.kosen.work";
-
-pub(crate) fn submit(token: &str, answer: &str) -> Result<SubmitResult> {
+pub(crate) fn submit(endpoint: &str, token: &str, answer: String) -> Result<SubmitResult> {
     let res = reqwest::blocking::Client::builder()
         .build()
         .context("failed to build reqwest client")?
-        .post(ENDPOINT)
+        .post(endpoint)
         .header("procon-token", token)
-        .body(answer.to_string())
+        .body(answer)
         .send()
         .context("failed to send answer to procon server")?;
 
