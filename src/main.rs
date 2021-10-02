@@ -2,6 +2,7 @@
 
 use std::{
     fs::File,
+    io::Write,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -49,7 +50,6 @@ fn main() {
         println!("fetch::fetch_ppm() done");
 
         use bytes::Buf;
-        use std::io::Write;
 
         let filename = format!("problem-{}.ppm", epoch);
         File::create(&filename).unwrap().write_all(&data).unwrap();
@@ -77,6 +77,16 @@ fn main() {
 
     let rots = recovered_image.iter().map(|x| x.rot).collect::<Vec<_>>();
     let answer = kaitou::ans(&ops, &rots);
+
+    #[cfg(not(feature = "net"))]
+    {
+        let filename = &format!("answer-{}.txt", epoch);
+        File::create(filename)
+            .unwrap()
+            .write_all(answer.as_bytes())
+            .unwrap();
+        println!("saved answer to {}", filename);
+    }
 
     #[cfg(feature = "net")]
     {
