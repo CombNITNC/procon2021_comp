@@ -34,13 +34,11 @@ fn main() {
         }
     }
 
-    let file = File::open("problem.ppm").expect("failed to open problem file");
-    let reader = BufReader::new(file);
-    let problem = image::read_problem(reader).unwrap();
+    let problem = biggest_case();
     let grid = Grid::new(problem.rows, problem.cols);
     let fragments = fragment::Fragment::new_all(&problem);
 
-    let mut recovered_image = pixel_match::resolve(fragments, grid);
+    let recovered_image = pixel_match::resolve(fragments, grid);
     println!("pixel_match::resolve() done");
 
     let movements = fragment::map_fragment::map_fragment(&recovered_image);

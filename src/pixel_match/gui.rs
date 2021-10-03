@@ -19,7 +19,7 @@ use sdl2::{
 use crate::{
     basis::{Dir, Rot},
     fragment::Fragment,
-    grid::{Pos, VecOnGrid},
+    grid::{Grid, Pos as GridPos, VecOnGrid},
     pixel_match::gui::image_preview::RecoveredImagePreview,
 };
 
@@ -30,13 +30,13 @@ mod image_preview;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct EdgePos {
-    pub(super) pos: Pos,
+    pub(super) pos: GridPos,
     pub(super) dir: Dir,
 }
 
 impl EdgePos {
     #[inline]
-    pub(super) fn new(pos: Pos, dir: Dir) -> Self {
+    pub(super) fn new(pos: GridPos, dir: Dir) -> Self {
         Self { pos, dir }
     }
 }
@@ -55,7 +55,7 @@ pub(super) enum GuiResponse {
 
 pub(super) struct RecalculateArtifact {
     pub(super) recovered_image: VecOnGrid<Option<Fragment>>,
-    pub(super) root_pos: Pos,
+    pub(super) root_pos: GridPos,
 }
 
 pub(super) struct GuiContext {
@@ -182,8 +182,8 @@ enum HintsEditKind {
 
 #[derive(Debug)]
 enum Hint {
-    Blacklist(Pos, EdgePos),
-    ConfirmedPair(EdgePos, Vec<(Pos, Rot)>),
+    Blacklist(GridPos, EdgePos),
+    ConfirmedPair(EdgePos, Vec<(GridPos, Rot)>),
 }
 
 impl GuiState {
@@ -196,7 +196,7 @@ impl GuiState {
             }
 
             Hint::ConfirmedPair(e, t) => {
-                // ここでは再計算をしない
+                // ここでは再計算をしない (ロックをしただけでは結果画像は変化しないため)
                 self.hints_edit_history.push(HintsEditKind::ConfirmedPairs);
                 self.hints.confirmed_pairs.push((e, t));
             }
@@ -233,11 +233,7 @@ impl GuiState {
 
             Quit { .. }
             | KeyDown {
-                keycode: Some(Keycode::Escape),
-                ..
-            }
-            | KeyDown {
-                keycode: Some(Keycode::Q),
+                keycode: Some(Keycode::Escape | Keycode::Q),
                 ..
             } => {
                 self.running = false;
@@ -365,6 +361,68 @@ impl Renderer<'_> {
         if sides.intersects(Sides::BOTTOM) {
             self.draw_line((x, y + height), (x + width, y + height))
                 .unwrap();
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Axis {
+    X,
+    Y,
+}
+
+impl Axis {
+    fn invert(self) -> Self {
+        match self {
+            Axis::X => Axis::Y,
+            Axis::Y => Axis::X,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Pos(u8, u8);
+
+impl From<GridPos> for Pos {
+    fn from(p: GridPos) -> Self {
+        Self(p.x(), p.y())
+    }
+}
+
+impl Pos {
+    #[inline]
+    fn x(self) -> u8 {
+        self.0
+    }
+    #[inline]
+    fn y(self) -> u8 {
+        self.1
+    }
+    #[inline]
+    fn get(self, axis: Axis) -> u8 {
+        match axis {
+            Axis::X => self.x(),
+            Axis::Y => self.y(),
+        }
+    }
+    #[inline]
+    fn replace(self, axis: Axis, v: u8) -> Self {
+        match axis {
+            Axis::X => Self(self.0, v),
+            Axis::Y => Self(v, self.1),
+        }
+    }
+    #[inline]
+    #[track_caller]
+    fn into_gridpos(self, grid: Grid) -> GridPos {
+        grid.pos(self.0, self.1)
+    }
+    fn move_to(self, dir: Dir) -> Self {
+        match dir {
+            Dir::North => Pos(self.x(), self.y() - 1),
+            Dir::South => Pos(self.x(), self.y() + 1),
+            Dir::West => Pos(self.x() - 1, self.y()),
+            Dir::East => Pos(self.x() + 1, self.y()),
         }
     }
 }
