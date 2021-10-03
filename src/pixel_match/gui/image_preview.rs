@@ -258,7 +258,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
     /// fragment.rot 回転したときの、reference 方向の辺の dir を求める
     ///
-    /// 例: selecting_fragment = { rot: R90, ..}; reference = Dir::North;
+    /// 例: selecting_fragment = { rot: R90, .. }; reference = Dir::North;
     ///   N                 W
     /// W   E  -- R90 --> S   N このとき答えは West
     ///   S                 E
@@ -352,39 +352,36 @@ impl<'tc> RecoveredImagePreview<'tc> {
         let cell_side_length = image_size.0 as f64 / grid.width() as f64;
         let cell_size = (cell_side_length as i32, cell_side_length as i32);
 
-        let offset_of = |p: u8| (cell_side_length * p as f64) as i32;
-        let offset_of = |(x, y): (u8, u8)| (offset_of(x), offset_of(y));
+        let offset_of_single = |p: u8| (cell_side_length * p as f64) as i32;
+        let offset_of = |(x, y): (u8, u8)| (offset_of_single(x), offset_of_single(y));
 
         // root
         renderer.set_draw_color(SdlColor::BLUE);
         renderer.draw_partial_rect(offset_of(root.into()), cell_size, Sides::all());
 
         // drag
-        if matches!(self.dragging_from, Some(from) if from != selecting_at) {
+        if let Some(from) if from != selecting_at {
             let from = self.dragging_from.unwrap();
             let dragging_axis = self.dragging_axis(from);
-
-            let range = {
-                let (a, b) = match (dragging_axis, from, selecting_at) {
-                    (Axis::X, (a, _), (b, _)) => (a, b),
-                    (Axis::Y, (_, a), (_, b)) => (a, b),
-                };
-
-                if a > b {
-                    b..=a
-                } else {
-                    a..=b
-                }
+            let table = IntoIterator::into_iter([from, selecting_at]);
+            let (begin, size) = match dragging_axis {
+                Axis::X => (
+                    table.min_by_key(|x| x.0).unwrap(),
+                    (
+                        offset_of_single(diff_u8(from.0, selecting_at.0)),
+                        cell_side_length as i32,
+                    ),
+                ),
+                Axis::Y => (
+                    table.min_by_key(|x| x.1).unwrap(),
+                    (
+                        cell_side_length as i32,
+                        offset_of_single(diff_u8(from.1, selecting_at.1)),
+                    ),
+                ),
             };
-
             renderer.set_draw_color(SdlColor::MAGENTA);
-            for x in range {
-                let pos = match (dragging_axis, from) {
-                    (Axis::X, (_, a)) => (x, a),
-                    (Axis::Y, (a, _)) => (a, x),
-                };
-                renderer.draw_partial_rect(offset_of(pos), cell_size, Sides::all());
-            }
+            renderer.draw_partial_rect(offset_of(begin), size, Sides::all());
         }
 
         // selection
@@ -457,6 +454,14 @@ impl<'tc> RecoveredImagePreview<'tc> {
                     .unwrap();
             }
         }
+    }
+}
+
+fn diff_u8(a: u8, b: u8) -> u8 {
+    if a > b {
+        a - b
+    } else {
+        b - a
     }
 }
 
