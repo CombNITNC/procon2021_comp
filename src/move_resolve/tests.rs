@@ -43,7 +43,7 @@ fn smallest_case() {
     assert_eq!(
         Operation {
             select: grid.pos(1, 0),
-            movements: vec![Right],
+            movements: vec![Left],
         },
         path[0]
     );
@@ -118,7 +118,7 @@ fn case1() {
     let expected = vec![
         Operation {
             select: grid.pos(2, 0),
-            movements: vec![Left, Up, Left, Left],
+            movements: vec![Left, Down, Left, Left],
         },
         Operation {
             select: grid.pos(1, 1),
@@ -265,6 +265,70 @@ fn large_case2() {
     const SELECT_LIMIT: u8 = 3;
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
+
+    let result = resolve(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
+
+    let finder = BoardFinder::new(grid);
+    for Operation { select, movements } in result {
+        let mut current = select;
+        for movement in movements {
+            let to_swap = finder.move_pos_to(current, movement);
+            nodes.swap(current, to_swap);
+            current = to_swap;
+        }
+    }
+    assert!(grid.all_pos().zip(nodes.into_iter()).all(|(p, n)| p == n));
+}
+
+#[test]
+fn large_case3() {
+    // test_cases/03.ppm の movements が元です.
+    let grid = Grid::new(10, 4);
+    let case = &[
+        (grid.pos(0, 0), grid.pos(8, 0)),
+        (grid.pos(1, 0), grid.pos(8, 1)),
+        (grid.pos(2, 0), grid.pos(6, 1)),
+        (grid.pos(3, 0), grid.pos(7, 3)),
+        (grid.pos(4, 0), grid.pos(7, 1)),
+        (grid.pos(5, 0), grid.pos(4, 2)),
+        (grid.pos(6, 0), grid.pos(9, 0)),
+        (grid.pos(7, 0), grid.pos(2, 1)),
+        (grid.pos(8, 0), grid.pos(9, 3)),
+        (grid.pos(9, 0), grid.pos(2, 0)),
+        (grid.pos(0, 1), grid.pos(1, 0)),
+        (grid.pos(1, 1), grid.pos(2, 3)),
+        (grid.pos(2, 1), grid.pos(4, 3)),
+        (grid.pos(3, 1), grid.pos(9, 2)),
+        (grid.pos(4, 1), grid.pos(3, 2)),
+        (grid.pos(5, 1), grid.pos(8, 3)),
+        (grid.pos(6, 1), grid.pos(1, 2)),
+        (grid.pos(7, 1), grid.pos(0, 1)),
+        (grid.pos(8, 1), grid.pos(5, 1)),
+        (grid.pos(9, 1), grid.pos(2, 2)),
+        (grid.pos(0, 2), grid.pos(0, 0)),
+        (grid.pos(1, 2), grid.pos(8, 2)),
+        (grid.pos(2, 2), grid.pos(0, 2)),
+        (grid.pos(3, 2), grid.pos(0, 3)),
+        (grid.pos(4, 2), grid.pos(7, 2)),
+        (grid.pos(6, 2), grid.pos(4, 1)),
+        (grid.pos(7, 2), grid.pos(3, 1)),
+        (grid.pos(8, 2), grid.pos(9, 1)),
+        (grid.pos(9, 2), grid.pos(6, 0)),
+        (grid.pos(0, 3), grid.pos(7, 0)),
+        (grid.pos(1, 3), grid.pos(5, 0)),
+        (grid.pos(2, 3), grid.pos(1, 1)),
+        (grid.pos(3, 3), grid.pos(4, 0)),
+        (grid.pos(4, 3), grid.pos(3, 0)),
+        (grid.pos(5, 3), grid.pos(6, 3)),
+        (grid.pos(6, 3), grid.pos(6, 2)),
+        (grid.pos(7, 3), grid.pos(5, 3)),
+        (grid.pos(8, 3), grid.pos(1, 3)),
+        (grid.pos(9, 3), grid.pos(3, 3)),
+    ];
+    let Nodes { mut nodes, .. } = Nodes::new(grid, case);
+    const SELECT_LIMIT: u8 = 10;
+    const SWAP_COST: u16 = 10;
+    const SELECT_COST: u16 = 4;
 
     let result = resolve(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 

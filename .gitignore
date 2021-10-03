@@ -1,5 +1,5 @@
 /target
+/.env
+/answer*
+/problem*
 /.kprivate
-*.png
-*.ppm
-.env
