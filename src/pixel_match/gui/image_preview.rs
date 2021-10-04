@@ -360,14 +360,19 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
             let size = match dragging_axis {
                 Axis::X => (
-                    offset_of_single(diff_u8(from.0, selecting_at.0)),
+                    offset_of_single(
+                        diff_u8(from.0, selecting_at.0) + 1, /* for selecting pos */
+                    ),
                     cell_side_length as i32,
                 ),
                 Axis::Y => (
                     cell_side_length as i32,
-                    offset_of_single(diff_u8(from.1, selecting_at.1)),
+                    offset_of_single(
+                        diff_u8(from.1, selecting_at.1) + 1, /* for selecting pos */
+                    ),
                 ),
             };
+
             renderer.set_draw_color(SdlColor::MAGENTA);
             renderer.draw_partial_rect(offset_of(begin), size, Sides::all());
         }

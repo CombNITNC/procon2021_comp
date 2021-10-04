@@ -408,8 +408,8 @@ impl Pos {
     #[inline]
     fn replace(self, axis: Axis, v: u8) -> Self {
         match axis {
-            Axis::X => Self(self.0, v),
-            Axis::Y => Self(v, self.1),
+            Axis::X => Self(v, self.1),
+            Axis::Y => Self(self.0, v),
         }
     }
     #[inline]
