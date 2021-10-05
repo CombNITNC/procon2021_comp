@@ -111,7 +111,6 @@ pub(super) fn begin(ctx: GuiContext) {
     };
 
     let mut preview: Option<RecoveredImagePreview> = None;
-    let mut prev_selecting_at = None;
 
     loop {
         for event in sdl.event_pump().unwrap().poll_iter() {
@@ -127,8 +126,7 @@ pub(super) fn begin(ctx: GuiContext) {
         }
 
         if state.hints_updated {
-            let preview = preview.take();
-            prev_selecting_at = preview.map(|x| x.selecting_at);
+            preview = None;
             state.send_recalculate_request();
         }
 
@@ -144,11 +142,7 @@ pub(super) fn begin(ctx: GuiContext) {
             #[allow(clippy::single_match)]
             match state.ctx.rx.try_recv() {
                 Ok(GuiResponse::Recalculated(a)) => {
-                    preview = Some(RecoveredImagePreview::new(
-                        &mut renderer,
-                        a,
-                        prev_selecting_at,
-                    ));
+                    preview = Some(RecoveredImagePreview::new(&mut renderer, a));
                 }
 
                 Err(_) => {}

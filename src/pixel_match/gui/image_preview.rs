@@ -27,19 +27,16 @@ pub(super) struct RecoveredImagePreview<'tc> {
 }
 
 impl<'tc> RecoveredImagePreview<'tc> {
-    pub(super) fn new(
-        renderer: &mut Renderer<'tc>,
-        mut image: RecalculateArtifact,
-        prev_selecting_at: Option<Pos>,
-    ) -> Self {
+    pub(super) fn new(renderer: &mut Renderer<'tc>, mut image: RecalculateArtifact) -> Self {
         Self {
             recovered_image_texture: create_image_texture(renderer, &mut image.recovered_image),
             arrow_texture: arrow_texture(renderer.texture_creator),
-            image,
 
-            selecting_at: prev_selecting_at.map(Into::into).unwrap_or(Pos(0, 0)),
+            selecting_at: image.root_pos.into(),
             dragging_from: None,
             show_fragment_debug: false,
+
+            image,
         }
     }
 
@@ -210,7 +207,6 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 let reference_side = Self::calc_reference_side(root_pos, near_to_root);
                 let reference_pos = near_to_root.move_to(reference_side);
 
-                // 復元*前*の画像での位置
                 let reference_image_pos = self.image.recovered_image
                     [reference_pos.into_gridpos(grid)]
                 .as_ref()
@@ -329,6 +325,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
             .unwrap();
 
         self.render_selection_and_root(renderer, image_size);
+        self.render_hints(renderer, global_state);
 
         if self.show_fragment_debug {
             self.render_fragment_debug(renderer, image_size);
@@ -360,16 +357,12 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
             let size = match dragging_axis {
                 Axis::X => (
-                    offset_of_single(
-                        diff_u8(from.0, selecting_at.0) + 1, /* for selecting pos */
-                    ),
+                    offset_of_single(diff_u8(from.0, selecting_at.0) + (1/* for selecting pos */)),
                     cell_side_length as i32,
                 ),
                 Axis::Y => (
                     cell_side_length as i32,
-                    offset_of_single(
-                        diff_u8(from.1, selecting_at.1) + 1, /* for selecting pos */
-                    ),
+                    offset_of_single(diff_u8(from.1, selecting_at.1) + (1/* for selecting pos */)),
                 ),
             };
 
@@ -399,6 +392,10 @@ impl<'tc> RecoveredImagePreview<'tc> {
         renderer.draw_partial_rect(offset_of(selecting_at), cell_size, sides);
         renderer.set_draw_color(SdlColor::GREEN);
         renderer.draw_partial_rect(offset_of(selecting_at), cell_size, !sides);
+    }
+
+    pub(super) fn render_hints(&self, renderer: &mut Renderer<'_>, global_state: &GuiState) {
+        for &(ref edgepos, ref fragments) in &global_state.hints.confirmed_pairs {}
     }
 
     fn render_fragment_debug(&self, renderer: &mut Renderer<'_>, image_size: (u32, u32)) {
