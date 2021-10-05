@@ -23,7 +23,7 @@ impl Solver {
             if finder.height() < finder.width() {
                 finder.rotate_to(3);
             }
-            if finder.width() <= 2 && finder.height() <= 2 {
+            if finder.width() <= 3 && finder.height() <= 3 {
                 break;
             }
             let targets = self.next_targets(&board, &finder);
