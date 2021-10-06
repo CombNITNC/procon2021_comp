@@ -40,65 +40,33 @@ impl<'tc> RecoveredImagePreview<'tc> {
         }
     }
 
-    fn dragging_axis(&self, dragging_from: Pos) -> Axis {
-        match dragging_from {
-            Pos(x, _) if x == self.selecting_at.0 => Axis::Y,
-            Pos(_, y) if y == self.selecting_at.1 => Axis::X,
-            _ => panic!("called selecting_axis on invalid dragging state, dragging_from: {:?}, selecting_at: {:?}", self.dragging_from, self.selecting_at),
-        }
-    }
-
     pub(super) fn process_sdl_event(&mut self, event: Event, global_state: &mut GuiState) {
         use Event::*;
         let grid = self.image.recovered_image.grid;
 
         match event {
             KeyDown {
-                keycode: Some(Keycode::Up),
+                keycode: Some(k @ (Keycode::Up | Keycode::Down | Keycode::Left | Keycode::Right)),
                 ..
             } => {
-                if matches!(self.dragging_from, Some(x) if x.0 != self.selecting_at.0) {
-                    return;
+                let mut updated = self.selecting_at;
+
+                match k {
+                    Keycode::Up => updated.1 = updated.1.saturating_sub(1),
+                    Keycode::Left => updated.0 = updated.0.saturating_sub(1),
+                    Keycode::Down if self.selecting_at.1 < grid.height() - 1 => updated.1 += 1,
+                    Keycode::Right if self.selecting_at.0 < grid.width() - 1 => updated.0 += 1,
+                    _ => unreachable!(),
                 }
 
-                self.selecting_at.1 = self.selecting_at.1.saturating_sub(1);
-            }
+                let root = self.image.root_pos.into();
 
-            KeyDown {
-                keycode: Some(Keycode::Down),
-                ..
-            } => {
-                if matches!(self.dragging_from, Some(x) if x.0 != self.selecting_at.0) {
-                    return;
+                match self.dragging_from {
+                    Some(d) if !Self::is_draggable(root, d, updated) => return,
+                    _ => {}
                 }
 
-                if self.selecting_at.1 < grid.height() - 1 {
-                    self.selecting_at.1 += 1;
-                }
-            }
-
-            KeyDown {
-                keycode: Some(Keycode::Right),
-                ..
-            } => {
-                if matches!(self.dragging_from, Some(x) if x.1 != self.selecting_at.1) {
-                    return;
-                }
-
-                if self.selecting_at.0 < grid.width() - 1 {
-                    self.selecting_at.0 += 1;
-                }
-            }
-
-            KeyDown {
-                keycode: Some(Keycode::Left),
-                ..
-            } => {
-                if matches!(self.dragging_from, Some(x) if x.1 != self.selecting_at.1) {
-                    return;
-                }
-
-                self.selecting_at.0 = self.selecting_at.0.saturating_sub(1);
+                self.selecting_at = updated;
             }
 
             KeyDown {
@@ -143,7 +111,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                     return;
                 }
 
-                let dragging_axis = self.dragging_axis(dragging_from);
+                let dragging_axis = Self::dragging_axis(dragging_from, selecting_at);
                 let dragging_axis_of = |p: Pos| p.get(dragging_axis);
 
                 /*
@@ -176,7 +144,9 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 }
 
                 let mut table = [self.selecting_at, dragging_from];
-                table.sort_by_key(|a| diff_u8(dragging_axis_of(*a), dragging_axis_of(root_pos)));
+                table.sort_unstable_by_key(|a| {
+                    diff_u8(dragging_axis_of(*a), dragging_axis_of(root_pos))
+                });
                 let [near_to_root, far_from_root] = table;
 
                 // dragging_axis(near_to_root)..=dragging_axis(far_from_root)のイテレータがほしいだけ。
@@ -289,8 +259,50 @@ impl<'tc> RecoveredImagePreview<'tc> {
             (Less, Greater) => Dir::South,
             (Greater, Greater) => Dir::South,
 
-            (Equal, Equal) => panic!("calc_reference_side is called on exact root pos"),
+            (Equal, Equal) => panic!("called on exact root pos"),
         }
+    }
+
+    fn dragging_axis(from: Pos, to: Pos) -> Axis {
+        match from {
+            Pos(x, _) if x == to.x() => Axis::Y,
+            Pos(_, y) if y == to.y() => Axis::X,
+            _ => panic!("invalid dragging state, from: {:?}, to: {:?}", from, to),
+        }
+    }
+
+    fn is_draggable(root: Pos, from: Pos, to: Pos) -> bool {
+        if matches!((from, to), (Pos(x1, y1), Pos(x2, y2)) if (x1 != x2 && y1 != y2)) {
+            return false;
+        }
+
+        if matches!((from, to), (Pos(x1, y1), Pos(x2, y2)) if (x1 == x2 && y1 == y2)) {
+            return true;
+        }
+
+        /*
+          123
+          4f5
+          678
+        */
+
+        use Ordering::*;
+        let draggable_axis = match (root.x().cmp(&from.x()), root.y().cmp(&from.y())) {
+            /*1*/ (Greater, Greater) |
+            /*2*/ (Equal, Greater) |
+            /*3*/ (Less, Greater) |
+            /*6*/ (Greater, Less) |
+            /*7*/ (Equal, Less) |
+            /*8*/ (Less, Less) => Axis::Y,
+
+            /*4*/ (Greater, Equal) |
+            /*5*/ (Less, Equal) => Axis::X,
+
+            /*f (from)*/ (Equal, Equal) => unreachable!(),
+        };
+
+        let dragging_axis = Self::dragging_axis(from, to);
+        dragging_axis == draggable_axis
     }
 
     pub(super) fn render(&self, renderer: &mut Renderer<'_>, global_state: &GuiState) {
@@ -325,7 +337,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
             .unwrap();
 
         self.render_selection_and_root(renderer, image_size);
-        self.render_hints(renderer, global_state);
+        // self.render_hints(renderer, global_state);
 
         if self.show_fragment_debug {
             self.render_fragment_debug(renderer, image_size);
@@ -350,7 +362,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
         // drag
         if matches!(self.dragging_from, Some(f) if f != selecting_at) {
             let from = self.dragging_from.unwrap();
-            let dragging_axis = self.dragging_axis(from);
+            let dragging_axis = Self::dragging_axis(from, selecting_at);
 
             let table = IntoIterator::into_iter([from, selecting_at]);
             let begin = table.min_by_key(|x| x.get(dragging_axis)).unwrap();
@@ -394,8 +406,18 @@ impl<'tc> RecoveredImagePreview<'tc> {
         renderer.draw_partial_rect(offset_of(selecting_at), cell_size, !sides);
     }
 
-    pub(super) fn render_hints(&self, renderer: &mut Renderer<'_>, global_state: &GuiState) {
-        for &(ref edgepos, ref fragments) in &global_state.hints.confirmed_pairs {}
+    pub(super) fn render_hints(
+        &self,
+        renderer: &mut Renderer<'_>,
+        global_state: &GuiState,
+        image_size: (u32, u32),
+    ) {
+        let root_pos = self.image.root_pos;
+        let grid = self.image.recovered_image.grid;
+        let cell_side_length = image_size.0 as f64 / grid.width() as f64;
+
+        let offset_of = |p: u8| (cell_side_length * p as f64) as i32;
+        let offset_of = |(x, y): (u8, u8)| (offset_of(x), offset_of(y));
     }
 
     fn render_fragment_debug(&self, renderer: &mut Renderer<'_>, image_size: (u32, u32)) {

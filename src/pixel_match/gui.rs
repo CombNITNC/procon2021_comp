@@ -359,7 +359,7 @@ impl Renderer<'_> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Axis {
     X,
     Y,
