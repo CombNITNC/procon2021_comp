@@ -2,6 +2,8 @@ pub(crate) mod map_fragment;
 #[cfg(test)]
 mod tests;
 
+use std::borrow::Cow;
+
 use crate::{
     basis::{Color, Dir, Image, Problem, Rot},
     grid::{Grid, Pos},
@@ -70,7 +72,7 @@ pub(crate) struct Fragment {
     pub(crate) rot: Rot,
     /// この断片画像の縁四辺.
     pub(crate) edges: Edges,
-    pixels: Vec<Color>,
+    pixels: LazyRotate,
 }
 
 impl Fragment {
@@ -83,35 +85,15 @@ impl Fragment {
         self.edges.rotate(rot);
     }
 
-    #[allow(clippy::needless_range_loop)]
-    pub(crate) fn pixels(&self) -> Vec<Color> {
-        let row = self.side_length();
-        let count = match self.rot {
-            Rot::R0 => return self.pixels.clone(),
-            Rot::R90 => 1,
-            Rot::R180 => 2,
-            Rot::R270 => 3,
-        };
+    pub(crate) fn pixels(&mut self) -> &[Color] {
+        self.pixels.get(self.rot)
+    }
 
-        let mut temp = self
-            .pixels
-            .chunks(row)
-            .map(|x| x.to_vec())
-            .collect::<Vec<_>>();
+    pub(crate) fn apply_rotate(&mut self) {
+        let _ = self.pixels.get(self.rot);
 
-        let mut result = vec![vec![Color { r: 0, g: 0, b: 0 }; row]; row];
-
-        for _ in 0..count {
-            for i in 0..row {
-                for j in 0..row {
-                    result[j][row - 1 - i] = temp[i][j];
-                }
-            }
-
-            temp = result.clone();
-        }
-
-        result.into_iter().flatten().collect()
+        self.pixels.rot = Rot::R0;
+        self.rot = Rot::R0;
     }
 
     pub(crate) fn new_all(
@@ -180,8 +162,68 @@ impl Fragment {
         Self {
             pos,
             rot: Rot::R0,
+            pixels: LazyRotate::new(all, north.len()),
             edges: Edges::new(north, east, south, west),
-            pixels: all,
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct LazyRotate {
+    data: Vec<Color>,
+    rot: Rot,
+    row: usize,
+}
+
+impl LazyRotate {
+    fn new(data: Vec<Color>, row: usize) -> Self {
+        Self {
+            data,
+            rot: Rot::R0,
+            row,
+        }
+    }
+
+    fn get(&mut self, rot: Rot) -> &[Color] {
+        if self.rot != rot {
+            self.rotate(self.rot_count(rot));
+            self.rot = rot;
+        }
+
+        &self.data
+    }
+
+    /// 自分を何回回転させれば `target_rot` になるかを求める
+    fn rot_count(&self, target_rot: Rot) -> usize {
+        let mut my_rot = self.rot;
+        let mut count = 0;
+        loop {
+            my_rot += Rot::R90;
+            count += 1;
+
+            if my_rot == target_rot {
+                break count;
+            }
+        }
+    }
+
+    fn rotate(&mut self, count: usize) {
+        let init_vec = || vec![Color { r: 0, g: 0, b: 0 }; self.row * self.row];
+
+        let mut temp = Cow::Borrowed(&self.data);
+        let mut result = init_vec();
+
+        for _ in 0..count {
+            for i in 0..self.row {
+                for j in 0..self.row {
+                    result[j * self.row + self.row - 1 - i] = temp[i * self.row + j];
+                }
+            }
+
+            temp = Cow::Owned(result);
+            result = init_vec();
+        }
+
+        self.data = temp.into_owned();
     }
 }

@@ -18,6 +18,10 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+      - name: Setup SDL2
+        run: |
+          cargo install cargo-vcpkg
+          cargo vcpkg -v build
       - name: Build
         run: cargo build --release --verbose
       - name: Run tests
@@ -31,6 +35,10 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+      - name: Setup SDL2
+        run: |
+          cargo install cargo-vcpkg
+          cargo vcpkg -v build
       - run: rustup component add clippy
       - uses: actions-rs/clippy-check@v1
         with:

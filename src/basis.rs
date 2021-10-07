@@ -107,7 +107,7 @@ pub(crate) struct Operation {
 }
 
 /// `Rot` はある断片画像を原画像の状態から時計回りに回転させた角度を表す.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Rot {
     R0,
     R90,
@@ -117,7 +117,7 @@ pub(crate) enum Rot {
 
 impl Rot {
     #[inline]
-    fn as_num(self) -> u8 {
+    pub(crate) fn as_num(self) -> u8 {
         match self {
             Rot::R0 => 0,
             Rot::R90 => 1,
@@ -127,7 +127,7 @@ impl Rot {
     }
 
     #[inline]
-    fn from_num(rot: u8) -> Self {
+    pub(crate) fn from_num(rot: u8) -> Self {
         assert!(rot <= 3, "rot must be lower than 4");
         match rot {
             0 => Rot::R0,
@@ -147,7 +147,7 @@ impl AddAssign for Rot {
 }
 
 /// `Dir` はある断片画像において辺が位置する向きを表す.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Dir {
     North,
     East,

@@ -1,22 +1,100 @@
-use crate::basis::{Color, Dir};
+use std::sync::mpsc;
+
+use crate::basis::{Color, Dir, Rot};
 use crate::fragment::Fragment;
 use crate::grid::{Grid, Pos, VecOnGrid};
+use crate::pixel_match::gui::{EdgePos, GuiRequest, GuiResponse};
 
 mod double_side;
+mod gui;
 mod shaker;
 
 use double_side::fill_by_double_side;
 use shaker::shaker_fill;
 
-pub(crate) fn resolve(mut fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragment> {
+use self::gui::RecalculateArtifact;
+
+pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragment> {
+    let (gtx, rx) = mpsc::channel();
+    let (tx, grx) = mpsc::channel();
+
+    let gui_thread = std::thread::Builder::new()
+        .name("GUI".into())
+        .spawn(|| gui::begin(gui::GuiContext { tx: gtx, rx: grx }))
+        .expect("failed to launch GUI thread");
+
+    let (recovered_image, root_pos) = solve(fragments.clone(), grid, ResolveHints::default());
+
+    let mut result = recovered_image.clone();
+
+    tx.send(GuiResponse::Recalculated(RecalculateArtifact {
+        recovered_image,
+        root_pos,
+    }))
+    .unwrap();
+
+    loop {
+        match rx.recv() {
+            Ok(GuiRequest::Recalculate(hint)) => {
+                println!("recalculating. blacklists: {{");
+                for h in &hint.blacklist {
+                    println!("    {:?}", h);
+                }
+                println!("}}");
+                println!("whitelists: {{");
+                for h in &hint.confirmed_pairs {
+                    println!("    {:?}", h);
+                }
+                println!("}}");
+
+                let (recovered_image, root_pos) = solve(fragments.clone(), grid, hint);
+
+                result = recovered_image.clone();
+
+                tx.send(GuiResponse::Recalculated(RecalculateArtifact {
+                    recovered_image,
+                    root_pos,
+                }))
+                .unwrap();
+            }
+
+            Ok(GuiRequest::Quit) => break,
+
+            Err(_) => {
+                eprintln!("GUI thread channel unexpectedly closed. maybe it has panicked");
+                break;
+            }
+        }
+    }
+
+    if let Err(e) = gui_thread.join() {
+        std::panic::resume_unwind(e);
+    }
+
+    VecOnGrid::from_vec(
+        grid,
+        result
+            .into_iter()
+            .map(|x| x.expect("there were not filled fragment on grid"))
+            .collect(),
+    )
+    .unwrap()
+}
+
+// returns: (recovered_image, root_pos)
+fn solve(
+    mut fragments: Vec<Fragment>,
+    grid: Grid,
+    mut hints: ResolveHints,
+) -> (VecOnGrid<Option<Fragment>>, Pos) {
     let mut fragment_grid = VecOnGrid::<Option<Fragment>>::with_default(grid);
 
     // 必ず向きの正しい左上の断片を取得
     let root = find_and_remove(&mut fragments, grid.pos(0, 0)).unwrap();
 
     // そこから上下左右に伸ばす形で探索
-    let (up, down) = shaker_fill(grid.height(), &mut fragments, Dir::North, &root);
-    let (left, right) = shaker_fill(grid.width(), &mut fragments, Dir::West, &root);
+    let (up, down) = shaker_fill(grid.height(), &mut fragments, Dir::North, &root, &mut hints);
+    let (left, right) = shaker_fill(grid.width(), &mut fragments, Dir::West, &root, &mut hints);
 
     // root から上下左右に何個断片が有るかわかったので、rootのあるべき座標が分かる
     let root_pos = grid.pos(left.len() as _, up.len() as _);
@@ -85,14 +163,7 @@ pub(crate) fn resolve(mut fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fra
         }
     }
 
-    VecOnGrid::from_vec(
-        grid,
-        fragment_grid
-            .into_iter()
-            .map(|x| x.expect("there were not filled fragment on grid"))
-            .collect(),
-    )
-    .unwrap()
+    (fragment_grid, root_pos)
 }
 
 #[inline]
@@ -174,4 +245,33 @@ fn average_distance<'a>(
 #[inline]
 fn find_and_remove(vec: &mut Vec<Fragment>, pos: Pos) -> Option<Fragment> {
     Some(vec.remove(vec.iter().position(|x| x.pos == pos)?))
+}
+
+#[derive(Debug, Default, Clone)]
+struct ResolveHints {
+    blacklist: Vec<(Pos, EdgePos)>,
+    confirmed_pairs: Vec<(EdgePos, Vec<(Pos, Rot)>)>,
+}
+
+impl ResolveHints {
+    fn blacklist_of<'a>(
+        &'a self,
+        fragment: &'a Fragment,
+    ) -> impl Iterator<Item = &'a EdgePos> + Clone + 'a {
+        self.blacklist
+            .iter()
+            .filter(move |&(x, _)| *x == fragment.pos)
+            .map(|(_, x)| x)
+    }
+
+    fn confirmed_pairs_of(&mut self, pos: EdgePos) -> Option<Vec<(Pos, Rot)>> {
+        let (index, _) = self
+            .confirmed_pairs
+            .iter()
+            .enumerate()
+            .filter(|(_, (p, _))| *p == pos)
+            .max_by_key(|(_, (_, v))| v.len())?;
+
+        Some(self.confirmed_pairs.remove(index).1)
+    }
 }
