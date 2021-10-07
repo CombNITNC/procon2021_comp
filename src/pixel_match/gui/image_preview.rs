@@ -337,7 +337,6 @@ impl<'tc> RecoveredImagePreview<'tc> {
             .unwrap();
 
         self.render_selection_and_root(renderer, image_size);
-        // self.render_hints(renderer, global_state);
 
         if self.show_fragment_debug {
             self.render_fragment_debug(renderer, image_size);
@@ -404,20 +403,6 @@ impl<'tc> RecoveredImagePreview<'tc> {
         renderer.draw_partial_rect(offset_of(selecting_at), cell_size, sides);
         renderer.set_draw_color(SdlColor::GREEN);
         renderer.draw_partial_rect(offset_of(selecting_at), cell_size, !sides);
-    }
-
-    pub(super) fn render_hints(
-        &self,
-        renderer: &mut Renderer<'_>,
-        global_state: &GuiState,
-        image_size: (u32, u32),
-    ) {
-        let root_pos = self.image.root_pos;
-        let grid = self.image.recovered_image.grid;
-        let cell_side_length = image_size.0 as f64 / grid.width() as f64;
-
-        let offset_of = |p: u8| (cell_side_length * p as f64) as i32;
-        let offset_of = |(x, y): (u8, u8)| (offset_of(x), offset_of(y));
     }
 
     fn render_fragment_debug(&self, renderer: &mut Renderer<'_>, image_size: (u32, u32)) {
