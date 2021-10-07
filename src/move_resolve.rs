@@ -130,7 +130,15 @@ impl IdaStarState for GridCompleter {
             .board
             .around_of(selected)
             .into_iter()
-            .map(|to| GridAction::Swap(Movement::between_pos(selected, to)));
+            .map(|to| Movement::between_pos(selected, to))
+            .filter(|&around| {
+                if let GridAction::Swap(dir) = prev {
+                    around != dir.opposite()
+                } else {
+                    true
+                }
+            })
+            .map(GridAction::Swap);
         if matches!(prev, GridAction::Swap(_)) && 1 <= self.remaining_select {
             let selecting_states = different_cells
                 .filter(|&p| p != selected)
@@ -220,7 +228,7 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    if 36 <= grid.width() as u32 * grid.height() as u32 {
+    if 30 < grid.width() as u32 * grid.height() as u32 {
         return resolve_approximately(grid, movements, select_limit, swap_cost, select_cost);
     }
     let Nodes { nodes, .. } = Nodes::new(grid, movements);

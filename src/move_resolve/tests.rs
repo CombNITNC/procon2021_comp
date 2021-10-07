@@ -182,6 +182,27 @@ fn case3() {
 }
 
 #[test]
+fn case4() {
+    // 00 11 02
+    // 01 20 21
+    // 12 10 22
+    let grid = Grid::new(3, 3);
+    let case = &[
+        (grid.pos(1, 1), grid.pos(1, 0)),
+        (grid.pos(0, 2), grid.pos(2, 0)),
+        (grid.pos(2, 0), grid.pos(1, 1)),
+        (grid.pos(1, 2), grid.pos(0, 2)),
+        (grid.pos(1, 0), grid.pos(1, 2)),
+    ];
+    let expected = vec![Operation {
+        select: grid.pos(1, 1),
+        movements: vec![Up, Right, Right, Right, Up, Left, Down, Left],
+    }];
+    let actual = resolve(grid, case, 8, 1, 8);
+    test_vec(expected, actual);
+}
+
+#[test]
 fn large_case1() {
     // 00 10 20 55 40 50
     // 01 30 21 31 41 51
