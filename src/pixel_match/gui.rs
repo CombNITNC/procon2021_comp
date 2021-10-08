@@ -408,7 +408,7 @@ impl Pos {
     }
     #[inline]
     #[track_caller]
-    fn into_gridpos(self, grid: Grid) -> GridPos {
+    fn into_grid_pos(self, grid: Grid) -> GridPos {
         grid.pos(self.0, self.1)
     }
     fn move_to(self, dir: Dir) -> Self {

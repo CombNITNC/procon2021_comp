@@ -166,7 +166,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 let list = iter
                     .map(|x| {
                         let pos = near_to_root.replace(dragging_axis, x);
-                        let fragment = self.image.recovered_image[pos.into_gridpos(grid)]
+                        let fragment = self.image.recovered_image[pos.into_grid_pos(grid)]
                             .as_ref()
                             .unwrap();
 
@@ -178,7 +178,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 let reference_pos = near_to_root.move_to(reference_side);
 
                 let reference_image_pos = self.image.recovered_image
-                    [reference_pos.into_gridpos(grid)]
+                    [reference_pos.into_grid_pos(grid)]
                 .as_ref()
                 .unwrap()
                 .pos;
@@ -211,7 +211,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 };
 
                 let reference_fragment = self.image.recovered_image
-                    [reference_pos.into_gridpos(grid)]
+                    [reference_pos.into_grid_pos(grid)]
                 .as_ref()
                 .unwrap();
 
