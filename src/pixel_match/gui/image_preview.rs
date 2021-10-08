@@ -111,7 +111,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                     return;
                 }
 
-                let dragging_axis = Self::dragging_axis(dragging_from, selecting_at);
+                let dragging_axis = dragging_from.aligned_axis(selecting_at).unwrap();
                 let dragging_axis_of = |p: Pos| p.get(dragging_axis);
 
                 /*
@@ -166,7 +166,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 let list = iter
                     .map(|x| {
                         let pos = near_to_root.replace(dragging_axis, x);
-                        let fragment = self.image.recovered_image[pos.into_gridpos(grid)]
+                        let fragment = self.image.recovered_image[pos.into_grid_pos(grid)]
                             .as_ref()
                             .unwrap();
 
@@ -178,7 +178,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 let reference_pos = near_to_root.move_to(reference_side);
 
                 let reference_image_pos = self.image.recovered_image
-                    [reference_pos.into_gridpos(grid)]
+                    [reference_pos.into_grid_pos(grid)]
                 .as_ref()
                 .unwrap()
                 .pos;
@@ -211,7 +211,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 };
 
                 let reference_fragment = self.image.recovered_image
-                    [reference_pos.into_gridpos(grid)]
+                    [reference_pos.into_grid_pos(grid)]
                 .as_ref()
                 .unwrap();
 
@@ -229,17 +229,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
     /// W   E  -- R90 --> S   N このとき答えは West
     ///   S                 E
     fn calc_intersects_dir(fragment: &Fragment, reference: Dir) -> Dir {
-        let mut table = [Dir::North, Dir::East, Dir::South, Dir::West];
-        table.rotate_right(fragment.rot.as_num() as usize);
-
-        let index = match reference {
-            Dir::North => 0,
-            Dir::East => 1,
-            Dir::South => 2,
-            Dir::West => 3,
-        };
-
-        table[index]
+        reference.rotate(fragment.rot + Rot::R270)
     }
 
     /// Pos にある fragment の reference となる fragment の方向を返す
@@ -249,60 +239,25 @@ impl<'tc> RecoveredImagePreview<'tc> {
     fn calc_reference_side(root: Pos, pos: Pos) -> Dir {
         use Ordering::*;
         match (root.x().cmp(&pos.x()), root.y().cmp(&pos.y())) {
-            (Equal, Greater) => Dir::South,
-            (Equal, Less) => Dir::North,
+            (_, Greater) => Dir::South,
+            (_, Less) => Dir::North,
             (Less, Equal) => Dir::West,
             (Greater, Equal) => Dir::East,
-
-            (Less, Less) => Dir::North,
-            (Greater, Less) => Dir::North,
-            (Less, Greater) => Dir::South,
-            (Greater, Greater) => Dir::South,
-
             (Equal, Equal) => panic!("called on exact root pos"),
         }
     }
 
-    fn dragging_axis(from: Pos, to: Pos) -> Axis {
-        match from {
-            Pos(x, _) if x == to.x() => Axis::Y,
-            Pos(_, y) if y == to.y() => Axis::X,
-            _ => panic!("invalid dragging state, from: {:?}, to: {:?}", from, to),
-        }
-    }
-
     fn is_draggable(root: Pos, from: Pos, to: Pos) -> bool {
-        if matches!((from, to), (Pos(x1, y1), Pos(x2, y2)) if (x1 != x2 && y1 != y2)) {
-            return false;
-        }
-
-        if matches!((from, to), (Pos(x1, y1), Pos(x2, y2)) if (x1 == x2 && y1 == y2)) {
+        if from == to {
             return true;
         }
 
-        /*
-          123
-          4f5
-          678
-        */
-
-        use Ordering::*;
-        let draggable_axis = match (root.x().cmp(&from.x()), root.y().cmp(&from.y())) {
-            /*1*/ (Greater, Greater) |
-            /*2*/ (Equal, Greater) |
-            /*3*/ (Less, Greater) |
-            /*6*/ (Greater, Less) |
-            /*7*/ (Equal, Less) |
-            /*8*/ (Less, Less) => Axis::Y,
-
-            /*4*/ (Greater, Equal) |
-            /*5*/ (Less, Equal) => Axis::X,
-
-            /*f (from)*/ (Equal, Equal) => unreachable!(),
-        };
-
-        let dragging_axis = Self::dragging_axis(from, to);
-        dragging_axis == draggable_axis
+        if let Some(dragging_axis) = from.aligned_axis(to) {
+            let draggable_axis = root.aligned_axis(from).unwrap_or(Axis::Y);
+            dragging_axis == draggable_axis
+        } else {
+            false
+        }
     }
 
     pub(super) fn render(&self, renderer: &mut Renderer<'_>, global_state: &GuiState) {
@@ -351,8 +306,8 @@ impl<'tc> RecoveredImagePreview<'tc> {
         let cell_side_length = image_size.0 as f64 / grid.width() as f64;
         let cell_size = (cell_side_length as i32, cell_side_length as i32);
 
-        let offset_of_single = |p: u8| (cell_side_length * p as f64) as i32;
-        let offset_of = |p: Pos| (offset_of_single(p.x()), offset_of_single(p.y()));
+        let scale_by_side = |p: u8| (cell_side_length * p as f64) as i32;
+        let offset_of = |p: Pos| (scale_by_side(p.x()), scale_by_side(p.y()));
 
         // root
         renderer.set_draw_color(SdlColor::BLUE);
@@ -361,19 +316,19 @@ impl<'tc> RecoveredImagePreview<'tc> {
         // drag
         if matches!(self.dragging_from, Some(f) if f != selecting_at) {
             let from = self.dragging_from.unwrap();
-            let dragging_axis = Self::dragging_axis(from, selecting_at);
+            let dragging_axis = from.aligned_axis(selecting_at).unwrap();
 
             let table = IntoIterator::into_iter([from, selecting_at]);
             let begin = table.min_by_key(|x| x.get(dragging_axis)).unwrap();
 
             let size = match dragging_axis {
                 Axis::X => (
-                    offset_of_single(diff_u8(from.0, selecting_at.0) + (1/* for selecting pos */)),
+                    scale_by_side(diff_u8(from.0, selecting_at.0) + (1/* for selecting pos */)),
                     cell_side_length as i32,
                 ),
                 Axis::Y => (
                     cell_side_length as i32,
-                    offset_of_single(diff_u8(from.1, selecting_at.1) + (1/* for selecting pos */)),
+                    scale_by_side(diff_u8(from.1, selecting_at.1) + (1/* for selecting pos */)),
                 ),
             };
 
@@ -386,23 +341,17 @@ impl<'tc> RecoveredImagePreview<'tc> {
         use Ordering::*;
 
         let sides = match (root.x().cmp(&selecting_at.0), root.y().cmp(&selecting_at.1)) {
-            (Less, Less) => Sides::LEFT | Sides::TOP,
-            (Less, Greater) => Sides::LEFT | Sides::BOTTOM,
-            (Greater, Less) => Sides::RIGHT | Sides::TOP,
-            (Greater, Greater) => Sides::RIGHT | Sides::BOTTOM,
-
-            (Equal, Greater) => Sides::BOTTOM,
-            (Equal, Less) => Sides::TOP,
+            (_, Less) => Sides::TOP,
+            (_, Greater) => Sides::BOTTOM,
             (Less, Equal) => Sides::LEFT,
             (Greater, Equal) => Sides::RIGHT,
-
-            (Equal, Equal) => Sides::all(),
+            (Equal, Equal) => Sides::empty(),
         };
 
+        renderer.set_draw_color(SdlColor::GREEN);
+        renderer.draw_partial_rect(offset_of(selecting_at), cell_size, Sides::all());
         renderer.set_draw_color(SdlColor::RED);
         renderer.draw_partial_rect(offset_of(selecting_at), cell_size, sides);
-        renderer.set_draw_color(SdlColor::GREEN);
-        renderer.draw_partial_rect(offset_of(selecting_at), cell_size, !sides);
     }
 
     fn render_fragment_debug(&self, renderer: &mut Renderer<'_>, image_size: (u32, u32)) {
@@ -410,46 +359,45 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
         let cell_side_length = image_size.0 as f64 / grid.width() as f64;
 
-        let offset_of = |p: u8| (cell_side_length * p as f64) as i32;
-        let offset_of = |(x, y): (u8, u8)| (offset_of(x), offset_of(y));
+        let scale_by_side = |p: u8| (cell_side_length * p as f64) as i32;
+        let offset_of = |x, y| (scale_by_side(x), scale_by_side(y));
 
-        for x in 0..grid.width() {
-            for y in 0..grid.height() {
-                let pos = grid.pos(x, y);
-                let fragment = self.image.recovered_image[pos].as_ref().unwrap();
+        for (pos, fragment) in self.image.recovered_image.iter_with_pos() {
+            let fragment = fragment.as_ref().unwrap();
 
-                renderer.render_text(
-                    format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
-                    offset_of((x, y)),
-                    SdlColor::GREEN,
+            renderer.render_text(
+                format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
+                offset_of(pos.x(), pos.y()),
+                SdlColor::GREEN,
+                false,
+            );
+
+            // assuming arrow is always square.
+            let arrow_side_length = 20;
+            let arrow_pos = offset_of(pos.x() + 1, pos.y() + 1);
+            let arrow_pos = (
+                arrow_pos.0 - arrow_side_length as i32,
+                arrow_pos.1 - arrow_side_length as i32,
+            );
+
+            let rect = Rect::new(
+                arrow_pos.0,
+                arrow_pos.1,
+                arrow_side_length,
+                arrow_side_length,
+            );
+
+            renderer
+                .copy_ex(
+                    &self.arrow_texture,
+                    None,
+                    rect,
+                    fragment.rot.as_degrees(),
+                    None,
                     false,
-                );
-
-                // assuming arrow is always square.
-                let arrow_side_length = 20;
-                let arrow_pos = offset_of((x + 1, y + 1));
-                let arrow_pos = (
-                    arrow_pos.0 - arrow_side_length as i32,
-                    arrow_pos.1 - arrow_side_length as i32,
-                );
-
-                let rect = Rect::new(
-                    arrow_pos.0,
-                    arrow_pos.1,
-                    arrow_side_length,
-                    arrow_side_length,
-                );
-                let angle = match fragment.rot {
-                    Rot::R0 => 0.0,
-                    Rot::R90 => 90.0,
-                    Rot::R180 => 180.0,
-                    Rot::R270 => 270.0,
-                };
-
-                renderer
-                    .copy_ex(&self.arrow_texture, None, rect, angle, None, false, false)
-                    .unwrap();
-            }
+                    false,
+                )
+                .unwrap();
         }
     }
 }
@@ -476,12 +424,13 @@ fn create_image_texture<'tc>(
     let width = (side_length * grid.width() as usize) as u32;
     let height = (side_length * grid.height() as usize) as u32;
 
+    const BYTES_PER_PIXEL: usize = 3;
     let mut data = Vec::with_capacity(
         side_length
             * side_length
             * grid.width() as usize
             * grid.height() as usize
-            * (3/* each pixel has 3 bytes for RGB */),
+            * BYTES_PER_PIXEL,
     );
 
     for y in 0..grid.height() {
@@ -489,7 +438,7 @@ fn create_image_texture<'tc>(
             for x in 0..grid.width() {
                 let grid_pos = grid.pos(x, y);
 
-                if let Some(ref mut x) = &mut fragment_grid[grid_pos] {
+                if let Some(x) = &mut fragment_grid[grid_pos] {
                     data.extend(
                         x.pixels()[(py * side_length) as usize..((py + 1) * side_length) as usize]
                             .iter()

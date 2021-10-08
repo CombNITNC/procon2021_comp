@@ -138,7 +138,7 @@ pub(super) fn begin(ctx: GuiContext) {
         } else {
             WaitingMessage.render(&mut renderer);
 
-            // not to forget to process other GuiResponse
+            // TODO: process other GuiResponse
             #[allow(clippy::single_match)]
             match state.ctx.rx.try_recv() {
                 Ok(GuiResponse::Recalculated(a)) => {
@@ -217,12 +217,11 @@ impl GuiState {
         use Event::*;
 
         match event {
-            Window {
+            &Window {
                 win_event: WindowEvent::Resized(w, h),
                 ..
             } => {
-                self.window_size.0 = *w as u32;
-                self.window_size.1 = *h as u32;
+                self.window_size = (w as u32, h as u32);
             }
 
             Quit { .. }
@@ -408,7 +407,7 @@ impl Pos {
     }
     #[inline]
     #[track_caller]
-    fn into_gridpos(self, grid: Grid) -> GridPos {
+    fn into_grid_pos(self, grid: Grid) -> GridPos {
         grid.pos(self.0, self.1)
     }
     fn move_to(self, dir: Dir) -> Self {
@@ -418,5 +417,15 @@ impl Pos {
             Dir::West => Pos(self.x() - 1, self.y()),
             Dir::East => Pos(self.x() + 1, self.y()),
         }
+    }
+
+    fn aligned_axis(self, other: Self) -> Option<Axis> {
+        Some(if self.x() == other.x() {
+            Axis::Y
+        } else if self.y() == other.y() {
+            Axis::X
+        } else {
+            return None;
+        })
     }
 }
