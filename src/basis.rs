@@ -137,6 +137,15 @@ impl Rot {
             _ => unreachable!(),
         }
     }
+
+    pub(crate) fn as_degrees(self) -> f64 {
+        match self {
+            Rot::R0 => 0.0,
+            Rot::R90 => 90.0,
+            Rot::R180 => 180.0,
+            Rot::R270 => 270.0,
+        }
+    }
 }
 
 impl Add for Rot {
