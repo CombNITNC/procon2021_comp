@@ -424,12 +424,13 @@ fn create_image_texture<'tc>(
     let width = (side_length * grid.width() as usize) as u32;
     let height = (side_length * grid.height() as usize) as u32;
 
+    const BYTES_PER_PIXEL: usize = 3;
     let mut data = Vec::with_capacity(
         side_length
             * side_length
             * grid.width() as usize
             * grid.height() as usize
-            * (3/* each pixel has 3 bytes for RGB */),
+            * BYTES_PER_PIXEL,
     );
 
     for y in 0..grid.height() {
@@ -437,7 +438,7 @@ fn create_image_texture<'tc>(
             for x in 0..grid.width() {
                 let grid_pos = grid.pos(x, y);
 
-                if let Some(ref mut x) = &mut fragment_grid[grid_pos] {
+                if let Some(x) = &mut fragment_grid[grid_pos] {
                     data.extend(
                         x.pixels()[(py * side_length) as usize..((py + 1) * side_length) as usize]
                             .iter()
