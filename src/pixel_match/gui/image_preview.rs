@@ -229,17 +229,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
     /// W   E  -- R90 --> S   N このとき答えは West
     ///   S                 E
     fn calc_intersects_dir(fragment: &Fragment, reference: Dir) -> Dir {
-        let mut table = [Dir::North, Dir::East, Dir::South, Dir::West];
-        table.rotate_right(fragment.rot.as_num() as usize);
-
-        let index = match reference {
-            Dir::North => 0,
-            Dir::East => 1,
-            Dir::South => 2,
-            Dir::West => 3,
-        };
-
-        table[index]
+        reference.rotate(fragment.rot + Rot::R270)
     }
 
     /// Pos にある fragment の reference となる fragment の方向を返す
