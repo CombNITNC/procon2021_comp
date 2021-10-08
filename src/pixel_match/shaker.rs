@@ -48,21 +48,24 @@ struct Finder<'a> {
 impl<'a> Finder<'a> {
     fn apply_confirmed_pairs(&mut self) {
         let fragment_pos = self.list.borrow().last().unwrap_or(self.ctx.root_ref).pos;
+        let edgepos = EdgePos::new(fragment_pos, self.dir);
 
-        if let Some(pairs) = self
-            .ctx
-            .hints
-            .borrow_mut()
-            .confirmed_pairs_of(EdgePos::new(fragment_pos, self.dir))
-        {
+        if let Some(pairs) = self.ctx.hints.borrow_mut().confirmed_pairs_of(edgepos) {
             if self.list.borrow().len() + self.oppisite_list.borrow().len() + pairs.len() + 1
                 > self.ctx.num_fragment as usize
             {
                 println!("shaker_fill: couldn't apply confirmed_pairs because of size overrun");
             } else {
                 for (pos, rot) in pairs {
-                    let mut fragment =
-                        find_and_remove(*self.ctx.fragments.borrow_mut(), pos).unwrap();
+                    let mut fragment = match find_and_remove(*self.ctx.fragments.borrow_mut(), pos)
+                    {
+                        Some(v) => v,
+                        None => {
+                            println!("shaker_fill: partially applied confirmed_pair because fragment in pair is already taken. edgepos: {:?}", edgepos);
+                            break;
+                        }
+                    };
+
                     fragment.rotate(rot);
                     self.list.borrow_mut().push(fragment);
                 }
@@ -76,7 +79,7 @@ impl<'a> Finder<'a> {
         find_by_single_side(
             *self.ctx.fragments.borrow(),
             fragment_ref.edges.edge(self.dir),
-            self.ctx.hints.borrow().blacklist_of(fragment_ref),
+            self.ctx.hints.borrow().blacklist_of(fragment_ref.pos),
         )
     }
 

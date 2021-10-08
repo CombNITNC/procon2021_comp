@@ -9,9 +9,6 @@ mod double_side;
 mod gui;
 mod shaker;
 
-use double_side::fill_by_double_side;
-use shaker::shaker_fill;
-
 use self::gui::RecalculateArtifact;
 
 pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragment> {
@@ -97,8 +94,10 @@ fn solve(
     let root = find_and_remove(&mut fragments, grid.pos(0, 0)).unwrap();
 
     // そこから上下左右に伸ばす形で探索
-    let (up, down) = shaker_fill(grid.height(), &mut fragments, Dir::North, &root, &mut hints);
-    let (left, right) = shaker_fill(grid.width(), &mut fragments, Dir::West, &root, &mut hints);
+    let (up, down) =
+        shaker::shaker_fill(grid.height(), &mut fragments, Dir::North, &root, &mut hints);
+    let (left, right) =
+        shaker::shaker_fill(grid.width(), &mut fragments, Dir::West, &root, &mut hints);
 
     // root から上下左右に何個断片が有るかわかったので、rootのあるべき座標が分かる
     let root_pos = grid.pos(left.len() as _, up.len() as _);
@@ -115,57 +114,7 @@ fn solve(
     // この 1,2,3,4 で示したスペースをそれぞれ root に近い断片から埋めていく。
     // 2辺わかった状態で探索できるため、精度向上が期待できる。
 
-    // 1
-    for x in root_pos.x() + 1..grid.width() {
-        for y in (0..root_pos.y()).rev() {
-            fill_by_double_side(
-                &mut fragments,
-                &mut fragment_grid,
-                grid.pos(x, y),
-                (grid.pos(x, y + 1), Dir::North),
-                (grid.pos(x - 1, y), Dir::East),
-            );
-        }
-    }
-
-    // 2
-    for x in (0..root_pos.x()).rev() {
-        for y in (0..root_pos.y()).rev() {
-            fill_by_double_side(
-                &mut fragments,
-                &mut fragment_grid,
-                grid.pos(x, y),
-                (grid.pos(x + 1, y), Dir::West),
-                (grid.pos(x, y + 1), Dir::North),
-            );
-        }
-    }
-
-    // 3
-    for x in (0..root_pos.x()).rev() {
-        for y in root_pos.y() + 1..grid.height() {
-            fill_by_double_side(
-                &mut fragments,
-                &mut fragment_grid,
-                grid.pos(x, y),
-                (grid.pos(x, y - 1), Dir::South),
-                (grid.pos(x + 1, y), Dir::West),
-            );
-        }
-    }
-
-    // 4
-    for x in root_pos.x() + 1..grid.width() {
-        for y in root_pos.y() + 1..grid.height() {
-            fill_by_double_side(
-                &mut fragments,
-                &mut fragment_grid,
-                grid.pos(x, y),
-                (grid.pos(x - 1, y), Dir::East),
-                (grid.pos(x, y - 1), Dir::South),
-            );
-        }
-    }
+    double_side::fill_by_double_side(root_pos, &mut hints, &mut fragments, &mut fragment_grid);
 
     (fragment_grid, root_pos)
 }
@@ -258,13 +207,10 @@ struct ResolveHints {
 }
 
 impl ResolveHints {
-    fn blacklist_of<'a>(
-        &'a self,
-        fragment: &'a Fragment,
-    ) -> impl Iterator<Item = &'a EdgePos> + Clone + 'a {
+    fn blacklist_of(&self, pos: Pos) -> impl Iterator<Item = &EdgePos> + Clone {
         self.blacklist
             .iter()
-            .filter(move |&(x, _)| *x == fragment.pos)
+            .filter(move |&(x, _)| *x == pos)
             .map(|(_, x)| x)
     }
 

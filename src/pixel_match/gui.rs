@@ -28,7 +28,7 @@ use super::ResolveHints;
 mod arrow_texture;
 mod image_preview;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct EdgePos {
     pub(super) pos: GridPos,
     pub(super) dir: Dir,
