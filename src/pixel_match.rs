@@ -18,58 +18,62 @@ pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragmen
     let (gtx, rx) = mpsc::channel();
     let (tx, grx) = mpsc::channel();
 
-    let gui_thread = std::thread::Builder::new()
-        .name("GUI".into())
-        .spawn(|| gui::begin(gui::GuiContext { tx: gtx, rx: grx }))
-        .expect("failed to launch GUI thread");
+    let solver_thread = std::thread::Builder::new()
+        .name("pixel matcher".into())
+        .spawn(move || {
+            let (recovered_image, root_pos) =
+                solve(fragments.clone(), grid, ResolveHints::default());
 
-    let (recovered_image, root_pos) = solve(fragments.clone(), grid, ResolveHints::default());
+            let mut result = recovered_image.clone();
 
-    let mut result = recovered_image.clone();
+            tx.send(GuiResponse::Recalculated(RecalculateArtifact {
+                recovered_image,
+                root_pos,
+            }))
+            .unwrap();
 
-    tx.send(GuiResponse::Recalculated(RecalculateArtifact {
-        recovered_image,
-        root_pos,
-    }))
-    .unwrap();
+            loop {
+                match rx.recv() {
+                    Ok(GuiRequest::Recalculate(hint)) => {
+                        println!("recalculating. blacklists: {{");
+                        for h in &hint.blacklist {
+                            println!("    {:?}", h);
+                        }
+                        println!("}}");
+                        println!("whitelists: {{");
+                        for h in &hint.confirmed_pairs {
+                            println!("    {:?}", h);
+                        }
+                        println!("}}");
 
-    loop {
-        match rx.recv() {
-            Ok(GuiRequest::Recalculate(hint)) => {
-                println!("recalculating. blacklists: {{");
-                for h in &hint.blacklist {
-                    println!("    {:?}", h);
+                        let (recovered_image, root_pos) = solve(fragments.clone(), grid, hint);
+
+                        result = recovered_image.clone();
+
+                        tx.send(GuiResponse::Recalculated(RecalculateArtifact {
+                            recovered_image,
+                            root_pos,
+                        }))
+                        .unwrap();
+                    }
+
+                    Ok(GuiRequest::Quit) => break,
+
+                    Err(_) => {
+                        eprintln!("main thread channel unexpectedly closed. maybe it has panicked");
+                        break;
+                    }
                 }
-                println!("}}");
-                println!("whitelists: {{");
-                for h in &hint.confirmed_pairs {
-                    println!("    {:?}", h);
-                }
-                println!("}}");
-
-                let (recovered_image, root_pos) = solve(fragments.clone(), grid, hint);
-
-                result = recovered_image.clone();
-
-                tx.send(GuiResponse::Recalculated(RecalculateArtifact {
-                    recovered_image,
-                    root_pos,
-                }))
-                .unwrap();
             }
+            result
+        })
+        .expect("failed to launch pixel matcher thread");
 
-            Ok(GuiRequest::Quit) => break,
+    gui::begin(gui::GuiContext { tx: gtx, rx: grx });
 
-            Err(_) => {
-                eprintln!("GUI thread channel unexpectedly closed. maybe it has panicked");
-                break;
-            }
-        }
-    }
-
-    if let Err(e) = gui_thread.join() {
-        std::panic::resume_unwind(e);
-    }
+    let result = solver_thread
+        .join()
+        .unwrap_or_else(|e| std::panic::resume_unwind(e));
 
     VecOnGrid::from_vec(
         grid,
