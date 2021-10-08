@@ -341,23 +341,17 @@ impl<'tc> RecoveredImagePreview<'tc> {
         use Ordering::*;
 
         let sides = match (root.x().cmp(&selecting_at.0), root.y().cmp(&selecting_at.1)) {
-            (Less, Less) => Sides::LEFT | Sides::TOP,
-            (Less, Greater) => Sides::LEFT | Sides::BOTTOM,
-            (Greater, Less) => Sides::RIGHT | Sides::TOP,
-            (Greater, Greater) => Sides::RIGHT | Sides::BOTTOM,
-
-            (Equal, Greater) => Sides::BOTTOM,
-            (Equal, Less) => Sides::TOP,
+            (_, Less) => Sides::TOP,
+            (_, Greater) => Sides::BOTTOM,
             (Less, Equal) => Sides::LEFT,
             (Greater, Equal) => Sides::RIGHT,
-
-            (Equal, Equal) => Sides::all(),
+            (Equal, Equal) => Sides::empty(),
         };
 
+        renderer.set_draw_color(SdlColor::GREEN);
+        renderer.draw_partial_rect(offset_of(selecting_at), cell_size, Sides::all());
         renderer.set_draw_color(SdlColor::RED);
         renderer.draw_partial_rect(offset_of(selecting_at), cell_size, sides);
-        renderer.set_draw_color(SdlColor::GREEN);
-        renderer.draw_partial_rect(offset_of(selecting_at), cell_size, !sides);
     }
 
     fn render_fragment_debug(&self, renderer: &mut Renderer<'_>, image_size: (u32, u32)) {
