@@ -1,5 +1,5 @@
 use crate::{
-    fragment::Fragment,
+    fragment::{Fragment, LazyRotate},
     grid::{Pos, VecOnGrid},
 };
 
@@ -29,7 +29,7 @@ fn test_map() {
                 pos: grid.pos(0, 0),
                 rot: Rot::R0,
                 edges: Edges::new(vec![], vec![], vec![], vec![]),
-                pixels: vec![],
+                pixels: LazyRotate::new(vec![], 0),
             },
         );
         vec[grid.pos(0, 0)].pos = grid.pos(1, 1);

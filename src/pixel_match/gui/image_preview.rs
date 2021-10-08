@@ -195,7 +195,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
                 let entry = EdgePos {
                     pos: selecting_fragment.pos,
-                    dir: Self::calc_intersects_dir(selecting_fragment, reference_side),
+                    dir: Self::calc_intersects_dir(selecting_fragment.rot, reference_side),
                 };
 
                 let reference_fragment = self.image.recovered_image
@@ -212,12 +212,22 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
     /// fragment.rot 回転したときの、reference 方向の辺の dir を求める
     ///
-    /// 例: selecting_fragment = { rot: R90, .. }; reference = Dir::North;
+    /// 例: fragment_rot = R90; reference = Dir::North;
     ///   N                 W
     /// W   E  -- R90 --> S   N このとき答えは West
     ///   S                 E
-    fn calc_intersects_dir(fragment: &Fragment, reference: Dir) -> Dir {
-        reference.rotate(fragment.rot + Rot::R270)
+    fn calc_intersects_dir(fragment_rot: Rot, reference: Dir) -> Dir {
+        let mut table = [Dir::North, Dir::East, Dir::South, Dir::West];
+        table.rotate_right(fragment_rot.as_num() as usize);
+
+        let index = match reference {
+            Dir::North => 0,
+            Dir::East => 1,
+            Dir::South => 2,
+            Dir::West => 3,
+        };
+
+        table[index]
     }
 
     /// Pos にある fragment の reference となる fragment の方向を返す
@@ -415,8 +425,18 @@ impl<'tc> RecoveredImagePreview<'tc> {
             let fragment = fragment.as_ref().unwrap();
 
             renderer.render_text(
-                format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
+                format!("p: ({}, {})", fragment.pos.x(), fragment.pos.y(),),
                 offset_of(pos.x(), pos.y()),
+                SdlColor::GREEN,
+                false,
+            );
+            renderer.render_text(
+                format!("g: ({}, {})", pos.x(), pos.y()),
+                {
+                    let mut p = offset_of(pos.x(), pos.y());
+                    p.1 += 14;
+                    p
+                },
                 SdlColor::GREEN,
                 false,
             );
@@ -544,4 +564,12 @@ impl Iterator for BidirectionalInclusiveRange {
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.range.size_hint()
     }
+}
+
+#[test]
+fn test_calc_intersects_dir() {
+    assert_eq!(
+        RecoveredImagePreview::calc_intersects_dir(Rot::R90, Dir::North),
+        Dir::West
+    );
 }

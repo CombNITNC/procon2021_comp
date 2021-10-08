@@ -30,18 +30,9 @@ where
             [Dir::West, Dir::North],
         ])
         .filter(move |a| {
-            let pred = !blacklist
+            !blacklist
                 .clone()
-                .any(|x| x.pos == fragment.pos && x.dir == a[blacklist_ref_index]);
-
-            if !pred {
-                println!(
-                    "dropping candidate {:?} {:?}",
-                    fragment.pos, a[blacklist_ref_index]
-                );
-            }
-
-            pred
+                .any(|x| x.pos == fragment.pos && x.dir == a[blacklist_ref_index])
         })
         .map(move |[dir_a, dir_b]| (fragment.edges.edge(dir_a), fragment.edges.edge(dir_b)))
         .map(move |(edge_a, edge_b)| DiffEntry {
@@ -75,8 +66,8 @@ fn fill_by_double_side_inner(
         );
 
     let (blacklist_pos, index) = match (ref1_dir, ref2_dir) {
-        (Dir::North | Dir::South, _) => (ref1_pos, 1),
-        (_, Dir::North | Dir::South) => (ref2_pos, 0),
+        (Dir::North | Dir::South, _) => (ref1_pos, 0),
+        (_, Dir::North | Dir::South) => (ref2_pos, 1),
         _ => unreachable!("either ref1 or ref2 should refer Y-axis"),
     };
 
