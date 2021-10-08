@@ -419,4 +419,14 @@ impl Pos {
             Dir::East => Pos(self.x() + 1, self.y()),
         }
     }
+
+    fn aligned_axis(self, other: Self) -> Option<Axis> {
+        Some(if self.x() == other.x() {
+            Axis::Y
+        } else if self.y() == other.y() {
+            Axis::X
+        } else {
+            return None;
+        })
+    }
 }
