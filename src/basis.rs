@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::ops::AddAssign;
+use std::ops::{Add, AddAssign};
 
 use crate::grid::Pos;
 
@@ -136,6 +136,14 @@ impl Rot {
             3 => Rot::R270,
             _ => unreachable!(),
         }
+    }
+}
+
+impl Add for Rot {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::from_num((self.as_num() + rhs.as_num()) % 4)
     }
 }
 
