@@ -400,46 +400,45 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
         let cell_side_length = image_size.0 as f64 / grid.width() as f64;
 
-        let offset_of = |p: u8| (cell_side_length * p as f64) as i32;
-        let offset_of = |(x, y): (u8, u8)| (offset_of(x), offset_of(y));
+        let scale_by_side = |p: u8| (cell_side_length * p as f64) as i32;
+        let offset_of = |x, y| (scale_by_side(x), scale_by_side(y));
 
-        for x in 0..grid.width() {
-            for y in 0..grid.height() {
-                let pos = grid.pos(x, y);
-                let fragment = self.image.recovered_image[pos].as_ref().unwrap();
+        for (pos, fragment) in self.image.recovered_image.iter_with_pos() {
+            let fragment = fragment.as_ref().unwrap();
 
-                renderer.render_text(
-                    format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
-                    offset_of((x, y)),
-                    SdlColor::GREEN,
+            renderer.render_text(
+                format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
+                offset_of(pos.x(), pos.y()),
+                SdlColor::GREEN,
+                false,
+            );
+
+            // assuming arrow is always square.
+            let arrow_side_length = 20;
+            let arrow_pos = offset_of(pos.x() + 1, pos.y() + 1);
+            let arrow_pos = (
+                arrow_pos.0 - arrow_side_length as i32,
+                arrow_pos.1 - arrow_side_length as i32,
+            );
+
+            let rect = Rect::new(
+                arrow_pos.0,
+                arrow_pos.1,
+                arrow_side_length,
+                arrow_side_length,
+            );
+
+            renderer
+                .copy_ex(
+                    &self.arrow_texture,
+                    None,
+                    rect,
+                    fragment.rot.as_degrees(),
+                    None,
                     false,
-                );
-
-                // assuming arrow is always square.
-                let arrow_side_length = 20;
-                let arrow_pos = offset_of((x + 1, y + 1));
-                let arrow_pos = (
-                    arrow_pos.0 - arrow_side_length as i32,
-                    arrow_pos.1 - arrow_side_length as i32,
-                );
-
-                let rect = Rect::new(
-                    arrow_pos.0,
-                    arrow_pos.1,
-                    arrow_side_length,
-                    arrow_side_length,
-                );
-                let angle = match fragment.rot {
-                    Rot::R0 => 0.0,
-                    Rot::R90 => 90.0,
-                    Rot::R180 => 180.0,
-                    Rot::R270 => 270.0,
-                };
-
-                renderer
-                    .copy_ex(&self.arrow_texture, None, rect, angle, None, false, false)
-                    .unwrap();
-            }
+                    false,
+                )
+                .unwrap();
         }
     }
 }
