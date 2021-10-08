@@ -138,7 +138,7 @@ pub(super) fn begin(ctx: GuiContext) {
         } else {
             WaitingMessage.render(&mut renderer);
 
-            // not to forget to process other GuiResponse
+            // TODO: process other GuiResponse
             #[allow(clippy::single_match)]
             match state.ctx.rx.try_recv() {
                 Ok(GuiResponse::Recalculated(a)) => {
