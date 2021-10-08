@@ -111,7 +111,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                     return;
                 }
 
-                let dragging_axis = Self::dragging_axis(dragging_from, selecting_at);
+                let dragging_axis = dragging_from.aligned_axis(selecting_at).unwrap();
                 let dragging_axis_of = |p: Pos| p.get(dragging_axis);
 
                 /*
@@ -247,46 +247,17 @@ impl<'tc> RecoveredImagePreview<'tc> {
         }
     }
 
-    fn dragging_axis(from: Pos, to: Pos) -> Axis {
-        match from {
-            Pos(x, _) if x == to.x() => Axis::Y,
-            Pos(_, y) if y == to.y() => Axis::X,
-            _ => panic!("invalid dragging state, from: {:?}, to: {:?}", from, to),
-        }
-    }
-
     fn is_draggable(root: Pos, from: Pos, to: Pos) -> bool {
-        if matches!((from, to), (Pos(x1, y1), Pos(x2, y2)) if (x1 != x2 && y1 != y2)) {
-            return false;
-        }
-
-        if matches!((from, to), (Pos(x1, y1), Pos(x2, y2)) if (x1 == x2 && y1 == y2)) {
+        if from == to {
             return true;
         }
 
-        /*
-          123
-          4f5
-          678
-        */
-
-        use Ordering::*;
-        let draggable_axis = match (root.x().cmp(&from.x()), root.y().cmp(&from.y())) {
-            /*1*/ (Greater, Greater) |
-            /*2*/ (Equal, Greater) |
-            /*3*/ (Less, Greater) |
-            /*6*/ (Greater, Less) |
-            /*7*/ (Equal, Less) |
-            /*8*/ (Less, Less) => Axis::Y,
-
-            /*4*/ (Greater, Equal) |
-            /*5*/ (Less, Equal) => Axis::X,
-
-            /*f (from)*/ (Equal, Equal) => unreachable!(),
-        };
-
-        let dragging_axis = Self::dragging_axis(from, to);
-        dragging_axis == draggable_axis
+        if let Some(dragging_axis) = from.aligned_axis(to) {
+            let draggable_axis = root.aligned_axis(from).unwrap_or(Axis::Y);
+            dragging_axis == draggable_axis
+        } else {
+            false
+        }
     }
 
     pub(super) fn render(&self, renderer: &mut Renderer<'_>, global_state: &GuiState) {
@@ -345,7 +316,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
         // drag
         if matches!(self.dragging_from, Some(f) if f != selecting_at) {
             let from = self.dragging_from.unwrap();
-            let dragging_axis = Self::dragging_axis(from, selecting_at);
+            let dragging_axis = from.aligned_axis(selecting_at).unwrap();
 
             let table = IntoIterator::into_iter([from, selecting_at]);
             let begin = table.min_by_key(|x| x.get(dragging_axis)).unwrap();
