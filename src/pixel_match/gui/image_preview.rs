@@ -306,8 +306,8 @@ impl<'tc> RecoveredImagePreview<'tc> {
         let cell_side_length = image_size.0 as f64 / grid.width() as f64;
         let cell_size = (cell_side_length as i32, cell_side_length as i32);
 
-        let offset_of_single = |p: u8| (cell_side_length * p as f64) as i32;
-        let offset_of = |p: Pos| (offset_of_single(p.x()), offset_of_single(p.y()));
+        let scale_by_side = |p: u8| (cell_side_length * p as f64) as i32;
+        let offset_of = |p: Pos| (scale_by_side(p.x()), scale_by_side(p.y()));
 
         // root
         renderer.set_draw_color(SdlColor::BLUE);
@@ -323,12 +323,12 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
             let size = match dragging_axis {
                 Axis::X => (
-                    offset_of_single(diff_u8(from.0, selecting_at.0) + (1/* for selecting pos */)),
+                    scale_by_side(diff_u8(from.0, selecting_at.0) + (1/* for selecting pos */)),
                     cell_side_length as i32,
                 ),
                 Axis::Y => (
                     cell_side_length as i32,
-                    offset_of_single(diff_u8(from.1, selecting_at.1) + (1/* for selecting pos */)),
+                    scale_by_side(diff_u8(from.1, selecting_at.1) + (1/* for selecting pos */)),
                 ),
             };
 
