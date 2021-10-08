@@ -217,12 +217,11 @@ impl GuiState {
         use Event::*;
 
         match event {
-            Window {
+            &Window {
                 win_event: WindowEvent::Resized(w, h),
                 ..
             } => {
-                self.window_size.0 = *w as u32;
-                self.window_size.1 = *h as u32;
+                self.window_size = (w as u32, h as u32);
             }
 
             Quit { .. }
