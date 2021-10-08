@@ -239,16 +239,10 @@ impl<'tc> RecoveredImagePreview<'tc> {
     fn calc_reference_side(root: Pos, pos: Pos) -> Dir {
         use Ordering::*;
         match (root.x().cmp(&pos.x()), root.y().cmp(&pos.y())) {
-            (Equal, Greater) => Dir::South,
-            (Equal, Less) => Dir::North,
+            (_, Greater) => Dir::South,
+            (_, Less) => Dir::North,
             (Less, Equal) => Dir::West,
             (Greater, Equal) => Dir::East,
-
-            (Less, Less) => Dir::North,
-            (Greater, Less) => Dir::North,
-            (Less, Greater) => Dir::South,
-            (Greater, Greater) => Dir::South,
-
             (Equal, Equal) => panic!("called on exact root pos"),
         }
     }
