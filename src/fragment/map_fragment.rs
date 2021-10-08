@@ -1,5 +1,5 @@
 use crate::{
-    fragment::{Fragment, LazyRotate},
+    fragment::Fragment,
     grid::{Pos, VecOnGrid},
 };
 

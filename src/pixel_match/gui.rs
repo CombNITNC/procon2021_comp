@@ -387,10 +387,12 @@ impl Pos {
     fn x(self) -> u8 {
         self.0
     }
+
     #[inline]
     fn y(self) -> u8 {
         self.1
     }
+
     #[inline]
     fn get(self, axis: Axis) -> u8 {
         match axis {
@@ -398,6 +400,7 @@ impl Pos {
             Axis::Y => self.y(),
         }
     }
+
     #[inline]
     fn replace(self, axis: Axis, v: u8) -> Self {
         match axis {
@@ -405,11 +408,13 @@ impl Pos {
             Axis::Y => Self(self.0, v),
         }
     }
+
     #[inline]
     #[track_caller]
     fn into_grid_pos(self, grid: Grid) -> GridPos {
         grid.pos(self.0, self.1)
     }
+
     fn move_to(self, dir: Dir) -> Self {
         match dir {
             Dir::North => Pos(self.x(), self.y() - 1),

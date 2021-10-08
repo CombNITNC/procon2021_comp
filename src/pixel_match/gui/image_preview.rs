@@ -425,18 +425,8 @@ impl<'tc> RecoveredImagePreview<'tc> {
             let fragment = fragment.as_ref().unwrap();
 
             renderer.render_text(
-                format!("p: ({}, {})", fragment.pos.x(), fragment.pos.y(),),
+                format!("{}, {}", fragment.pos.x(), fragment.pos.y(),),
                 offset_of(pos.x(), pos.y()),
-                SdlColor::GREEN,
-                false,
-            );
-            renderer.render_text(
-                format!("g: ({}, {})", pos.x(), pos.y()),
-                {
-                    let mut p = offset_of(pos.x(), pos.y());
-                    p.1 += 14;
-                    p
-                },
                 SdlColor::GREEN,
                 false,
             );
