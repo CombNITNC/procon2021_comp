@@ -79,8 +79,7 @@ fn main() {
                 problem.select_limit,
                 problem.swap_cost,
                 problem.select_cost,
-                threshold_x,
-                threshold_y,
+                (threshold_x, threshold_y),
             );
 
             println!(
