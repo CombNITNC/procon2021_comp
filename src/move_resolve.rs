@@ -284,8 +284,7 @@ pub(crate) fn resolve_approximately(
     let result = grid
         .all_pos()
         .par_bridge()
-        .inspect(|x| println!("pos: {:?}", x))
-        .map(|pos| {
+        .flat_map(|pos| {
             resolve_on_select(
                 grid,
                 nodes.clone(),
@@ -296,8 +295,6 @@ pub(crate) fn resolve_approximately(
                 thresholds,
             )
         })
-        .inspect(|x| println!("resolve_on_select: {:?}", x))
-        .flatten()
         .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
         .unwrap();
     let cost = operations_cost(&result);
