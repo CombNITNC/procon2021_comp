@@ -7,7 +7,7 @@ use std::{
 
 use super::SearchState;
 
-pub(crate) fn beam_search<S, A, C>(initial_state: S, beam_width: usize) -> (Vec<A>, C)
+pub(crate) fn beam_search<S, A, C>(initial_state: S, beam_width: usize) -> Option<(Vec<A>, C)>
 where
     S: SearchState<C = C, A = A>,
     A: Copy + std::fmt::Debug + Hash + Eq,
@@ -20,21 +20,16 @@ where
         state: initial_state,
         answer: vec![],
         answer_hasher: DefaultHasher::new(),
-        score: C::default(),
+        cost: C::default(),
     });
 
     while let Some(Node {
         state,
         answer,
         answer_hasher,
-        score,
+        cost,
     }) = heap.pop()
     {
-        if state.is_goal() {
-            return (answer, score);
-        }
-        visited.insert(answer_hasher.finish());
-
         let mut next_heap = BinaryHeap::new();
 
         for _ in 0..beam_width.min(heap.len()) {
@@ -45,11 +40,17 @@ where
                     let next_state = state.apply(action);
                     let mut next_answer = answer.clone();
                     next_answer.push(action);
-                    let next_score = state.cost_on(action);
+                    let next_cost = cost + state.cost_on(action);
+
+                    if next_state.is_goal() {
+                        return Some((next_answer, next_cost));
+                    }
+                    visited.insert(answer_hasher.finish());
+
                     next_heap.push(Node {
                         state: next_state,
                         answer: next_answer,
-                        score: next_score,
+                        cost: next_cost,
                         answer_hasher: next_hasher,
                     });
                 }
@@ -57,19 +58,19 @@ where
         }
         heap = next_heap;
     }
-    (vec![], C::default())
+    None
 }
 
 struct Node<S, A, C> {
     state: S,
     answer: Vec<A>,
-    score: C,
+    cost: C,
     answer_hasher: DefaultHasher,
 }
 
 impl<S, A, C: PartialEq> PartialEq for Node<S, A, C> {
     fn eq(&self, other: &Self) -> bool {
-        self.score == other.score
+        self.cost == other.cost
     }
 }
 
@@ -77,12 +78,12 @@ impl<S, A, C: PartialEq + Eq> Eq for Node<S, A, C> {}
 
 impl<S, A, C: PartialOrd> PartialOrd for Node<S, A, C> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.score.partial_cmp(&other.score)
+        other.cost.partial_cmp(&self.cost)
     }
 }
 
 impl<S, A, C: PartialOrd + PartialEq + Eq + Ord> Ord for Node<S, A, C> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.score.cmp(&other.score)
+        other.cost.cmp(&self.cost)
     }
 }

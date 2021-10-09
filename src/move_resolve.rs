@@ -3,14 +3,17 @@ use std::ops::Deref;
 
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use self::{approx::NextTargetsGenerator, edges_nodes::Nodes, ida_star::ida_star};
+use self::{approx::NextTargetsGenerator, edges_nodes::Nodes};
 use crate::{
     basis::{Movement, Operation},
     grid::{
         board::{Board, BoardFinder},
         Grid, Pos, VecOnGrid,
     },
-    move_resolve::approx::{gen::FromOutside, Solver},
+    move_resolve::{
+        approx::{gen::FromOutside, Solver},
+        beam_search::beam_search,
+    },
 };
 
 pub mod approx;
@@ -244,13 +247,12 @@ pub(crate) fn resolve(
 ) -> Vec<Operation> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let different_cells = DifferentCells::new(&nodes);
-    let lower_bound = different_cells.0;
 
     let (path, cost) = grid
         .all_pos()
         .par_bridge()
-        .map(|pos| {
-            ida_star(
+        .flat_map(|pos| {
+            beam_search(
                 GridCompleter {
                     board: Board::new(pos, nodes.clone()),
                     prev_action: None,
@@ -259,7 +261,7 @@ pub(crate) fn resolve(
                     select_cost,
                     remaining_select: select_limit,
                 },
-                lower_bound,
+                grid.width() as usize * grid.height() as usize,
             )
         })
         .min_by(|a, b| a.1.cmp(&b.1))
@@ -338,7 +340,7 @@ fn resolve_on_select<G: NextTargetsGenerator>(
     all_actions.append(&mut actions);
 
     let different_cells = DifferentCells::new(&nodes);
-    let (mut actions, _total_cost) = ida_star(
+    let (mut actions, _total_cost) = beam_search(
         GridCompleter {
             board: Board::new(selection, nodes),
             prev_action: all_actions.last().copied(),
@@ -347,8 +349,8 @@ fn resolve_on_select<G: NextTargetsGenerator>(
             select_cost,
             remaining_select: select_limit,
         },
-        different_cells.0,
-    );
+        5,
+    )?;
     all_actions.append(&mut actions);
     Some(actions_to_operations(all_actions))
 }
