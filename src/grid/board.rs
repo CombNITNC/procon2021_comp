@@ -1,4 +1,9 @@
-use std::collections::HashSet;
+use std::{
+    cell::{Ref, RefCell, RefMut},
+    collections::HashSet,
+    ops::Deref,
+    rc::Rc,
+};
 
 use super::{Grid, Pos, VecOnGrid};
 
@@ -6,12 +11,53 @@ mod finder;
 
 pub(crate) use finder::*;
 
+#[derive(Debug)]
+enum CowRc<T> {
+    Borrowed(Rc<RefCell<T>>),
+    Owned(Rc<RefCell<T>>),
+}
+
+impl<T> From<T> for CowRc<T> {
+    fn from(v: T) -> Self {
+        CowRc::Owned(Rc::new(RefCell::new(v)))
+    }
+}
+
+impl<T> Clone for CowRc<T> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Borrowed(x) => Self::Borrowed(Rc::clone(x)),
+            Self::Owned(x) => Self::Borrowed(Rc::clone(x)),
+        }
+    }
+}
+
+impl<T: ToOwned<Owned = T>> CowRc<T> {
+    fn to_mut(&mut self) -> RefMut<'_, T> {
+        match self {
+            CowRc::Owned(r) => r.borrow_mut(),
+            CowRc::Borrowed(r) => {
+                let o = Rc::new(RefCell::new(r.borrow().to_owned()));
+                *self = CowRc::Owned(o);
+                self.to_mut()
+            }
+        }
+    }
+
+    fn borrow(&self) -> Ref<'_, T> {
+        match self {
+            CowRc::Borrowed(r) => r.borrow(),
+            CowRc::Owned(r) => r.borrow(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct Board {
     select: Pos,
-    forward: VecOnGrid<Pos>,
-    reverse: VecOnGrid<Pos>,
-    locked: HashSet<Pos>,
+    forward: CowRc<VecOnGrid<Pos>>,
+    reverse: CowRc<VecOnGrid<Pos>>,
+    locked: CowRc<HashSet<Pos>>,
 }
 
 impl Board {
@@ -22,18 +68,18 @@ impl Board {
         }
         Self {
             select,
-            forward: field,
-            reverse,
-            locked: HashSet::new(),
+            forward: field.into(),
+            reverse: reverse.into(),
+            locked: HashSet::new().into(),
         }
     }
 
     pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
-        self.forward.grid.looping_manhattan_dist(a, b)
+        self.forward.borrow().grid.looping_manhattan_dist(a, b)
     }
 
     pub(crate) fn grid(&self) -> Grid {
-        self.forward.grid
+        self.forward.borrow().grid
     }
 
     pub(crate) fn selected(&self) -> Pos {
@@ -41,22 +87,24 @@ impl Board {
     }
 
     pub(crate) fn select(&mut self, to_select: Pos) {
-        if self.locked.contains(&to_select) {
+        if self.locked.borrow().contains(&to_select) {
             panic!("the position was locked: {:?}", to_select);
         }
         self.select = to_select;
     }
 
-    pub(crate) fn field(&self) -> &VecOnGrid<Pos> {
-        &self.forward
+    pub(crate) fn field<'a>(
+        &'a self,
+    ) -> impl Deref<Target = VecOnGrid<Pos>> + std::fmt::Debug + 'a {
+        self.forward.borrow()
     }
 
     pub(crate) fn forward(&self, pos: Pos) -> Pos {
-        self.forward[pos]
+        self.forward.borrow()[pos]
     }
 
     pub(crate) fn reverse(&self, pos: Pos) -> Pos {
-        self.reverse[pos]
+        self.reverse.borrow()[pos]
     }
 
     pub(crate) fn swap_to(&mut self, to_swap: Pos) {
@@ -64,7 +112,7 @@ impl Board {
         if dist == 0 {
             return;
         }
-        if self.locked.contains(&to_swap) {
+        if self.locked.borrow().contains(&to_swap) {
             panic!("the position was locked: {:?}", to_swap);
         }
         assert_eq!(
@@ -72,9 +120,11 @@ impl Board {
             "swapping position must be a neighbor\nselect: {:?}, to_swap: {:?}",
             self.select, to_swap
         );
-        self.reverse
-            .swap(self.forward[self.select], self.forward[to_swap]);
-        self.forward.swap(self.select, to_swap);
+        self.reverse.to_mut().swap(
+            self.forward.borrow()[self.select],
+            self.forward.borrow()[to_swap],
+        );
+        self.forward.to_mut().swap(self.select, to_swap);
         self.select = to_swap;
     }
 
@@ -85,10 +135,10 @@ impl Board {
     }
 
     fn width(&self) -> u8 {
-        self.forward.grid.width()
+        self.forward.borrow().grid.width()
     }
     fn height(&self) -> u8 {
-        self.forward.grid.height()
+        self.forward.borrow().grid.height()
     }
 
     fn up_of(&self, pos: Pos) -> Pos {
@@ -129,30 +179,31 @@ impl Board {
         ]
         .iter()
         .copied()
-        .filter(|pos| !self.locked.contains(pos))
+        .filter(|pos| !self.locked.borrow().contains(pos))
         .collect()
     }
 
     pub(crate) fn is_locked(&self, pos: Pos) -> bool {
-        self.locked.contains(&pos)
+        self.locked.borrow().contains(&pos)
     }
 
     pub(crate) fn lock(&mut self, pos: Pos) -> bool {
         if pos == self.select {
             panic!("tried to lock the selected pos: {:?}", pos);
         }
-        self.locked.insert(pos)
+        self.locked.to_mut().insert(pos)
     }
 
     pub(crate) fn unlock(&mut self, pos: Pos) -> bool {
-        self.locked.remove(&pos)
+        self.locked.to_mut().remove(&pos)
     }
 
     pub(crate) fn first_unlocked(&self) -> Option<Pos> {
         self.forward
+            .borrow()
             .grid
             .all_pos()
-            .find(|p| !self.locked.contains(p))
+            .find(|p| !self.locked.borrow().contains(p))
     }
 
     pub(crate) fn new_finder(&self) -> BoardFinder {
@@ -177,13 +228,13 @@ fn test_reverse() {
     );
     let board = Board::new(grid.pos(0, 0), nodes);
 
-    assert_eq!(board.forward[grid.pos(0, 0)], grid.pos(1, 0));
-    assert_eq!(board.forward[grid.pos(1, 0)], grid.pos(1, 1));
-    assert_eq!(board.forward[grid.pos(0, 1)], grid.pos(0, 1));
-    assert_eq!(board.forward[grid.pos(1, 1)], grid.pos(0, 0));
+    assert_eq!(board.forward.borrow()[grid.pos(0, 0)], grid.pos(1, 0));
+    assert_eq!(board.forward.borrow()[grid.pos(1, 0)], grid.pos(1, 1));
+    assert_eq!(board.forward.borrow()[grid.pos(0, 1)], grid.pos(0, 1));
+    assert_eq!(board.forward.borrow()[grid.pos(1, 1)], grid.pos(0, 0));
 
-    assert_eq!(board.reverse[grid.pos(0, 0)], grid.pos(1, 1));
-    assert_eq!(board.reverse[grid.pos(1, 0)], grid.pos(0, 0));
-    assert_eq!(board.reverse[grid.pos(0, 1)], grid.pos(0, 1));
-    assert_eq!(board.reverse[grid.pos(1, 1)], grid.pos(1, 0));
+    assert_eq!(board.reverse.borrow()[grid.pos(0, 0)], grid.pos(1, 1));
+    assert_eq!(board.reverse.borrow()[grid.pos(1, 0)], grid.pos(0, 0));
+    assert_eq!(board.reverse.borrow()[grid.pos(0, 1)], grid.pos(0, 1));
+    assert_eq!(board.reverse.borrow()[grid.pos(1, 1)], grid.pos(1, 0));
 }

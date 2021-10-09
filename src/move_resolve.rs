@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use self::{
@@ -42,7 +44,7 @@ impl DifferentCells {
     }
 
     /// a の位置と b の位置のマスを入れ替えた場合を計算する.
-    fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
+    fn on_swap(self, field: impl Deref<Target = VecOnGrid<Pos>>, a: Pos, b: Pos) -> Self {
         let before = (field.grid.looping_manhattan_dist(field[a], a)
             + field.grid.looping_manhattan_dist(field[b], b)) as i64;
         let after = (field.grid.looping_manhattan_dist(field[a], b)
@@ -115,9 +117,8 @@ impl IdaStarState for GridCompleter {
     type AS = Vec<GridAction>;
     fn next_actions(&self) -> Self::AS {
         // 揃っているマスどうしは入れ替えない
-        let different_cells = self
-            .board
-            .field()
+        let field = self.board.field();
+        let different_cells = field
             .iter_with_pos()
             .filter(|&(pos, &cell)| pos != cell)
             .map(|(_, &cell)| cell);
@@ -271,7 +272,8 @@ fn resolve_approximately(
             .map(|op| op.movements.len() as u32 * swap_cost as u32 + select_cost as u32)
             .sum()
     };
-    let result = grid.all_pos()
+    let result = grid
+        .all_pos()
         .par_bridge()
         .map(|pos| {
             resolve_on_select(
@@ -286,7 +288,10 @@ fn resolve_approximately(
         .flatten()
         .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
         .unwrap();
-    println!("move_resolve(approx): cost was {}", operations_cost(&result));
+    println!(
+        "move_resolve(approx): cost was {}",
+        operations_cost(&result)
+    );
     result
 }
 

@@ -1,4 +1,4 @@
-use std::ops;
+use std::ops::{self, Deref};
 
 use super::dijkstra::DijkstraCost;
 use crate::grid::{Pos, VecOnGrid};
@@ -26,7 +26,12 @@ impl LeastMovements {
         Self::default()
     }
 
-    pub(crate) fn swap_on(self, field: &VecOnGrid<Pos>, from: Pos, to: Pos) -> Self {
+    pub(crate) fn swap_on(
+        self,
+        field: impl Deref<Target = VecOnGrid<Pos>> + std::fmt::Debug,
+        from: Pos,
+        to: Pos,
+    ) -> Self {
         let before_min_vec = field.grid.looping_min_vec(from, field[from]);
         let before = least_movements(before_min_vec);
         let after_min_vec = field.grid.looping_min_vec(to, field[from]);
