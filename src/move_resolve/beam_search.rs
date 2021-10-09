@@ -46,14 +46,15 @@ where
                 let mut next_hasher = answer_hasher.clone();
                 action.hash(&mut next_hasher);
                 if !visited.contains(&next_hasher.finish()) {
-                    let next_state = state.apply(action);
-                    let mut next_answer = answer.clone();
-                    next_answer.push(action);
                     let next_cost = cost + state.cost_on(action);
 
                     if max_cost <= next_cost {
                         continue;
                     }
+
+                    let next_state = state.apply(action);
+                    let mut next_answer = answer.clone();
+                    next_answer.push(action);
                     if next_state.is_goal() {
                         return Some((next_answer, next_cost));
                     }
