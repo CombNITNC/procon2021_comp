@@ -1,10 +1,6 @@
-use std::{
-    cell::{Ref, RefCell, RefMut},
-    collections::HashSet,
-    hash::Hash,
-    ops::Deref,
-    rc::Rc,
-};
+use std::{collections::HashSet, hash::Hash, ops::Deref};
+
+use bos::Bos;
 
 use super::{Grid, Pos, VecOnGrid};
 
@@ -12,76 +8,29 @@ mod finder;
 
 pub(crate) use finder::*;
 
-#[derive(Debug, PartialEq, Eq)]
-enum CowRc<T> {
-    Borrowed(Rc<RefCell<T>>),
-    Owned(Rc<RefCell<T>>),
-}
-
-impl<T: Hash + ToOwned<Owned = T>> Hash for CowRc<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.borrow().hash(state);
-    }
-}
-
-impl<T> From<T> for CowRc<T> {
-    fn from(v: T) -> Self {
-        CowRc::Owned(Rc::new(RefCell::new(v)))
-    }
-}
-
-impl<T> Clone for CowRc<T> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Borrowed(x) => Self::Borrowed(Rc::clone(x)),
-            Self::Owned(x) => Self::Borrowed(Rc::clone(x)),
-        }
-    }
-}
-
-impl<T: ToOwned<Owned = T>> CowRc<T> {
-    fn to_mut(&mut self) -> RefMut<'_, T> {
-        match self {
-            CowRc::Owned(r) => r.borrow_mut(),
-            CowRc::Borrowed(r) => {
-                let o = Rc::new(RefCell::new(r.borrow().to_owned()));
-                *self = CowRc::Owned(o);
-                self.to_mut()
-            }
-        }
-    }
-
-    fn borrow(&self) -> Ref<'_, T> {
-        match self {
-            CowRc::Borrowed(r) => r.borrow(),
-            CowRc::Owned(r) => r.borrow(),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
-pub(crate) struct Board {
+pub(crate) struct Board<'b> {
     select: Pos,
-    forward: CowRc<VecOnGrid<Pos>>,
-    reverse: CowRc<VecOnGrid<Pos>>,
-    locked: CowRc<HashSet<Pos>>,
+    forward: Bos<'b, VecOnGrid<Pos>>,
+    reverse: Bos<'b, VecOnGrid<Pos>>,
+    locked: Bos<'b, HashSet<Pos>>,
 }
 
-impl Hash for Board {
+impl Hash for Board<'_> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.forward.hash(state);
     }
 }
 
-impl PartialEq for Board {
+impl PartialEq for Board<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.forward == other.forward
     }
 }
 
-impl Eq for Board {}
+impl Eq for Board<'_> {}
 
-impl Board {
+impl<'b> Board<'b> {
     pub(crate) fn new(select: Pos, field: VecOnGrid<Pos>) -> Self {
         let mut reverse = field.clone();
         for (pos, &elem) in field.iter_with_pos() {
@@ -89,18 +38,18 @@ impl Board {
         }
         Self {
             select,
-            forward: field.into(),
-            reverse: reverse.into(),
-            locked: HashSet::new().into(),
+            forward: Bos::Owned(field),
+            reverse: Bos::Owned(reverse),
+            locked: Bos::Owned(HashSet::new()),
         }
     }
 
     pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
-        self.forward.borrow().grid.looping_manhattan_dist(a, b)
+        self.forward.to_borrowed().grid.looping_manhattan_dist(a, b)
     }
 
     pub(crate) fn grid(&self) -> Grid {
-        self.forward.borrow().grid
+        self.forward.to_borrowed().grid
     }
 
     pub(crate) fn selected(&self) -> Pos {
@@ -108,7 +57,7 @@ impl Board {
     }
 
     pub(crate) fn select(&mut self, to_select: Pos) {
-        if self.locked.borrow().contains(&to_select) {
+        if self.locked.to_borrowed().contains(&to_select) {
             panic!("the position was locked: {:?}", to_select);
         }
         self.select = to_select;
@@ -117,15 +66,15 @@ impl Board {
     pub(crate) fn field<'a>(
         &'a self,
     ) -> impl Deref<Target = VecOnGrid<Pos>> + std::fmt::Debug + 'a {
-        self.forward.borrow()
+        self.forward.to_borrowed()
     }
 
     pub(crate) fn forward(&self, pos: Pos) -> Pos {
-        self.forward.borrow()[pos]
+        self.forward.to_borrowed()[pos]
     }
 
     pub(crate) fn reverse(&self, pos: Pos) -> Pos {
-        self.reverse.borrow()[pos]
+        self.reverse.to_borrowed()[pos]
     }
 
     pub(crate) fn swap_to(&mut self, to_swap: Pos) {
@@ -133,7 +82,7 @@ impl Board {
         if dist == 0 {
             return;
         }
-        if self.locked.borrow().contains(&to_swap) {
+        if self.locked.to_borrowed().contains(&to_swap) {
             panic!("the position was locked: {:?}", to_swap);
         }
         assert_eq!(
@@ -142,8 +91,8 @@ impl Board {
             self.select, to_swap
         );
         self.reverse.to_mut().swap(
-            self.forward.borrow()[self.select],
-            self.forward.borrow()[to_swap],
+            self.forward.to_borrowed()[self.select],
+            self.forward.to_borrowed()[to_swap],
         );
         self.forward.to_mut().swap(self.select, to_swap);
         self.select = to_swap;
@@ -156,10 +105,10 @@ impl Board {
     }
 
     fn width(&self) -> u8 {
-        self.forward.borrow().grid.width()
+        self.forward.to_borrowed().grid.width()
     }
     fn height(&self) -> u8 {
-        self.forward.borrow().grid.height()
+        self.forward.to_borrowed().grid.height()
     }
 
     fn up_of(&self, pos: Pos) -> Pos {
@@ -200,12 +149,12 @@ impl Board {
         ]
         .iter()
         .copied()
-        .filter(|pos| !self.locked.borrow().contains(pos))
+        .filter(|pos| !self.locked.to_borrowed().contains(pos))
         .collect()
     }
 
     pub(crate) fn is_locked(&self, pos: Pos) -> bool {
-        self.locked.borrow().contains(&pos)
+        self.locked.to_borrowed().contains(&pos)
     }
 
     pub(crate) fn lock(&mut self, pos: Pos) -> bool {
@@ -221,10 +170,10 @@ impl Board {
 
     pub(crate) fn first_unlocked(&self) -> Option<Pos> {
         self.forward
-            .borrow()
+            .to_borrowed()
             .grid
             .all_pos()
-            .find(|p| !self.locked.borrow().contains(p))
+            .find(|p| !self.locked.to_borrowed().contains(p))
     }
 
     pub(crate) fn new_finder(&self) -> BoardFinder {
@@ -249,13 +198,13 @@ fn test_reverse() {
     );
     let board = Board::new(grid.pos(0, 0), nodes);
 
-    assert_eq!(board.forward.borrow()[grid.pos(0, 0)], grid.pos(1, 0));
-    assert_eq!(board.forward.borrow()[grid.pos(1, 0)], grid.pos(1, 1));
-    assert_eq!(board.forward.borrow()[grid.pos(0, 1)], grid.pos(0, 1));
-    assert_eq!(board.forward.borrow()[grid.pos(1, 1)], grid.pos(0, 0));
+    assert_eq!(board.forward.to_borrowed()[grid.pos(0, 0)], grid.pos(1, 0));
+    assert_eq!(board.forward.to_borrowed()[grid.pos(1, 0)], grid.pos(1, 1));
+    assert_eq!(board.forward.to_borrowed()[grid.pos(0, 1)], grid.pos(0, 1));
+    assert_eq!(board.forward.to_borrowed()[grid.pos(1, 1)], grid.pos(0, 0));
 
-    assert_eq!(board.reverse.borrow()[grid.pos(0, 0)], grid.pos(1, 1));
-    assert_eq!(board.reverse.borrow()[grid.pos(1, 0)], grid.pos(0, 0));
-    assert_eq!(board.reverse.borrow()[grid.pos(0, 1)], grid.pos(0, 1));
-    assert_eq!(board.reverse.borrow()[grid.pos(1, 1)], grid.pos(1, 0));
+    assert_eq!(board.reverse.to_borrowed()[grid.pos(0, 0)], grid.pos(1, 1));
+    assert_eq!(board.reverse.to_borrowed()[grid.pos(1, 0)], grid.pos(0, 0));
+    assert_eq!(board.reverse.to_borrowed()[grid.pos(0, 1)], grid.pos(0, 1));
+    assert_eq!(board.reverse.to_borrowed()[grid.pos(1, 1)], grid.pos(1, 0));
 }

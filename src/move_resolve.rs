@@ -56,8 +56,8 @@ impl DifferentCells {
 }
 
 #[derive(Clone)]
-struct GridCompleter {
-    board: Board,
+struct GridCompleter<'b> {
+    board: Board<'b>,
     prev_action: Option<GridAction>,
     different_cells: DifferentCells,
     swap_cost: u16,
@@ -65,7 +65,7 @@ struct GridCompleter {
     remaining_select: u8,
 }
 
-impl std::fmt::Debug for GridCompleter {
+impl std::fmt::Debug for GridCompleter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridState")
             .field("board", &self.board)
@@ -81,21 +81,21 @@ enum GridAction {
     Select(Pos),
 }
 
-impl Hash for GridCompleter {
+impl Hash for GridCompleter<'_> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.board.hash(state);
     }
 }
 
-impl PartialEq for GridCompleter {
+impl PartialEq for GridCompleter<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.board == other.board
     }
 }
 
-impl Eq for GridCompleter {}
+impl Eq for GridCompleter<'_> {}
 
-impl IdaStarState for GridCompleter {
+impl IdaStarState for GridCompleter<'_> {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
         match action {

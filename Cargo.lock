@@ -39,6 +39,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
+name = "bos"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b8fab99ddb58e0f77ca663f1df762a5e7e84fa5fcf31ded143e5c96744b6689"
+
+[[package]]
 name = "bumpalo"
 version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -771,6 +777,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitflags",
+ "bos",
  "bytes",
  "dotenv",
  "image",

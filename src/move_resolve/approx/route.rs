@@ -26,23 +26,24 @@ impl Ord for TargetNode {
 }
 
 #[derive(Debug, Clone)]
-struct RowCompleteNode {
+struct RowCompleteNode<'b> {
     target: Pos,
     cost: LeastMovements,
-    board: Board,
+    board: Board<'b>,
 }
-impl PartialEq for RowCompleteNode {
+impl PartialEq for RowCompleteNode<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.cost == other.cost
     }
 }
-impl Eq for RowCompleteNode {}
-impl PartialOrd for RowCompleteNode {
+impl Eq for RowCompleteNode<'_> {}
+
+impl PartialOrd for RowCompleteNode<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         other.cost.partial_cmp(&self.cost)
     }
 }
-impl Ord for RowCompleteNode {
+impl Ord for RowCompleteNode<'_> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         other.cost.cmp(&self.cost)
     }
@@ -81,11 +82,11 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
     );
 
     #[derive(Debug, Clone)]
-    struct RouteTargetToPos {
-        node: RowCompleteNode,
+    struct RouteTargetToPos<'b> {
+        node: RowCompleteNode<'b>,
         pos: Pos,
     }
-    impl DijkstraState for RouteTargetToPos {
+    impl DijkstraState for RouteTargetToPos<'_> {
         type C = LeastMovements;
         fn cost(&self) -> Self::C {
             self.node.cost
@@ -160,7 +161,7 @@ fn route_target_around_pos(
     #[derive(Debug, Clone)]
     struct RouteTargetAroundPos<'b> {
         node: TargetNode,
-        board: &'b Board,
+        board: &'b Board<'b>,
         pos: Pos,
     }
     impl DijkstraState for RouteTargetAroundPos<'_> {
@@ -217,7 +218,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Option<Vec<P
     #[derive(Debug, Clone)]
     struct RouteSelectToTarget<'b> {
         node: TargetNode,
-        board: &'b Board,
+        board: &'b Board<'b>,
         target: Pos,
     }
     impl DijkstraState for RouteSelectToTarget<'_> {
@@ -271,7 +272,7 @@ fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, L
     #[derive(Debug, Clone)]
     struct RouteSelectAroundTarget<'b> {
         node: TargetNode,
-        board: &'b Board,
+        board: &'b Board<'b>,
         target: Pos,
     }
     impl DijkstraState for RouteSelectAroundTarget<'_> {
@@ -335,7 +336,7 @@ fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, L
 fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<Vec<Pos>> {
     #[derive(Debug, Clone)]
     struct RouteSelectAroundTarget<'b> {
-        node: RowCompleteNode,
+        node: RowCompleteNode<'b>,
         range: &'b RangePos,
         target: Pos,
     }
