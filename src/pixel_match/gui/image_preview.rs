@@ -425,7 +425,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
             let fragment = fragment.as_ref().unwrap();
 
             renderer.render_text(
-                format!("{}, {}", fragment.pos.x(), fragment.pos.y(),),
+                format!("{}, {}", fragment.pos.x(), fragment.pos.y()),
                 offset_of(pos.x(), pos.y()),
                 SdlColor::GREEN,
                 false,
