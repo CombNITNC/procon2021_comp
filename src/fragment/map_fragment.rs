@@ -19,7 +19,11 @@ pub(crate) fn map_fragment(matched: &VecOnGrid<Fragment>) -> Vec<(Pos, Pos)> {
 
 #[test]
 fn test_map() {
-    use crate::{basis::Rot, fragment::Edges, grid::Grid};
+    use crate::{
+        basis::Rot,
+        fragment::{Edges, LazyRotate},
+        grid::Grid,
+    };
 
     let grid = Grid::new(2, 2);
     let case = {
@@ -29,7 +33,7 @@ fn test_map() {
                 pos: grid.pos(0, 0),
                 rot: Rot::R0,
                 edges: Edges::new(vec![], vec![], vec![], vec![]),
-                pixels: vec![],
+                pixels: LazyRotate::new(vec![], 0),
             },
         );
         vec[grid.pos(0, 0)].pos = grid.pos(1, 1);

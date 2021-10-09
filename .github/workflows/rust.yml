@@ -20,8 +20,8 @@ jobs:
           toolchain: stable
       - name: Setup SDL2
         run: |
-          cargo install cargo-vcpkg
-          cargo vcpkg -v build
+         sudo apt update
+         sudo apt install libsdl2-dev libsdl2-ttf-dev
       - name: Build
         run: cargo build --release --verbose
       - name: Run tests
@@ -37,10 +37,9 @@ jobs:
           toolchain: stable
       - name: Setup SDL2
         run: |
-          cargo install cargo-vcpkg
-          cargo vcpkg -v build
+         sudo apt update
+         sudo apt install libsdl2-dev libsdl2-ttf-dev
       - run: rustup component add clippy
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features

@@ -19,6 +19,7 @@ bytes = { version = "1.1.0", optional = true }
 
 [features]
 net = ["reqwest", "dotenv", "bytes"]
+use-vcpkg = ["sdl2/use-vcpkg", "sdl2/static-link"]
 
 # comment out next line if you want to compile faster
 default = ["net"]
@@ -34,7 +35,7 @@ debug = true
 [dependencies.sdl2]
 version = "0.34"
 default-features = false
-features = ["ttf", "static-link", "use-vcpkg"]
+features = ["ttf"]
 
 [package.metadata.vcpkg]
 dependencies = ["sdl2", "sdl2-ttf"]

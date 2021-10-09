@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::ops::RangeInclusive;
 
 use sdl2::{
     event::Event, keyboard::Keycode, pixels::Color as SdlColor, pixels::PixelFormatEnum,
@@ -56,14 +57,13 @@ impl<'tc> RecoveredImagePreview<'tc> {
                     Keycode::Left => updated.0 = updated.0.saturating_sub(1),
                     Keycode::Down if self.selecting_at.1 < grid.height() - 1 => updated.1 += 1,
                     Keycode::Right if self.selecting_at.0 < grid.width() - 1 => updated.0 += 1,
-                    _ => unreachable!(),
+                    _ => return,
                 }
 
                 let root = self.image.root_pos.into();
 
-                match self.dragging_from {
-                    Some(d) if !Self::is_draggable(root, d, updated) => return,
-                    _ => {}
+                if matches!(self.dragging_from, Some(d) if !Self::is_draggable(root, d, updated)) {
+                    return;
                 }
 
                 self.selecting_at = updated;
@@ -149,30 +149,18 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 });
                 let [near_to_root, far_from_root] = table;
 
-                // dragging_axis(near_to_root)..=dragging_axis(far_from_root)のイテレータがほしいだけ。
-                // わざわざこうしているのは、Rangeがそのままでは逆順に走査できないため。
-                // (例: 3..=5 は [3, 4, 5] だが、 5..=3 は [] になる。ここでは 5..=3 であっても [5, 4, 3] になってほしい。)
-                let mut iter = (
+                let list = BidirectionalInclusiveRange::new(
                     dragging_axis_of(near_to_root)..=dragging_axis_of(far_from_root),
-                    (dragging_axis_of(far_from_root)..=dragging_axis_of(near_to_root)).rev(),
-                );
+                )
+                .map(|x| {
+                    let pos = near_to_root.replace(dragging_axis, x);
+                    let fragment = self.image.recovered_image[pos.into_grid_pos(grid)]
+                        .as_ref()
+                        .unwrap();
 
-                let iter = if dragging_axis_of(near_to_root) > dragging_axis_of(far_from_root) {
-                    &mut iter.1 as &mut dyn Iterator<Item = u8>
-                } else {
-                    &mut iter.0 as _
-                };
-
-                let list = iter
-                    .map(|x| {
-                        let pos = near_to_root.replace(dragging_axis, x);
-                        let fragment = self.image.recovered_image[pos.into_grid_pos(grid)]
-                            .as_ref()
-                            .unwrap();
-
-                        (fragment.pos, fragment.rot)
-                    })
-                    .collect::<Vec<_>>();
+                    (fragment.pos, fragment.rot)
+                })
+                .collect::<Vec<_>>();
 
                 let reference_side = Self::calc_reference_side(root_pos, near_to_root);
                 let reference_pos = near_to_root.move_to(reference_side);
@@ -207,7 +195,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
                 let entry = EdgePos {
                     pos: selecting_fragment.pos,
-                    dir: Self::calc_intersects_dir(selecting_fragment, reference_side),
+                    dir: Self::calc_intersects_dir(selecting_fragment.rot, reference_side),
                 };
 
                 let reference_fragment = self.image.recovered_image
@@ -224,12 +212,22 @@ impl<'tc> RecoveredImagePreview<'tc> {
 
     /// fragment.rot 回転したときの、reference 方向の辺の dir を求める
     ///
-    /// 例: selecting_fragment = { rot: R90, .. }; reference = Dir::North;
+    /// 例: fragment_rot = R90; reference = Dir::North;
     ///   N                 W
     /// W   E  -- R90 --> S   N このとき答えは West
     ///   S                 E
-    fn calc_intersects_dir(fragment: &Fragment, reference: Dir) -> Dir {
-        reference.rotate(fragment.rot + Rot::R270)
+    fn calc_intersects_dir(fragment_rot: Rot, reference: Dir) -> Dir {
+        let mut table = [Dir::North, Dir::East, Dir::South, Dir::West];
+        table.rotate_right(fragment_rot.as_num() as usize);
+
+        let index = match reference {
+            Dir::North => 0,
+            Dir::East => 1,
+            Dir::South => 2,
+            Dir::West => 3,
+        };
+
+        table[index]
     }
 
     /// Pos にある fragment の reference となる fragment の方向を返す
@@ -250,6 +248,10 @@ impl<'tc> RecoveredImagePreview<'tc> {
     fn is_draggable(root: Pos, from: Pos, to: Pos) -> bool {
         if from == to {
             return true;
+        }
+
+        if from == root || to == root {
+            return false;
         }
 
         if let Some(dragging_axis) = from.aligned_axis(to) {
@@ -291,6 +293,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
             )
             .unwrap();
 
+        self.render_hints(renderer, global_state, image_size);
         self.render_selection_and_root(renderer, image_size);
 
         if self.show_fragment_debug {
@@ -352,6 +355,62 @@ impl<'tc> RecoveredImagePreview<'tc> {
         renderer.draw_partial_rect(offset_of(selecting_at), cell_size, Sides::all());
         renderer.set_draw_color(SdlColor::RED);
         renderer.draw_partial_rect(offset_of(selecting_at), cell_size, sides);
+    }
+
+    fn render_hints(
+        &self,
+        renderer: &mut Renderer<'_>,
+        global_state: &GuiState,
+        image_size: (u32, u32),
+    ) {
+        // let root = self.image.root_pos.into();
+        let grid = self.image.recovered_image.grid;
+        let cell_side_length = image_size.0 as f64 / grid.width() as f64;
+
+        let offset_of_single = |p: u8| (cell_side_length * p as f64) as i32;
+        let offset_of = |Pos(x, y): Pos| (offset_of_single(x), offset_of_single(y));
+
+        // Pos on Problem Image --> Pos on Recovered Image
+        let pos_on_gui_grid = |pos: Pos| {
+            self.image
+                .recovered_image
+                .iter_with_pos()
+                .find(|(_, fragment)| Pos::from(fragment.as_ref().unwrap().pos) == pos)
+                .map(|(pos, _)| pos)
+                .unwrap()
+                .into()
+        };
+
+        for (edgepos, list) in &global_state.hints.confirmed_pairs {
+            let growing_dir = match (
+                pos_on_gui_grid(edgepos.pos.into()),
+                pos_on_gui_grid(list[0].0.into()),
+            ) {
+                (Pos(x1, y1), Pos(x2, y2)) if x1 > x2 && y1 == y2 => Dir::West,
+                (Pos(x1, y1), Pos(x2, y2)) if x1 < x2 && y1 == y2 => Dir::East,
+                (Pos(x1, y1), Pos(x2, y2)) if x1 == x2 && y1 > y2 => Dir::North,
+                (Pos(x1, y1), Pos(x2, y2)) if x1 == x2 && y1 < y2 => Dir::South,
+                _ => unreachable!("confirmed pair should be on 1-dimensional line"),
+            };
+
+            let offset = match growing_dir {
+                Dir::North | Dir::West => offset_of(pos_on_gui_grid(list.last().unwrap().0.into())),
+                d @ (Dir::South | Dir::East) => {
+                    offset_of(pos_on_gui_grid(edgepos.pos.into()).move_to(d))
+                }
+            };
+
+            let len = list.len() as u8;
+            let mut size = (cell_side_length as i32, cell_side_length as i32);
+
+            match growing_dir {
+                Dir::North | Dir::South => size.1 = offset_of_single(len) as i32,
+                Dir::West | Dir::East => size.0 = offset_of_single(len) as i32,
+            }
+
+            renderer.set_draw_color(SdlColor::YELLOW);
+            renderer.draw_partial_rect(offset, size, Sides::all());
+        }
     }
 
     fn render_fragment_debug(&self, renderer: &mut Renderer<'_>, image_size: (u32, u32)) {
@@ -459,4 +518,48 @@ fn create_image_texture<'tc>(
         .texture_creator
         .create_texture_from_surface(surface)
         .unwrap()
+}
+
+struct BidirectionalInclusiveRange {
+    range: RangeInclusive<u8>,
+    processor: fn(&mut RangeInclusive<u8>) -> Option<u8>,
+}
+
+impl BidirectionalInclusiveRange {
+    #[inline]
+    fn new(range: RangeInclusive<u8>) -> Self {
+        if range.start() > range.end() {
+            Self {
+                range: *range.end()..=*range.start(),
+                processor: <RangeInclusive<u8> as DoubleEndedIterator>::next_back,
+            }
+        } else {
+            Self {
+                range,
+                processor: <RangeInclusive<u8> as Iterator>::next,
+            }
+        }
+    }
+}
+
+impl Iterator for BidirectionalInclusiveRange {
+    type Item = u8;
+
+    #[inline]
+    fn next(&mut self) -> Option<u8> {
+        (self.processor)(&mut self.range)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.range.size_hint()
+    }
+}
+
+#[test]
+fn test_calc_intersects_dir() {
+    assert_eq!(
+        RecoveredImagePreview::calc_intersects_dir(Rot::R90, Dir::North),
+        Dir::West
+    );
 }
