@@ -13,6 +13,7 @@ use crate::{
     move_resolve::{
         approx::{gen::FromOutside, Solver},
         beam_search::beam_search,
+        ida_star::ida_star,
     },
 };
 
@@ -251,8 +252,8 @@ pub(crate) fn resolve(
     let (path, cost) = grid
         .all_pos()
         .par_bridge()
-        .flat_map(|pos| {
-            beam_search(
+        .map(|pos| {
+            ida_star(
                 GridCompleter {
                     board: Board::new(pos, nodes.clone()),
                     prev_action: None,
@@ -261,7 +262,7 @@ pub(crate) fn resolve(
                     select_cost,
                     remaining_select: select_limit,
                 },
-                grid.width() as usize * grid.height() as usize,
+                different_cells.0,
             )
         })
         .min_by(|a, b| a.1.cmp(&b.1))
