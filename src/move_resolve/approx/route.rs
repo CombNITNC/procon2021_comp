@@ -102,7 +102,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
 
         type AS = Vec<Pos>;
         fn next_actions(&mut self) -> Self::AS {
-            self.node.board.around_of(self.as_pos())
+            self.node.board.around_of(self.as_pos()).collect()
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
@@ -183,7 +183,7 @@ fn route_target_around_pos(
 
         type AS = Vec<Pos>;
         fn next_actions(&mut self) -> Self::AS {
-            self.board.around_of(self.as_pos())
+            self.board.around_of(self.as_pos()).collect()
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
@@ -237,7 +237,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Option<Vec<P
 
         type AS = Vec<Pos>;
         fn next_actions(&mut self) -> Self::AS {
-            self.board.around_of(self.as_pos())
+            self.board.around_of(self.as_pos()).collect()
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
@@ -356,7 +356,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
 
         type AS = Vec<Pos>;
         fn next_actions(&mut self) -> Self::AS {
-            self.node.board.around_of(self.as_pos())
+            self.node.board.around_of(self.as_pos()).collect()
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {

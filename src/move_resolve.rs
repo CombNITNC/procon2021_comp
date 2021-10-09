@@ -145,7 +145,6 @@ impl IdaStarState for GridCompleter<'_> {
         let swapping_states = self
             .board
             .around_of(selected)
-            .into_iter()
             .map(|to| Movement::between_pos(selected, to))
             .filter(|&around| {
                 if let GridAction::Swap(dir) = prev {

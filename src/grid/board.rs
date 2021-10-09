@@ -140,17 +140,14 @@ impl<'b> Board<'b> {
         }
     }
 
-    pub(crate) fn around_of(&self, pos: Pos) -> Vec<Pos> {
-        [
+    pub(crate) fn around_of<'a>(&'a self, pos: Pos) -> impl Iterator<Item = Pos> + 'a {
+        std::array::IntoIter::new([
             self.up_of(pos),
             self.right_of(pos),
             self.down_of(pos),
             self.left_of(pos),
-        ]
-        .iter()
-        .copied()
-        .filter(|pos| !self.locked.to_borrowed().contains(pos))
-        .collect()
+        ])
+        .filter(move |pos| !self.locked.to_borrowed().contains(pos))
     }
 
     pub(crate) fn is_locked(&self, pos: Pos) -> bool {
