@@ -1,4 +1,4 @@
-use super::{edges_nodes::Nodes, resolve, resolve_approximately, DifferentCells};
+use super::{edges_nodes::Nodes, resolve, DifferentCells};
 use crate::{
     basis::{Movement::*, Operation},
     grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
@@ -221,8 +221,7 @@ fn large_case1() {
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
 
-    let (result, _) =
-        resolve_approximately(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST, (2, 2));
+    let result = resolve(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
     let finder = BoardFinder::new(grid);
     for Operation { select, movements } in result {
@@ -288,8 +287,7 @@ fn large_case2() {
     const SWAP_COST: u16 = 1;
     const SELECT_COST: u16 = 8;
 
-    let (result, _) =
-        resolve_approximately(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST, (2, 2));
+    let result = resolve(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
     let finder = BoardFinder::new(grid);
     for Operation { select, movements } in result {
@@ -353,8 +351,7 @@ fn large_case3() {
     const SWAP_COST: u16 = 10;
     const SELECT_COST: u16 = 4;
 
-    let (result, _) =
-        resolve_approximately(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST, (2, 2));
+    let result = resolve(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
     let finder = BoardFinder::new(grid);
     for Operation { select, movements } in result {
@@ -399,10 +396,8 @@ fn rand_case() {
     let Nodes { mut nodes, .. } = Nodes::new(grid, &case);
     eprintln!("before: {:#?}", nodes);
 
-    let (result, cost) =
-        resolve_approximately(grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST, (2, 2));
+    let result = resolve(grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST);
 
-    eprintln!("cost: {}", cost);
     let finder = BoardFinder::new(grid);
     eprintln!("operations: {:?}", result);
     for Operation { select, movements } in result {
