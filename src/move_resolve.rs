@@ -1,4 +1,4 @@
-use easy_parallel::Parallel;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use self::{
     edges_nodes::Nodes,
@@ -235,8 +235,10 @@ pub(crate) fn resolve(
     let different_cells = DifferentCells::new(&nodes);
     let lower_bound = different_cells.0;
 
-    let (path, _) = Parallel::new()
-        .each(grid.all_pos(), |pos| {
+    let (path, _) = grid
+        .all_pos()
+        .par_bridge()
+        .map(|pos| {
             ida_star(
                 GridCompleter {
                     board: Board::new(pos, nodes),
@@ -249,8 +251,6 @@ pub(crate) fn resolve(
                 lower_bound,
             )
         })
-        .run()
-        .into_iter()
         .min_by(|a, b| a.1.cmp(&b.1))
         .unwrap();
     actions_to_operations(path)
@@ -270,8 +270,9 @@ fn resolve_approximately(
             .map(|op| op.movements.len() as u32 * swap_cost as u32 + select_cost as u32)
             .sum()
     };
-    Parallel::new()
-        .each(grid.all_pos(), |pos| {
+    grid.all_pos()
+        .par_bridge()
+        .map(|pos| {
             resolve_on_select(
                 grid,
                 nodes.clone(),
@@ -281,8 +282,6 @@ fn resolve_approximately(
                 pos,
             )
         })
-        .run()
-        .into_iter()
         .flatten()
         .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
         .unwrap()
