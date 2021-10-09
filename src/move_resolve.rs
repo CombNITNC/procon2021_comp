@@ -262,8 +262,9 @@ pub(crate) fn resolve_approximately(
     select_limit: u8,
     swap_cost: u16,
     select_cost: u16,
-    threshold: u8,
-) -> Vec<Operation> {
+    threshold_x: u8,
+    threshold_y: u8,
+) -> (Vec<Operation>, u32) {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let operations_cost = |ops: &[Operation]| -> u32 {
         ops.iter()
@@ -281,17 +282,16 @@ pub(crate) fn resolve_approximately(
                 select_cost,
                 select_limit,
                 pos,
-                threshold,
+                threshold_x,
+                threshold_y,
             )
         })
         .flatten()
         .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
         .unwrap();
-    println!(
-        "move_resolve(approx): cost was {}",
-        operations_cost(&result)
-    );
-    result
+    let cost = operations_cost(&result);
+    println!("move_resolve(approx): cost was {}", cost);
+    (result, cost)
 }
 
 fn resolve_on_select(
@@ -301,9 +301,13 @@ fn resolve_on_select(
     select_cost: u16,
     mut select_limit: u8,
     init_select: Pos,
-    threshold: u8,
+    threshold_x: u8,
+    threshold_y: u8,
 ) -> Option<Vec<Operation>> {
-    let mut solver = Solver { threshold };
+    let mut solver = Solver {
+        threshold_x,
+        threshold_y,
+    };
     let mut all_actions = vec![];
     let mut selection = init_select;
 

@@ -13,7 +13,8 @@ mod route;
 
 #[derive(Debug, Default)]
 pub(crate) struct Solver {
-    pub(crate) threshold: u8,
+    pub(crate) threshold_x: u8,
+    pub(crate) threshold_y: u8,
 }
 
 impl Solver {
@@ -25,7 +26,7 @@ impl Solver {
             if finder.height() < finder.width() {
                 finder.rotate_to(3);
             }
-            if finder.width() <= self.threshold && finder.height() <= self.threshold {
+            if finder.width() <= self.threshold_x && finder.height() <= self.threshold_y {
                 break;
             }
             let targets = self.next_targets(&board, &finder);

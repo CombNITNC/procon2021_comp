@@ -69,31 +69,45 @@ fn main() {
     println!("pixel_match::resolve() done");
 
     let movements = fragment::map_fragment::map_fragment(&recovered_image);
+    let mut min_cost = u32::MAX;
 
-    for threshold in 2..=5 {
-        let ops = move_resolve::resolve_approximately(
-            grid,
-            &movements,
-            problem.select_limit,
-            problem.swap_cost,
-            problem.select_cost,
-            threshold,
-        );
+    for threshold_x in 2..=5 {
+        for threshold_y in 2..=5 {
+            let (ops, cost) = move_resolve::resolve_approximately(
+                grid,
+                &movements,
+                problem.select_limit,
+                problem.swap_cost,
+                problem.select_cost,
+                threshold_x,
+                threshold_y,
+            );
 
-        println!(
-            "move_resolve::resolve_approx() done (threshold: {})",
-            threshold
-        );
+            println!(
+                "move_resolve::resolve_approx() done (threshold: {}-{})",
+                threshold_x, threshold_y
+            );
 
-        let answer = kaitou::ans(&ops, &rots);
+            if cost < min_cost {
+                min_cost = cost;
+                println!("best cost. submitting");
+                let answer = kaitou::ans(&ops, &rots);
 
-        #[cfg(feature = "net")]
-        submit(answer, &token, &endpoint);
-        #[cfg(not(feature = "net"))]
-        submit(
-            answer,
-            &format!("answer-{}-approx-{}.txt", epoch, threshold),
-        );
+                #[cfg(feature = "net")]
+                submit(answer, &token, &endpoint);
+                #[cfg(not(feature = "net"))]
+                submit(
+                    answer,
+                    &format!(
+                        "answer-{}-approx-{}-{}.txt",
+                        epoch, threshold_x, threshold_y
+                    ),
+                );
+
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+            println!();
+        }
     }
 
     let ops = move_resolve::resolve(
