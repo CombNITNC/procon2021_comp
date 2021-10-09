@@ -68,10 +68,7 @@ where
     loop {
         match find(start.clone(), &mut history, C::default(), bound) {
             FindResult::Found => return (history, bound),
-            FindResult::Deeper(cost) => {
-                println!("ida_star: finding deeper. cost: {:?}", cost);
-                bound = cost
-            }
+            FindResult::Deeper(cost) => bound = cost,
             FindResult::None => return (vec![], C::default()),
         }
     }

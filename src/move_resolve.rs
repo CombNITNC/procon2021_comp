@@ -229,9 +229,6 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    if 30 < grid.width() as u32 * grid.height() as u32 {
-        return resolve_approximately(grid, movements, select_limit, swap_cost, select_cost);
-    }
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let different_cells = DifferentCells::new(&nodes);
     let lower_bound = different_cells.0;
@@ -259,12 +256,13 @@ pub(crate) fn resolve(
 }
 
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の近似解を求める.
-fn resolve_approximately(
+pub(crate) fn resolve_approximately(
     grid: Grid,
     movements: &[(Pos, Pos)],
     select_limit: u8,
     swap_cost: u16,
     select_cost: u16,
+    threshold: u8,
 ) -> Vec<Operation> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let operations_cost = |ops: &[Operation]| -> u32 {
@@ -283,6 +281,7 @@ fn resolve_approximately(
                 select_cost,
                 select_limit,
                 pos,
+                threshold,
             )
         })
         .flatten()
@@ -302,8 +301,9 @@ fn resolve_on_select(
     select_cost: u16,
     mut select_limit: u8,
     init_select: Pos,
+    threshold: u8,
 ) -> Option<Vec<Operation>> {
-    let mut solver = Solver::default();
+    let mut solver = Solver { threshold };
     let mut all_actions = vec![];
     let mut selection = init_select;
 

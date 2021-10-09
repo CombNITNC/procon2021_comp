@@ -12,7 +12,9 @@ mod estimate;
 mod route;
 
 #[derive(Debug, Default)]
-pub(crate) struct Solver {}
+pub(crate) struct Solver {
+    pub(crate) threshold: u8,
+}
 
 impl Solver {
     pub(super) fn solve(&mut self, select: Pos, field: &VecOnGrid<Pos>) -> Option<Vec<GridAction>> {
@@ -23,7 +25,7 @@ impl Solver {
             if finder.height() < finder.width() {
                 finder.rotate_to(3);
             }
-            if finder.width() <= 2 && finder.height() <= 2 {
+            if finder.width() <= self.threshold && finder.height() <= self.threshold {
                 break;
             }
             let targets = self.next_targets(&board, &finder);

@@ -65,9 +65,36 @@ fn main() {
     let fragments = fragment::Fragment::new_all(&problem);
 
     let recovered_image = pixel_match::resolve(fragments, grid);
+    let rots = recovered_image.iter().map(|x| x.rot).collect::<Vec<_>>();
     println!("pixel_match::resolve() done");
 
     let movements = fragment::map_fragment::map_fragment(&recovered_image);
+
+    for threshold in 2..=5 {
+        let ops = move_resolve::resolve_approximately(
+            grid,
+            &movements,
+            problem.select_limit,
+            problem.swap_cost,
+            problem.select_cost,
+            threshold,
+        );
+
+        println!(
+            "move_resolve::resolve_approx() done (threshold: {})",
+            threshold
+        );
+
+        let answer = kaitou::ans(&ops, &rots);
+
+        #[cfg(feature = "net")]
+        submit(answer, &token, &endpoint);
+        #[cfg(not(feature = "net"))]
+        submit(
+            answer,
+            &format!("answer-{}-approx-{}.txt", epoch, threshold),
+        );
+    }
 
     let ops = move_resolve::resolve(
         grid,
@@ -78,23 +105,26 @@ fn main() {
     );
     println!("move_resolve::resolve() done");
 
-    let rots = recovered_image.iter().map(|x| x.rot).collect::<Vec<_>>();
     let answer = kaitou::ans(&ops, &rots);
 
-    #[cfg(not(feature = "net"))]
-    {
-        let filename = &format!("answer-{}.txt", epoch);
-        File::create(filename)
-            .unwrap()
-            .write_all(answer.as_bytes())
-            .unwrap();
-        println!("saved answer to {}", filename);
-    }
-
     #[cfg(feature = "net")]
-    {
-        println!("submitting");
-        let submit_result = submit::submit(&endpoint, &token, answer);
-        println!("submit result: {:#?}", submit_result);
-    }
+    submit(answer, &token, &endpoint);
+    #[cfg(not(feature = "net"))]
+    submit(answer, &format!("answer-{}.txt", epoch));
+}
+
+#[cfg(feature = "net")]
+fn submit(answer: String, token: &str, endpoint: &str) {
+    println!("submitting");
+    let submit_result = submit::submit(&endpoint, &token, answer);
+    println!("submit result: {:#?}", submit_result);
+}
+
+#[cfg(not(feature = "net"))]
+fn submit(answer: String, filename: &str) {
+    File::create(filename)
+        .unwrap()
+        .write_all(answer.as_bytes())
+        .unwrap();
+    println!("saved answer to {}", filename);
 }
