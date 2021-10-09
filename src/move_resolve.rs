@@ -274,6 +274,7 @@ pub(crate) fn resolve_approximately(
     swap_cost: u16,
     select_cost: u16,
     thresholds: (u8, u8),
+    max_cost: u32,
 ) -> Option<(Vec<Operation>, u32)> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let operations_cost = |ops: &[Operation]| -> u32 {
@@ -293,6 +294,7 @@ pub(crate) fn resolve_approximately(
                 select_limit,
                 pos,
                 thresholds,
+                max_cost,
             )
         })
         .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))?;
@@ -309,6 +311,7 @@ fn resolve_on_select(
     mut select_limit: u8,
     init_select: Pos,
     (threshold_x, threshold_y): (u8, u8),
+    max_cost: u32,
 ) -> Option<Vec<Operation>> {
     let mut solver = Solver {
         threshold_x,
@@ -344,7 +347,7 @@ fn resolve_on_select(
             remaining_select: select_limit,
         },
         5,
-        1000,
+        max_cost as u64,
     )?;
     all_actions.append(&mut actions);
     Some(actions_to_operations(all_actions))
