@@ -129,7 +129,7 @@ fn main() {
 #[cfg(feature = "net")]
 fn submit(answer: String, token: &str, endpoint: &str) {
     println!("submitting");
-    let submit_result = submit::submit(&endpoint, &token, answer);
+    let submit_result = submit::submit(endpoint, token, answer);
     println!("submit result: {:#?}", submit_result);
 }
 
