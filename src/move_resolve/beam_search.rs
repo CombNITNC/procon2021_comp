@@ -13,6 +13,10 @@ where
     A: Copy + std::fmt::Debug + Hash + Eq,
     C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug,
 {
+    if initial_state.is_goal() {
+        return Some((vec![], C::default()));
+    }
+
     let mut heap = BinaryHeap::new();
     let mut visited = HashSet::new();
 
