@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::Hash, ops::Deref};
+use std::{collections::HashSet, ops::Deref};
 
 use bos::Bos;
 
@@ -15,20 +15,6 @@ pub(crate) struct Board<'b> {
     reverse: Bos<'b, VecOnGrid<Pos>>,
     locked: Bos<'b, HashSet<Pos>>,
 }
-
-impl Hash for Board<'_> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.forward.hash(state);
-    }
-}
-
-impl PartialEq for Board<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.forward == other.forward
-    }
-}
-
-impl Eq for Board<'_> {}
 
 impl<'b> Board<'b> {
     pub(crate) fn new(select: Pos, field: VecOnGrid<Pos>) -> Self {

@@ -81,20 +81,6 @@ enum GridAction {
     Select(Pos),
 }
 
-impl Hash for GridCompleter<'_> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.board.hash(state);
-    }
-}
-
-impl PartialEq for GridCompleter<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.board == other.board
-    }
-}
-
-impl Eq for GridCompleter<'_> {}
-
 impl IdaStarState for GridCompleter<'_> {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {

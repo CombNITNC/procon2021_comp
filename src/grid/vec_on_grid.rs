@@ -1,4 +1,4 @@
-use std::{hash::Hash, ops};
+use std::ops;
 
 use super::{Grid, Pos};
 
@@ -7,12 +7,6 @@ use super::{Grid, Pos};
 pub(crate) struct VecOnGrid<T> {
     vec: Vec<T>,
     pub(crate) grid: Grid,
-}
-
-impl<T: Hash> Hash for VecOnGrid<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.vec.hash(state);
-    }
 }
 
 impl<T> VecOnGrid<T> {
