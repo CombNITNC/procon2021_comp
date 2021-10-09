@@ -235,13 +235,13 @@ pub(crate) fn resolve(
     let different_cells = DifferentCells::new(&nodes);
     let lower_bound = different_cells.0;
 
-    let (path, _) = grid
+    let (path, cost) = grid
         .all_pos()
         .par_bridge()
         .map(|pos| {
             ida_star(
                 GridCompleter {
-                    board: Board::new(pos, nodes),
+                    board: Board::new(pos, nodes.clone()),
                     prev_action: None,
                     different_cells,
                     swap_cost,
@@ -253,6 +253,7 @@ pub(crate) fn resolve(
         })
         .min_by(|a, b| a.1.cmp(&b.1))
         .unwrap();
+    println!("move_resolve(strict): cost was {}", cost);
     actions_to_operations(path)
 }
 
@@ -270,7 +271,7 @@ fn resolve_approximately(
             .map(|op| op.movements.len() as u32 * swap_cost as u32 + select_cost as u32)
             .sum()
     };
-    grid.all_pos()
+    let result = grid.all_pos()
         .par_bridge()
         .map(|pos| {
             resolve_on_select(
@@ -284,7 +285,9 @@ fn resolve_approximately(
         })
         .flatten()
         .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
-        .unwrap()
+        .unwrap();
+    println!("move_resolve(approx): cost was {}", operations_cost(&result));
+    result
 }
 
 fn resolve_on_select(

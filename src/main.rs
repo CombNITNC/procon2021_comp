@@ -49,14 +49,17 @@ fn main() {
         let data = fetch::fetch_ppm(&endpoint).unwrap();
         println!("fetch::fetch_ppm() done");
 
+        let problem = image::read_problem(data.slice(..).reader()).unwrap();
+
         use bytes::Buf;
 
         let filename = format!("problem-{}.ppm", epoch);
         File::create(&filename).unwrap().write_all(&data).unwrap();
         println!("saved the problem to {}", filename);
 
-        image::read_problem(data.reader()).unwrap()
+        problem
     };
+    println!("problem case: {:?}", problem);
 
     let grid = Grid::new(problem.rows, problem.cols);
     let fragments = fragment::Fragment::new_all(&problem);

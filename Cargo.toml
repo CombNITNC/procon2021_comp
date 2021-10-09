@@ -22,7 +22,7 @@ net = ["reqwest", "dotenv", "bytes"]
 use-vcpkg = ["sdl2/use-vcpkg", "sdl2/static-link"]
 
 # comment out next line if you want to compile faster
-default = ["net"]
+default = ["net", "use-vcpkg"]
 
 [dev-dependencies]
 rand = "0.8.4"
