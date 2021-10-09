@@ -4,6 +4,7 @@ use std::ops::Deref;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use self::{
+    approx::NextTargetsGenerator,
     edges_nodes::Nodes,
     ida_star::{ida_star, IdaStarState},
 };
@@ -13,7 +14,7 @@ use crate::{
         board::{Board, BoardFinder},
         Grid, Pos, VecOnGrid,
     },
-    move_resolve::approx::Solver,
+    move_resolve::approx::{gen::FromOutside, Solver},
 };
 
 pub mod approx;
@@ -262,7 +263,7 @@ pub(crate) fn resolve_approximately(
     select_limit: u8,
     swap_cost: u16,
     select_cost: u16,
-    thresholds: (u8, u8),
+    (threshold_x, threshold_y): (u8, u8),
 ) -> (Vec<Operation>, u32) {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let operations_cost = |ops: &[Operation]| -> u32 {
@@ -281,7 +282,11 @@ pub(crate) fn resolve_approximately(
                 select_cost,
                 select_limit,
                 pos,
-                thresholds,
+                Solver {
+                    threshold_x,
+                    threshold_y,
+                    targets_gen: FromOutside,
+                },
             )
         })
         .flatten()
@@ -292,19 +297,15 @@ pub(crate) fn resolve_approximately(
     (result, cost)
 }
 
-fn resolve_on_select(
+fn resolve_on_select<G: NextTargetsGenerator>(
     grid: Grid,
     mut nodes: VecOnGrid<Pos>,
     swap_cost: u16,
     select_cost: u16,
     mut select_limit: u8,
     init_select: Pos,
-    (threshold_x, threshold_y): (u8, u8),
+    mut solver: Solver<G>,
 ) -> Option<Vec<Operation>> {
-    let mut solver = Solver {
-        threshold_x,
-        threshold_y,
-    };
     let mut all_actions = vec![];
     let mut selection = init_select;
 
