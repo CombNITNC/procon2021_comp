@@ -7,7 +7,11 @@ use std::{
 
 use super::SearchState;
 
-pub(crate) fn beam_search<S, A, C>(initial_state: S, beam_width: usize) -> Option<(Vec<A>, C)>
+pub(crate) fn beam_search<S, A, C>(
+    initial_state: S,
+    beam_width: usize,
+    max_cost: C,
+) -> Option<(Vec<A>, C)>
 where
     S: SearchState<C = C, A = A>,
     A: Copy + std::fmt::Debug + Hash + Eq,
@@ -47,6 +51,9 @@ where
                     next_answer.push(action);
                     let next_cost = cost + state.cost_on(action);
 
+                    if max_cost <= next_cost {
+                        continue;
+                    }
                     if next_state.is_goal() {
                         return Some((next_answer, next_cost));
                     }
