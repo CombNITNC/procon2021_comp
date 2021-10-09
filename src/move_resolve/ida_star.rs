@@ -4,20 +4,7 @@ use std::{
     ops::Add,
 };
 
-/// A* で探索する状態が実装するべき trait.
-pub trait IdaStarState: Clone + std::fmt::Debug {
-    type A: Copy + std::fmt::Debug;
-    fn apply(&self, action: Self::A) -> Self;
-
-    type AS: IntoIterator<Item = Self::A>;
-    fn next_actions(&self) -> Self::AS;
-
-    fn is_goal(&self) -> bool;
-
-    type C: Copy + Ord + std::fmt::Debug;
-    fn heuristic(&self) -> Self::C;
-    fn cost_on(&self, action: Self::A) -> Self::C;
-}
+use super::SearchState;
 
 #[derive(Debug)]
 enum FindResult<C> {
@@ -34,7 +21,7 @@ fn find<V, A, C>(
     bound: C,
 ) -> FindResult<C>
 where
-    V: IdaStarState<C = C, A = A>,
+    V: SearchState<C = C, A = A>,
     A: Copy + std::fmt::Debug + Eq + Hash,
     C: PartialOrd + Add<Output = C> + Copy + std::fmt::Debug,
 {
@@ -77,9 +64,9 @@ where
 }
 
 /// 反復深化 A* アルゴリズムの実装.
-pub fn ida_star<V, A, C>(start: V, lower_bound: C) -> (Vec<A>, C)
+pub(crate) fn ida_star<V, A, C>(start: V, lower_bound: C) -> (Vec<A>, C)
 where
-    V: IdaStarState<C = C, A = A>,
+    V: SearchState<C = C, A = A>,
     A: Copy + std::fmt::Debug + Hash + Eq,
     C: PartialOrd + Add<Output = C> + Default + Copy + std::fmt::Debug,
 {

@@ -3,11 +3,7 @@ use std::ops::Deref;
 
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use self::{
-    approx::NextTargetsGenerator,
-    edges_nodes::Nodes,
-    ida_star::{ida_star, IdaStarState},
-};
+use self::{approx::NextTargetsGenerator, edges_nodes::Nodes, ida_star::ida_star};
 use crate::{
     basis::{Movement, Operation},
     grid::{
@@ -24,6 +20,21 @@ pub mod ida_star;
 pub mod least_movements;
 #[cfg(test)]
 mod tests;
+
+/// 探索する状態が実装するべき trait.
+pub(crate) trait SearchState: Clone + std::fmt::Debug {
+    type A: Copy + std::fmt::Debug;
+    fn apply(&self, action: Self::A) -> Self;
+
+    type AS: IntoIterator<Item = Self::A>;
+    fn next_actions(&self) -> Self::AS;
+
+    fn is_goal(&self) -> bool;
+
+    type C: Copy + Ord + std::fmt::Debug;
+    fn heuristic(&self) -> Self::C;
+    fn cost_on(&self, action: Self::A) -> Self::C;
+}
 
 /// フィールドにあるマスのゴール位置までの距離の合計.
 #[derive(Clone, Copy)]
@@ -82,7 +93,7 @@ enum GridAction {
     Select(Pos),
 }
 
-impl IdaStarState for GridCompleter<'_> {
+impl SearchState for GridCompleter<'_> {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
         match action {
