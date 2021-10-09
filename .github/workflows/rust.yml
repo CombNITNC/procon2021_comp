@@ -21,7 +21,7 @@ jobs:
       - name: Setup SDL2
         run: |
          sudo apt update
-         sudo apt install libsdl2-dev
+         sudo apt install libsdl2-dev libsdl2-ttf-dev
       - name: Build
         run: cargo build --release --verbose
       - name: Run tests
@@ -38,7 +38,7 @@ jobs:
       - name: Setup SDL2
         run: |
          sudo apt update
-         sudo apt install libsdl2-dev
+         sudo apt install libsdl2-dev libsdl2-ttf-dev
       - run: rustup component add clippy
       - uses: actions-rs/clippy-check@v1
         with:
