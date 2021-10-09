@@ -27,16 +27,17 @@ where
         cost: C::default(),
     });
 
-    while let Some(Node {
-        state,
-        answer,
-        answer_hasher,
-        cost,
-    }) = heap.pop()
-    {
+    while !heap.is_empty() {
         let mut next_heap = BinaryHeap::new();
 
         for _ in 0..beam_width.min(heap.len()) {
+            let Node {
+                state,
+                answer,
+                cost,
+                answer_hasher,
+            } = heap.pop().unwrap();
+
             for action in state.next_actions() {
                 let mut next_hasher = answer_hasher.clone();
                 action.hash(&mut next_hasher);
