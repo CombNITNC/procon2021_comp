@@ -1,12 +1,18 @@
-use std::ops;
+use std::{hash::Hash, ops};
 
 use super::{Grid, Pos};
 
 /// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) struct VecOnGrid<T> {
     vec: Vec<T>,
     pub(crate) grid: Grid,
+}
+
+impl<T: Hash> Hash for VecOnGrid<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.vec.hash(state);
+    }
 }
 
 impl<T> VecOnGrid<T> {

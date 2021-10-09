@@ -1,7 +1,7 @@
-use std::ops::Add;
+use std::{collections::HashSet, hash::Hash, ops::Add};
 
 /// A* で探索する状態が実装するべき trait.
-pub trait IdaStarState: Clone + std::fmt::Debug {
+pub trait IdaStarState: Clone + std::fmt::Debug + Hash + Eq {
     type A: Copy + std::fmt::Debug;
     fn apply(&self, action: Self::A) -> Self;
 
@@ -22,7 +22,13 @@ enum FindResult<C> {
     None,
 }
 
-fn find<V, A, C>(node: V, history: &mut Vec<A>, distance: C, bound: C) -> FindResult<C>
+fn find<V, A, C>(
+    node: V,
+    history: &mut Vec<A>,
+    set: &mut HashSet<V>,
+    distance: C,
+    bound: C,
+) -> FindResult<C>
 where
     V: IdaStarState<C = C, A = A>,
     A: Copy + std::fmt::Debug,
@@ -39,14 +45,17 @@ where
     for action in node.next_actions() {
         history.push(action);
         let next_distance = distance + node.cost_on(action);
-        match find(node.apply(action), history, next_distance, bound) {
-            FindResult::Found => return FindResult::Found,
-            FindResult::Deeper(cost) => {
-                if min.map_or(true, |c| cost < c) {
-                    min.replace(cost);
+        let next_state = node.apply(action);
+        if !set.contains(&next_state) {
+            match find(next_state, history, set, next_distance, bound) {
+                FindResult::Found => return FindResult::Found,
+                FindResult::Deeper(cost) => {
+                    if min.map_or(true, |c| cost < c) {
+                        min.replace(cost);
+                    }
                 }
+                _ => {}
             }
-            _ => {}
         }
         history.pop();
     }
@@ -64,9 +73,10 @@ where
     C: PartialOrd + Add<Output = C> + Default + Copy + std::fmt::Debug,
 {
     let mut history = vec![];
+    let mut set = HashSet::new();
     let mut bound = lower_bound;
     loop {
-        match find(start.clone(), &mut history, C::default(), bound) {
+        match find(start.clone(), &mut history, &mut set, C::default(), bound) {
             FindResult::Found => return (history, bound),
             FindResult::Deeper(cost) => bound = cost,
             FindResult::None => return (vec![], C::default()),

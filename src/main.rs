@@ -71,8 +71,8 @@ fn main() {
     let movements = fragment::map_fragment::map_fragment(&recovered_image);
     let mut min_cost = u32::MAX;
 
-    for threshold_x in 2..=5 {
-        for threshold_y in 2..=5 {
+    for threshold_x in 2..=4 {
+        for threshold_y in 2..=4 {
             let (ops, cost) = move_resolve::resolve_approximately(
                 grid,
                 &movements,

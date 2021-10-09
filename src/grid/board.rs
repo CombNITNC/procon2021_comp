@@ -1,6 +1,7 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
     collections::HashSet,
+    hash::Hash,
     ops::Deref,
     rc::Rc,
 };
@@ -11,10 +12,16 @@ mod finder;
 
 pub(crate) use finder::*;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum CowRc<T> {
     Borrowed(Rc<RefCell<T>>),
     Owned(Rc<RefCell<T>>),
+}
+
+impl<T: Hash + ToOwned<Owned = T>> Hash for CowRc<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.borrow().hash(state);
+    }
 }
 
 impl<T> From<T> for CowRc<T> {
@@ -59,6 +66,20 @@ pub(crate) struct Board {
     reverse: CowRc<VecOnGrid<Pos>>,
     locked: CowRc<HashSet<Pos>>,
 }
+
+impl Hash for Board {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.forward.hash(state);
+    }
+}
+
+impl PartialEq for Board {
+    fn eq(&self, other: &Self) -> bool {
+        self.forward == other.forward
+    }
+}
+
+impl Eq for Board {}
 
 impl Board {
     pub(crate) fn new(select: Pos, field: VecOnGrid<Pos>) -> Self {

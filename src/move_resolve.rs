@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::ops::Deref;
 
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -79,6 +80,20 @@ enum GridAction {
     Swap(Movement),
     Select(Pos),
 }
+
+impl Hash for GridCompleter {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.board.hash(state);
+    }
+}
+
+impl PartialEq for GridCompleter {
+    fn eq(&self, other: &Self) -> bool {
+        self.board == other.board
+    }
+}
+
+impl Eq for GridCompleter {}
 
 impl IdaStarState for GridCompleter {
     type A = GridAction;
