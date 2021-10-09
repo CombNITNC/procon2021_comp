@@ -75,7 +75,7 @@ impl std::fmt::Debug for GridCompleter<'_> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum GridAction {
     Swap(Movement),
     Select(Pos),

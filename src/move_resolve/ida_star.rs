@@ -1,7 +1,7 @@
 use std::{collections::HashSet, hash::Hash, ops::Add};
 
 /// A* で探索する状態が実装するべき trait.
-pub trait IdaStarState: Clone + std::fmt::Debug + Hash + Eq {
+pub trait IdaStarState: Clone + std::fmt::Debug {
     type A: Copy + std::fmt::Debug;
     fn apply(&self, action: Self::A) -> Self;
 
@@ -25,13 +25,13 @@ enum FindResult<C> {
 fn find<V, A, C>(
     node: V,
     history: &mut Vec<A>,
-    set: &mut HashSet<V>,
+    set: &mut HashSet<Vec<A>>,
     distance: C,
     bound: C,
 ) -> FindResult<C>
 where
     V: IdaStarState<C = C, A = A>,
-    A: Copy + std::fmt::Debug,
+    A: Copy + std::fmt::Debug + Eq + Hash,
     C: PartialOrd + Add<Output = C> + Copy + std::fmt::Debug,
 {
     let total_estimated = distance + node.heuristic();
@@ -45,9 +45,8 @@ where
     for action in node.next_actions() {
         history.push(action);
         let next_distance = distance + node.cost_on(action);
-        let next_state = node.apply(action);
-        if !set.contains(&next_state) {
-            match find(next_state, history, set, next_distance, bound) {
+        if !set.contains(history) {
+            match find(node.apply(action), history, set, next_distance, bound) {
                 FindResult::Found => return FindResult::Found,
                 FindResult::Deeper(cost) => {
                     if min.map_or(true, |c| cost < c) {
@@ -69,7 +68,7 @@ where
 pub fn ida_star<V, A, C>(start: V, lower_bound: C) -> (Vec<A>, C)
 where
     V: IdaStarState<C = C, A = A>,
-    A: Copy + std::fmt::Debug,
+    A: Copy + std::fmt::Debug + Hash + Eq,
     C: PartialOrd + Add<Output = C> + Default + Copy + std::fmt::Debug,
 {
     let mut history = vec![];
