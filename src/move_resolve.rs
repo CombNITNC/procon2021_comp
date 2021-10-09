@@ -274,7 +274,7 @@ pub(crate) fn resolve_approximately(
     swap_cost: u16,
     select_cost: u16,
     thresholds: (u8, u8),
-) -> (Vec<Operation>, u32) {
+) -> Option<(Vec<Operation>, u32)> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let operations_cost = |ops: &[Operation]| -> u32 {
         ops.iter()
@@ -295,11 +295,10 @@ pub(crate) fn resolve_approximately(
                 thresholds,
             )
         })
-        .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
-        .unwrap();
+        .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))?;
     let cost = operations_cost(&result);
     println!("move_resolve(approx): cost was {}", cost);
-    (result, cost)
+    Some((result, cost))
 }
 
 fn resolve_on_select(

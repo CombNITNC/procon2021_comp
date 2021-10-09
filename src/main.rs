@@ -73,7 +73,7 @@ fn main() {
 
     for threshold_x in 2..=4 {
         for threshold_y in 2..=4 {
-            let (ops, cost) = move_resolve::resolve_approximately(
+            let result = move_resolve::resolve_approximately(
                 grid,
                 &movements,
                 problem.select_limit,
@@ -81,6 +81,10 @@ fn main() {
                 problem.select_cost,
                 (threshold_x, threshold_y),
             );
+            if result.is_none() {
+                continue;
+            }
+            let (ops, cost) = result.unwrap();
 
             println!(
                 "move_resolve::resolve_approx() done (threshold: {}-{})",
