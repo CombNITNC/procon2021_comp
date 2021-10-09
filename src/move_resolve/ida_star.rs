@@ -1,4 +1,8 @@
-use std::{collections::HashSet, hash::Hash, ops::Add};
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+    ops::Add,
+};
 
 /// A* で探索する状態が実装するべき trait.
 pub trait IdaStarState: Clone + std::fmt::Debug {
@@ -25,7 +29,7 @@ enum FindResult<C> {
 fn find<V, A, C>(
     node: V,
     history: &mut Vec<A>,
-    set: &mut HashSet<Vec<A>>,
+    hasher: impl Hasher + Clone,
     distance: C,
     bound: C,
 ) -> FindResult<C>
@@ -45,8 +49,16 @@ where
     for action in node.next_actions() {
         history.push(action);
         let next_distance = distance + node.cost_on(action);
-        if !set.contains(history) {
-            match find(node.apply(action), history, set, next_distance, bound) {
+        let mut next_hasher = hasher.clone();
+        action.hash(&mut next_hasher);
+        if hasher.finish() != next_hasher.finish() {
+            match find(
+                node.apply(action),
+                history,
+                next_hasher,
+                next_distance,
+                bound,
+            ) {
                 FindResult::Found => return FindResult::Found,
                 FindResult::Deeper(cost) => {
                     if min.map_or(true, |c| cost < c) {
@@ -72,10 +84,10 @@ where
     C: PartialOrd + Add<Output = C> + Default + Copy + std::fmt::Debug,
 {
     let mut history = vec![];
-    let mut set = HashSet::new();
     let mut bound = lower_bound;
     loop {
-        match find(start.clone(), &mut history, &mut set, C::default(), bound) {
+        let hasher = DefaultHasher::new();
+        match find(start.clone(), &mut history, hasher, C::default(), bound) {
             FindResult::Found => return (history, bound),
             FindResult::Deeper(cost) => bound = cost,
             FindResult::None => return (vec![], C::default()),
