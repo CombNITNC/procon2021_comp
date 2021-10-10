@@ -8,18 +8,18 @@ use std::cell::RefCell;
 fn find_by_single_side<'a, B>(
     fragments: &[Fragment],
     reference_edge: &Edge,
-    blacklist: B,
+    blocklist: B,
 ) -> DiffEntry
 where
     B: Iterator<Item = &'a EdgePos> + Clone + 'a,
 {
     find_with(fragments, move |fragment| {
-        let blacklist = blacklist.clone();
+        let blocklist = blocklist.clone();
         fragment
             .edges
             .iter()
             .filter(move |e| {
-                !blacklist
+                !blocklist
                     .clone()
                     .any(|b| b.pos == fragment.pos && b.dir == e.dir)
             })
@@ -90,7 +90,7 @@ impl<'a> Finder<'a> {
         let mut result = find_by_single_side(
             *self.ctx.fragments.borrow(),
             fragment_ref.edges.edge(self.dir),
-            self.ctx.hints.borrow().blacklist_of(fragment_ref.pos),
+            self.ctx.hints.borrow().blocklist_of(fragment_ref.pos),
         );
 
         if self.stop {

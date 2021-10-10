@@ -33,8 +33,8 @@ pub fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragment> {
                 match rx.recv() {
                     Ok(GuiRequest::Recalculate(hint)) => {
                         println!(
-                            "recalculating. blacklists: {} entries",
-                            hint.blacklist.len()
+                            "recalculating. blocklists: {} entries",
+                            hint.blocklist.len()
                         );
                         println!("whitelists: {} entries", hint.confirmed_pairs.len());
 
@@ -197,13 +197,13 @@ fn find_and_remove(vec: &mut Vec<Fragment>, pos: Pos) -> Option<Fragment> {
 
 #[derive(Debug, Default, Clone)]
 struct ResolveHints {
-    blacklist: Vec<(Pos, EdgePos)>,
+    blocklist: Vec<(Pos, EdgePos)>,
     confirmed_pairs: Vec<(EdgePos, Vec<(Pos, Rot)>, bool /* continue */)>,
 }
 
 impl ResolveHints {
-    fn blacklist_of(&self, pos: Pos) -> impl Iterator<Item = &EdgePos> + Clone {
-        self.blacklist
+    fn blocklist_of(&self, pos: Pos) -> impl Iterator<Item = &EdgePos> + Clone {
+        self.blocklist
             .iter()
             .filter(move |&(x, _)| *x == pos)
             .map(|(_, x)| x)

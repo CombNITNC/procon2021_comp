@@ -13,7 +13,7 @@ fn get_edge_pixels(grid: &VecOnGrid<Option<Fragment>>, pos: Pos, dir: Dir) -> Op
 fn find_by_double_side<'a, I, B>(
     fragments: &'a [Fragment],
     reference_iter: I,
-    (blacklist, blacklist_ref_index): (B, usize),
+    (blocklist, blocklist_ref_index): (B, usize),
 ) -> DiffEntry
 where
     I: Iterator<Item = &'a Color> + Clone + 'a,
@@ -21,7 +21,7 @@ where
 {
     find_with(fragments, move |fragment| {
         let reference_iter = reference_iter.clone();
-        let blacklist = blacklist.clone();
+        let blocklist = blocklist.clone();
 
         IntoIterator::into_iter([
             [Dir::North, Dir::East],
@@ -30,9 +30,9 @@ where
             [Dir::West, Dir::North],
         ])
         .filter(move |a| {
-            !blacklist
+            !blocklist
                 .clone()
-                .any(|x| x.pos == fragment.pos && x.dir == a[blacklist_ref_index])
+                .any(|x| x.pos == fragment.pos && x.dir == a[blocklist_ref_index])
         })
         .map(move |[dir_a, dir_b]| (fragment.edges.edge(dir_a), fragment.edges.edge(dir_b)))
         .map(move |(edge_a, edge_b)| DiffEntry {
@@ -65,16 +65,16 @@ fn fill_by_double_side_inner(
                 .rev(),
         );
 
-    let (blacklist_pos, index) = match (ref1_dir, ref2_dir) {
+    let (blocklist_pos, index) = match (ref1_dir, ref2_dir) {
         (Dir::North | Dir::South, _) => (ref1_pos, 0),
         (_, Dir::North | Dir::South) => (ref2_pos, 1),
         _ => unreachable!("either ref1 or ref2 should refer Y-axis"),
     };
 
-    let blacklist_pos = fragment_grid[blacklist_pos].as_ref().unwrap().pos;
-    let blacklist = hints.blacklist_of(blacklist_pos);
+    let blocklist_pos = fragment_grid[blocklist_pos].as_ref().unwrap().pos;
+    let blocklist = hints.blocklist_of(blocklist_pos);
 
-    let min = find_by_double_side(fragments, reference_iter, (blacklist, index));
+    let min = find_by_double_side(fragments, reference_iter, (blocklist, index));
 
     let mut fragment = find_and_remove(fragments, min.pos).unwrap();
     fragment.rotate(ref1_dir.calc_rot(min.dir));

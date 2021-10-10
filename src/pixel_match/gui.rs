@@ -170,22 +170,22 @@ struct GuiState {
 }
 
 enum HintsEditKind {
-    Blacklist,
+    Blocklist,
     ConfirmedPairs,
 }
 
 #[derive(Debug)]
 enum Hint {
-    Blacklist(GridPos, EdgePos),
+    Blocklist(GridPos, EdgePos),
     ConfirmedPair(EdgePos, Vec<(GridPos, Rot)>),
 }
 
 impl GuiState {
     fn push_hint(&mut self, hint: Hint) {
         match hint {
-            Hint::Blacklist(p, e) => {
-                self.hints_edit_history.push(HintsEditKind::Blacklist);
-                self.hints.blacklist.push((p, e));
+            Hint::Blocklist(p, e) => {
+                self.hints_edit_history.push(HintsEditKind::Blocklist);
+                self.hints.blocklist.push((p, e));
             }
 
             Hint::ConfirmedPair(e, t) => {
@@ -198,9 +198,9 @@ impl GuiState {
 
     fn pop_hints(&mut self) {
         match self.hints_edit_history.pop() {
-            Some(HintsEditKind::Blacklist) => {
+            Some(HintsEditKind::Blocklist) => {
                 self.hints_updated = true;
-                self.hints.blacklist.pop();
+                self.hints.blocklist.pop();
             }
 
             Some(HintsEditKind::ConfirmedPairs) => {

@@ -203,7 +203,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 let grid = self.image.recovered_image.grid;
 
                 if selecting == root {
-                    println!("gui: cannot apply blacklist on exact root pos");
+                    println!("gui: cannot apply blocklist on exact root pos");
                     return;
                 }
 
@@ -223,8 +223,8 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 .as_ref()
                 .unwrap();
 
-                global_state.push_hint(Hint::Blacklist(reference_fragment.pos, entry));
-                println!("gui: blacklist updated silently")
+                global_state.push_hint(Hint::Blocklist(reference_fragment.pos, entry));
+                println!("gui: blocklist updated silently")
             }
 
             _ => {}
