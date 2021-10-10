@@ -3,13 +3,14 @@ use std::ops::Deref;
 
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use self::{approx::Solver, beam_search::beam_search, edges_nodes::Nodes, ida_star::ida_star};
+use self::{approx::NextTargetsGenerator, edges_nodes::Nodes};
 use crate::{
     basis::{Movement, Operation},
     grid::{
         board::{Board, BoardFinder},
         Grid, Pos, VecOnGrid,
     },
+    move_resolve::{approx::Solver, beam_search::beam_search, ida_star::ida_star},
 };
 
 pub mod approx;
@@ -271,14 +272,15 @@ pub(crate) fn resolve(
 }
 
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の近似解を求める.
-pub(crate) fn resolve_approximately(
+pub(crate) fn resolve_approximately<G: NextTargetsGenerator + Clone + Send + Sync>(
     grid: Grid,
     movements: &[(Pos, Pos)],
     select_limit: u8,
     swap_cost: u16,
     select_cost: u16,
-    thresholds: (u8, u8),
+    (threshold_x, threshold_y): (u8, u8),
     max_cost: u32,
+    targets_gen: G,
 ) -> Option<(Vec<Operation>, u32)> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let operations_cost = |ops: &[Operation]| -> u32 {
@@ -289,7 +291,7 @@ pub(crate) fn resolve_approximately(
     let result = grid
         .all_pos()
         .par_bridge()
-        .flat_map(|pos| {
+        .flat_map(move |pos| {
             resolve_on_select(
                 grid,
                 nodes.clone(),
@@ -297,8 +299,12 @@ pub(crate) fn resolve_approximately(
                 select_cost,
                 select_limit,
                 pos,
-                thresholds,
                 max_cost,
+                Solver {
+                    threshold_x,
+                    threshold_y,
+                    targets_gen: targets_gen.clone(),
+                },
             )
         })
         .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))?;
@@ -307,20 +313,16 @@ pub(crate) fn resolve_approximately(
     Some((result, cost))
 }
 
-fn resolve_on_select(
+fn resolve_on_select<G: NextTargetsGenerator>(
     grid: Grid,
     mut nodes: VecOnGrid<Pos>,
     swap_cost: u16,
     select_cost: u16,
     mut select_limit: u8,
     init_select: Pos,
-    (threshold_x, threshold_y): (u8, u8),
     max_cost: u32,
+    mut solver: Solver<G>,
 ) -> Option<Vec<Operation>> {
-    let mut solver = Solver {
-        threshold_x,
-        threshold_y,
-    };
     let mut all_actions = vec![];
     let mut selection = init_select;
 

@@ -37,14 +37,6 @@ impl BoardFinder {
         self.rotation
     }
 
-    pub(crate) fn iter(&self) -> FinderIter {
-        FinderIter::new(
-            self,
-            self.offset,
-            self.move_pos_to(self.offset, Movement::Left),
-        )
-    }
-
     fn as_grid(&self) -> Grid {
         Grid::new(self.width, self.height)
     }
@@ -135,76 +127,16 @@ fn test_finder() {
     let grid = Grid::new(6, 6);
     let mut finder = BoardFinder::new(grid);
 
-    let expected = &[
-        grid.pos(0, 0),
-        grid.pos(1, 0),
-        grid.pos(2, 0),
-        grid.pos(3, 0),
-        grid.pos(4, 0),
-        grid.pos(5, 0),
-    ];
-    let actual: Vec<_> = finder.iter().collect();
     assert_eq!(grid.pos(0, 0), finder.offset());
-    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
-    expected
-        .iter()
-        .zip(actual.iter())
-        .enumerate()
-        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
 
     finder.rotate_to(1);
-    let expected = &[
-        grid.pos(5, 0),
-        grid.pos(5, 1),
-        grid.pos(5, 2),
-        grid.pos(5, 3),
-        grid.pos(5, 4),
-        grid.pos(5, 5),
-    ];
-    let actual: Vec<_> = finder.iter().collect();
     assert_eq!(grid.pos(5, 0), finder.offset());
-    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
-    expected
-        .iter()
-        .zip(actual.iter())
-        .enumerate()
-        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
 
     finder.rotate_to(1);
-    let expected = &[
-        grid.pos(5, 5),
-        grid.pos(4, 5),
-        grid.pos(3, 5),
-        grid.pos(2, 5),
-        grid.pos(1, 5),
-        grid.pos(0, 5),
-    ];
-    let actual: Vec<_> = finder.iter().collect();
     assert_eq!(grid.pos(5, 5), finder.offset());
-    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
-    expected
-        .iter()
-        .zip(actual.iter())
-        .enumerate()
-        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
 
     finder.rotate_to(1);
-    let expected = &[
-        grid.pos(0, 5),
-        grid.pos(0, 4),
-        grid.pos(0, 3),
-        grid.pos(0, 2),
-        grid.pos(0, 1),
-        grid.pos(0, 0),
-    ];
-    let actual: Vec<_> = finder.iter().collect();
     assert_eq!(grid.pos(0, 5), finder.offset());
-    assert_eq!(expected.len(), actual.len(), "{:?} {:?}", expected, actual);
-    expected
-        .iter()
-        .zip(actual.iter())
-        .enumerate()
-        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
 
     finder.rotate_to(2);
     // 00 ..[50]
@@ -239,43 +171,6 @@ fn test_finder() {
     assert_eq!(5, finder.width());
     assert_eq!(5, finder.height());
     assert_eq!(grid.pos(4, 4), finder.offset());
-}
-
-pub(crate) struct FinderIter<'f> {
-    next: Option<Pos>,
-    end: Pos,
-    finder: &'f BoardFinder,
-}
-
-impl<'f> FinderIter<'f> {
-    fn new(finder: &'f BoardFinder, start: Pos, end: Pos) -> Self {
-        let mut iter = Self {
-            next: None,
-            end,
-            finder,
-        };
-        iter.next = Some(start);
-        iter
-    }
-
-    fn advance(&self) -> Option<Pos> {
-        self.next
-            .map(|next| self.finder.move_pos_to(next, Movement::Right))
-    }
-}
-
-impl Iterator for FinderIter<'_> {
-    type Item = Pos;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let ret = self.next?;
-        self.next = if ret == self.end {
-            None
-        } else {
-            self.advance()
-        };
-        Some(ret)
-    }
 }
 
 /// 時計回りに 90 度単位の `rotation` で回転した位置を計算する.

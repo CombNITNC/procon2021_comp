@@ -19,7 +19,7 @@ mod fetch;
 #[cfg(feature = "net")]
 mod submit;
 
-use crate::grid::Grid;
+use crate::{grid::Grid, move_resolve::approx::gen::FromOutside};
 
 fn main() {
     #[cfg(feature = "net")]
@@ -81,6 +81,7 @@ fn main() {
                 problem.select_cost,
                 (threshold_x, threshold_y),
                 min_cost,
+                FromOutside,
             );
             if result.is_none() {
                 println!(
