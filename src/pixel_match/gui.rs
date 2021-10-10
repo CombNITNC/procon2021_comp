@@ -184,7 +184,6 @@ impl GuiState {
     fn push_hint(&mut self, hint: Hint) {
         match hint {
             Hint::Blacklist(p, e) => {
-                self.hints_updated = true;
                 self.hints_edit_history.push(HintsEditKind::Blacklist);
                 self.hints.blacklist.push((p, e));
             }
@@ -192,7 +191,7 @@ impl GuiState {
             Hint::ConfirmedPair(e, t) => {
                 // ここでは再計算をしない (ロックをしただけでは結果画像は変化しないため)
                 self.hints_edit_history.push(HintsEditKind::ConfirmedPairs);
-                self.hints.confirmed_pairs.push((e, t));
+                self.hints.confirmed_pairs.push((e, t, true));
             }
         }
     }
@@ -211,6 +210,15 @@ impl GuiState {
 
             _ => {}
         }
+    }
+
+    fn force_update(&mut self) {
+        self.hints_updated = true;
+    }
+
+    fn stop_continue_last_hint(&mut self) {
+        self.hints.confirmed_pairs.last_mut().unwrap().2 = false;
+        self.hints_updated = true;
     }
 
     fn process_sdl_event(&mut self, event: &Event) {

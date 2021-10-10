@@ -1,25 +1,41 @@
+use std::hash::Hash;
+use std::ops::Deref;
+
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use self::{
-    edges_nodes::Nodes,
-    ida_star::{ida_star, IdaStarState},
-};
+use self::{approx::NextTargetsGenerator, edges_nodes::Nodes};
 use crate::{
     basis::{Movement, Operation},
     grid::{
         board::{Board, BoardFinder},
         Grid, Pos, VecOnGrid,
     },
-    move_resolve::approx::Solver,
+    move_resolve::{approx::Solver, beam_search::beam_search, ida_star::ida_star},
 };
 
 pub mod approx;
+pub mod beam_search;
 pub mod dijkstra;
 pub mod edges_nodes;
 pub mod ida_star;
 pub mod least_movements;
 #[cfg(test)]
 mod tests;
+
+/// 探索する状態が実装するべき trait.
+pub(crate) trait SearchState: Clone + std::fmt::Debug {
+    type A: Copy + std::fmt::Debug;
+    fn apply(&self, action: Self::A) -> Self;
+
+    type AS: IntoIterator<Item = Self::A>;
+    fn next_actions(&self) -> Self::AS;
+
+    fn is_goal(&self) -> bool;
+
+    type C: Copy + Ord + std::fmt::Debug;
+    fn heuristic(&self) -> Self::C;
+    fn cost_on(&self, action: Self::A) -> Self::C;
+}
 
 /// フィールドにあるマスのゴール位置までの距離の合計.
 #[derive(Clone, Copy)]
@@ -42,7 +58,7 @@ impl DifferentCells {
     }
 
     /// a の位置と b の位置のマスを入れ替えた場合を計算する.
-    fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
+    fn on_swap(self, field: impl Deref<Target = VecOnGrid<Pos>>, a: Pos, b: Pos) -> Self {
         let before = (field.grid.looping_manhattan_dist(field[a], a)
             + field.grid.looping_manhattan_dist(field[b], b)) as i64;
         let after = (field.grid.looping_manhattan_dist(field[a], b)
@@ -53,8 +69,8 @@ impl DifferentCells {
 }
 
 #[derive(Clone)]
-struct GridCompleter {
-    board: Board,
+struct GridCompleter<'b> {
+    board: Board<'b>,
     prev_action: Option<GridAction>,
     different_cells: DifferentCells,
     swap_cost: u16,
@@ -62,7 +78,7 @@ struct GridCompleter {
     remaining_select: u8,
 }
 
-impl std::fmt::Debug for GridCompleter {
+impl std::fmt::Debug for GridCompleter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridState")
             .field("board", &self.board)
@@ -72,13 +88,13 @@ impl std::fmt::Debug for GridCompleter {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum GridAction {
     Swap(Movement),
     Select(Pos),
 }
 
-impl IdaStarState for GridCompleter {
+impl SearchState for GridCompleter<'_> {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
         match action {
@@ -115,9 +131,8 @@ impl IdaStarState for GridCompleter {
     type AS = Vec<GridAction>;
     fn next_actions(&self) -> Self::AS {
         // 揃っているマスどうしは入れ替えない
-        let different_cells = self
-            .board
-            .field()
+        let field = self.board.field();
+        let different_cells = field
             .iter_with_pos()
             .filter(|&(pos, &cell)| pos != cell)
             .map(|(_, &cell)| cell);
@@ -129,7 +144,6 @@ impl IdaStarState for GridCompleter {
         let swapping_states = self
             .board
             .around_of(selected)
-            .into_iter()
             .map(|to| Movement::between_pos(selected, to))
             .filter(|&around| {
                 if let GridAction::Swap(dir) = prev {
@@ -155,7 +169,11 @@ impl IdaStarState for GridCompleter {
 
     type C = u64;
     fn heuristic(&self) -> Self::C {
-        (self.different_cells.0 as f64).powf(1.0 + 41.0 / 256.0) as u64
+        self.board
+            .field()
+            .iter_with_pos()
+            .map(|(p, &e)| self.board.grid().looping_manhattan_dist(p, e).pow(2) as u64)
+            .sum()
     }
 
     fn cost_on(&self, action: Self::A) -> Self::C {
@@ -228,51 +246,52 @@ pub(crate) fn resolve(
     swap_cost: u16,
     select_cost: u16,
 ) -> Vec<Operation> {
-    if 30 < grid.width() as u32 * grid.height() as u32 {
-        return resolve_approximately(grid, movements, select_limit, swap_cost, select_cost);
-    }
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let different_cells = DifferentCells::new(&nodes);
-    let lower_bound = different_cells.0;
 
-    let (path, _) = grid
+    let (path, cost) = grid
         .all_pos()
         .par_bridge()
         .map(|pos| {
             ida_star(
                 GridCompleter {
-                    board: Board::new(pos, nodes),
+                    board: Board::new(pos, nodes.clone()),
                     prev_action: None,
                     different_cells,
                     swap_cost,
                     select_cost,
                     remaining_select: select_limit,
                 },
-                lower_bound,
+                different_cells.0,
             )
         })
         .min_by(|a, b| a.1.cmp(&b.1))
         .unwrap();
+    println!("move_resolve(strict): cost was {}", cost);
     actions_to_operations(path)
 }
 
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の近似解を求める.
-fn resolve_approximately(
+pub(crate) fn resolve_approximately<G: NextTargetsGenerator + Clone + Send + Sync>(
     grid: Grid,
     movements: &[(Pos, Pos)],
     select_limit: u8,
     swap_cost: u16,
     select_cost: u16,
-) -> Vec<Operation> {
+    (threshold_x, threshold_y): (u8, u8),
+    max_cost: u32,
+    targets_gen: G,
+) -> Option<(Vec<Operation>, u32)> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let operations_cost = |ops: &[Operation]| -> u32 {
         ops.iter()
             .map(|op| op.movements.len() as u32 * swap_cost as u32 + select_cost as u32)
             .sum()
     };
-    grid.all_pos()
+    let result = grid
+        .all_pos()
         .par_bridge()
-        .map(|pos| {
+        .flat_map(move |pos| {
             resolve_on_select(
                 grid,
                 nodes.clone(),
@@ -280,22 +299,30 @@ fn resolve_approximately(
                 select_cost,
                 select_limit,
                 pos,
+                max_cost,
+                Solver {
+                    threshold_x,
+                    threshold_y,
+                    targets_gen: targets_gen.clone(),
+                },
             )
         })
-        .flatten()
-        .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))
-        .unwrap()
+        .min_by(|a, b| operations_cost(a).cmp(&operations_cost(b)))?;
+    let cost = operations_cost(&result);
+    println!("move_resolve(approx): cost was {}", cost);
+    Some((result, cost))
 }
 
-fn resolve_on_select(
+fn resolve_on_select<G: NextTargetsGenerator>(
     grid: Grid,
     mut nodes: VecOnGrid<Pos>,
     swap_cost: u16,
     select_cost: u16,
     mut select_limit: u8,
     init_select: Pos,
+    max_cost: u32,
+    mut solver: Solver<G>,
 ) -> Option<Vec<Operation>> {
-    let mut solver = Solver::default();
     let mut all_actions = vec![];
     let mut selection = init_select;
 
@@ -316,7 +343,7 @@ fn resolve_on_select(
     all_actions.append(&mut actions);
 
     let different_cells = DifferentCells::new(&nodes);
-    let (mut actions, _total_cost) = ida_star(
+    let (mut actions, _total_cost) = beam_search(
         GridCompleter {
             board: Board::new(selection, nodes),
             prev_action: all_actions.last().copied(),
@@ -325,8 +352,9 @@ fn resolve_on_select(
             select_cost,
             remaining_select: select_limit,
         },
-        different_cells.0,
-    );
+        100,
+        max_cost as u64,
+    )?;
     all_actions.append(&mut actions);
     Some(actions_to_operations(all_actions))
 }

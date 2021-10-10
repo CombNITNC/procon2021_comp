@@ -43,6 +43,7 @@ struct Finder<'a> {
     list: &'a RefCell<Vec<Fragment>>,
     oppisite_list: &'a RefCell<Vec<Fragment>>,
     ctx: &'a Context<'a>,
+    stop: bool,
 }
 
 impl<'a> Finder<'a> {
@@ -51,12 +52,15 @@ impl<'a> Finder<'a> {
         let edgepos = EdgePos::new(fragment_pos, self.dir);
 
         if let Some(pairs) = self.ctx.hints.borrow_mut().confirmed_pairs_of(edgepos) {
+            let (pairs, should_continue) = pairs;
             if self.list.borrow().len() + self.oppisite_list.borrow().len() + pairs.len() + 1
                 > self.ctx.num_fragment as usize
             {
                 println!("shaker_fill: couldn't apply confirmed_pairs because of size overrun");
             } else {
-                for (pos, rot) in pairs {
+                let mut done = false;
+                let pairs_len = pairs.len();
+                for (i, (pos, rot)) in pairs.into_iter().enumerate() {
                     let mut fragment = match find_and_remove(*self.ctx.fragments.borrow_mut(), pos)
                     {
                         Some(v) => v,
@@ -68,6 +72,13 @@ impl<'a> Finder<'a> {
 
                     fragment.rotate(rot);
                     self.list.borrow_mut().push(fragment);
+
+                    if i == pairs_len - 1 {
+                        done = true;
+                    }
+                }
+                if done && !should_continue {
+                    self.stop = true;
                 }
             }
         }
@@ -76,11 +87,17 @@ impl<'a> Finder<'a> {
     fn find_match(&self) -> DiffEntry {
         let list_ref = self.list.borrow();
         let fragment_ref = list_ref.last().unwrap_or(self.ctx.root_ref);
-        find_by_single_side(
+        let mut result = find_by_single_side(
             *self.ctx.fragments.borrow(),
             fragment_ref.edges.edge(self.dir),
             self.ctx.hints.borrow().blacklist_of(fragment_ref.pos),
-        )
+        );
+
+        if self.stop {
+            result.score = f64::MAX;
+        }
+
+        result
     }
 
     fn adopt(&mut self, d: DiffEntry) {
@@ -112,6 +129,7 @@ pub(super) fn shaker_fill(
         list: &left,
         oppisite_list: &right,
         ctx: &ctx,
+        stop: false,
     };
 
     let mut right_finder = Finder {
@@ -119,6 +137,7 @@ pub(super) fn shaker_fill(
         list: &right,
         oppisite_list: &left,
         ctx: &ctx,
+        stop: false,
     };
 
     while right.borrow().len() + left.borrow().len() + (1/* for root */) != num_fragment as usize {

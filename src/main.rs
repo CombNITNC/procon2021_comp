@@ -19,7 +19,7 @@ mod fetch;
 #[cfg(feature = "net")]
 mod submit;
 
-use crate::grid::Grid;
+use crate::{grid::Grid, move_resolve::approx::gen::FromOutside};
 
 fn main() {
     #[cfg(feature = "net")]
@@ -49,23 +49,79 @@ fn main() {
         let data = fetch::fetch_ppm(&endpoint).unwrap();
         println!("fetch::fetch_ppm() done");
 
+        let problem = image::read_problem(data.slice(..).reader()).unwrap();
+
         use bytes::Buf;
 
         let filename = format!("problem-{}.ppm", epoch);
         File::create(&filename).unwrap().write_all(&data).unwrap();
         println!("saved the problem to {}", filename);
 
-        image::read_problem(data.reader()).unwrap()
+        problem
     };
+    println!("problem case: {:?}", problem);
 
     let grid = Grid::new(problem.rows, problem.cols);
     let fragments = fragment::Fragment::new_all(&problem);
 
     let recovered_image = pixel_match::resolve(fragments, grid);
+    let rots = recovered_image.iter().map(|x| x.rot).collect::<Vec<_>>();
     println!("pixel_match::resolve() done");
 
     let movements = fragment::map_fragment::map_fragment(&recovered_image);
+    let mut min_cost = 20000;
 
+    for threshold_x in 2..=4 {
+        for threshold_y in 2..=4 {
+            let result = move_resolve::resolve_approximately(
+                grid,
+                &movements,
+                problem.select_limit,
+                problem.swap_cost,
+                problem.select_cost,
+                (threshold_x, threshold_y),
+                min_cost,
+                FromOutside,
+            );
+            if result.is_none() {
+                println!(
+                    "move_resolve::resolve_approx() none (threshold: {}-{})",
+                    threshold_x, threshold_y
+                );
+                println!();
+
+                continue;
+            }
+            let (ops, cost) = result.unwrap();
+
+            println!(
+                "move_resolve::resolve_approx() done (threshold: {}-{})",
+                threshold_x, threshold_y
+            );
+
+            if cost < min_cost {
+                min_cost = cost;
+                println!("best cost. submitting");
+                let answer = kaitou::ans(&ops, &rots);
+
+                #[cfg(feature = "net")]
+                submit(answer, &token, &endpoint);
+                #[cfg(not(feature = "net"))]
+                submit(
+                    answer,
+                    &format!(
+                        "answer-{}-approx-{}-{}.txt",
+                        epoch, threshold_x, threshold_y
+                    ),
+                );
+
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+            println!();
+        }
+    }
+
+    println!("finding best score");
     let ops = move_resolve::resolve(
         grid,
         &movements,
@@ -75,23 +131,26 @@ fn main() {
     );
     println!("move_resolve::resolve() done");
 
-    let rots = recovered_image.iter().map(|x| x.rot).collect::<Vec<_>>();
     let answer = kaitou::ans(&ops, &rots);
 
-    #[cfg(not(feature = "net"))]
-    {
-        let filename = &format!("answer-{}.txt", epoch);
-        File::create(filename)
-            .unwrap()
-            .write_all(answer.as_bytes())
-            .unwrap();
-        println!("saved answer to {}", filename);
-    }
-
     #[cfg(feature = "net")]
-    {
-        println!("submitting");
-        let submit_result = submit::submit(&endpoint, &token, answer);
-        println!("submit result: {:#?}", submit_result);
-    }
+    submit(answer, &token, &endpoint);
+    #[cfg(not(feature = "net"))]
+    submit(answer, &format!("answer-{}.txt", epoch));
+}
+
+#[cfg(feature = "net")]
+fn submit(answer: String, token: &str, endpoint: &str) {
+    println!("submitting");
+    let submit_result = submit::submit(endpoint, token, answer);
+    println!("submit result: {:#?}", submit_result);
+}
+
+#[cfg(not(feature = "net"))]
+fn submit(answer: String, filename: &str) {
+    File::create(filename)
+        .unwrap()
+        .write_all(answer.as_bytes())
+        .unwrap();
+    println!("saved answer to {}", filename);
 }

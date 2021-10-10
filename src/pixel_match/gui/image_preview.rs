@@ -91,10 +91,25 @@ impl<'tc> RecoveredImagePreview<'tc> {
             }
 
             KeyDown {
+                keycode: Some(Keycode::R),
+                ..
+            } => {
+                global_state.force_update();
+            }
+
+            KeyDown {
                 keycode: Some(Keycode::LCtrl),
                 ..
             } => {
                 self.dragging_from = Some(self.selecting_at);
+            }
+
+            KeyDown {
+                keycode: Some(Keycode::F),
+                ..
+            } => {
+                println!("gui: set confirmed_pair continue field to false");
+                global_state.stop_continue_last_hint();
             }
 
             KeyUp {
@@ -183,9 +198,14 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 keycode: Some(Keycode::Space),
                 ..
             } => {
-                let root = self.image.root_pos;
+                let root = self.image.root_pos.into();
                 let selecting = self.selecting_at;
                 let grid = self.image.recovered_image.grid;
+
+                if selecting == root {
+                    println!("gui: cannot apply blacklist on exact root pos");
+                    return;
+                }
 
                 let reference_side = Self::calc_reference_side(root.into(), selecting);
                 let reference_pos = selecting.move_to(reference_side);
@@ -204,6 +224,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 .unwrap();
 
                 global_state.push_hint(Hint::Blacklist(reference_fragment.pos, entry));
+                println!("gui: blacklist updated silently")
             }
 
             _ => {}
@@ -381,7 +402,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 .into()
         };
 
-        for (edgepos, list) in &global_state.hints.confirmed_pairs {
+        for (edgepos, list, _) in &global_state.hints.confirmed_pairs {
             let growing_dir = match (
                 pos_on_gui_grid(edgepos.pos.into()),
                 pos_on_gui_grid(list[0].0.into()),

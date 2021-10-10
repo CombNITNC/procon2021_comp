@@ -35,7 +35,7 @@ impl std::fmt::Debug for Color {
 }
 
 /// `Movement` はある断片画像を動かして入れ替える向きを表す.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum Movement {
     Up,
     Right,
@@ -220,6 +220,7 @@ impl Dir {
 }
 
 /// `Problem` は原画像から抽出される問題設定の情報を表す.
+#[derive(Debug)]
 pub(crate) struct Problem {
     pub(crate) select_limit: u8,
     pub(crate) select_cost: u16,
@@ -233,4 +234,13 @@ pub(crate) struct Image {
     pub(crate) width: u16,
     pub(crate) height: u16,
     pub(crate) pixels: Vec<Color>,
+}
+
+impl std::fmt::Debug for Image {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Image")
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .finish_non_exhaustive()
+    }
 }
