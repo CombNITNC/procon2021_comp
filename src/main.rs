@@ -69,7 +69,7 @@ fn main() {
     println!("pixel_match::resolve() done");
 
     let movements = fragment::map_fragment::map_fragment(&recovered_image);
-    let mut min_cost = 2000;
+    let mut min_cost = 20000;
 
     for threshold_x in 2..=4 {
         for threshold_y in 2..=4 {
