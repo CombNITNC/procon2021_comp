@@ -184,7 +184,6 @@ impl GuiState {
     fn push_hint(&mut self, hint: Hint) {
         match hint {
             Hint::Blacklist(p, e) => {
-                self.hints_updated = true;
                 self.hints_edit_history.push(HintsEditKind::Blacklist);
                 self.hints.blacklist.push((p, e));
             }
@@ -211,6 +210,10 @@ impl GuiState {
 
             _ => {}
         }
+    }
+
+    fn force_update(&mut self) {
+        self.hints_updated = true;
     }
 
     fn stop_continue_last_hint(&mut self) {

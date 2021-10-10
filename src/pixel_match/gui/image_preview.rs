@@ -91,6 +91,13 @@ impl<'tc> RecoveredImagePreview<'tc> {
             }
 
             KeyDown {
+                keycode: Some(Keycode::R),
+                ..
+            } => {
+                global_state.force_update();
+            }
+
+            KeyDown {
                 keycode: Some(Keycode::LCtrl),
                 ..
             } => {
@@ -212,6 +219,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 .unwrap();
 
                 global_state.push_hint(Hint::Blacklist(reference_fragment.pos, entry));
+                println!("gui: blacklist updated silently")
             }
 
             _ => {}
