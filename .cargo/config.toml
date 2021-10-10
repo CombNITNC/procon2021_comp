@@ -4,5 +4,5 @@ rustflags = ["-C", "target-cpu=native"]
 [target.'cfg(windows)']
 rustflags = "-C link-args=/STACK:300000000"
 
-[target.'cfg(unix)']
+[target.'cfg(target_os = "linux")']
 rustflags = "-C link-args=-Wl,-zstack-size=300000000"
