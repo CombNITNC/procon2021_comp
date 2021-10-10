@@ -121,6 +121,7 @@ fn main() {
         }
     }
 
+    println!("finding best score");
     let ops = move_resolve::resolve(
         grid,
         &movements,

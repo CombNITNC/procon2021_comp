@@ -203,7 +203,7 @@ fn find_and_remove(vec: &mut Vec<Fragment>, pos: Pos) -> Option<Fragment> {
 #[derive(Debug, Default, Clone)]
 struct ResolveHints {
     blacklist: Vec<(Pos, EdgePos)>,
-    confirmed_pairs: Vec<(EdgePos, Vec<(Pos, Rot)>)>,
+    confirmed_pairs: Vec<(EdgePos, Vec<(Pos, Rot)>, bool /* continue */)>,
 }
 
 impl ResolveHints {
@@ -214,14 +214,18 @@ impl ResolveHints {
             .map(|(_, x)| x)
     }
 
-    fn confirmed_pairs_of(&mut self, pos: EdgePos) -> Option<Vec<(Pos, Rot)>> {
+    fn confirmed_pairs_of(
+        &mut self,
+        pos: EdgePos,
+    ) -> Option<(Vec<(Pos, Rot)>, bool /* continue */)> {
         let (index, _) = self
             .confirmed_pairs
             .iter()
             .enumerate()
-            .filter(|(_, (p, _))| *p == pos)
-            .max_by_key(|(_, (_, v))| v.len())?;
+            .filter(|(_, (p, ..))| *p == pos)
+            .max_by_key(|(_, (_, v, ..))| v.len())?;
 
-        Some(self.confirmed_pairs.remove(index).1)
+        let (.., a, b) = self.confirmed_pairs.remove(index);
+        Some((a, b))
     }
 }

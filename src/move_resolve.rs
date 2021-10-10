@@ -352,7 +352,7 @@ fn resolve_on_select<G: NextTargetsGenerator>(
             select_cost,
             remaining_select: select_limit,
         },
-        5,
+        100,
         max_cost as u64,
     )?;
     all_actions.append(&mut actions);

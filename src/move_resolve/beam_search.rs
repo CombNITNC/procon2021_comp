@@ -21,7 +21,7 @@ where
         return Some((vec![], C::default()));
     }
 
-    let mut heap = BinaryHeap::new();
+    let mut heap = BinaryHeap::with_capacity(beam_width);
     let mut visited = HashSet::new();
 
     heap.push(Node {
@@ -32,7 +32,7 @@ where
     });
 
     while !heap.is_empty() {
-        let mut next_heap = BinaryHeap::new();
+        let mut next_heap = BinaryHeap::with_capacity(beam_width);
 
         for _ in 0..beam_width.min(heap.len()) {
             let Node {

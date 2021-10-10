@@ -97,6 +97,14 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 self.dragging_from = Some(self.selecting_at);
             }
 
+            KeyDown {
+                keycode: Some(Keycode::F),
+                ..
+            } => {
+                println!("gui: set confirmed_pair continue field to false");
+                global_state.stop_continue_last_hint();
+            }
+
             KeyUp {
                 keycode: Some(Keycode::LCtrl),
                 ..
@@ -381,7 +389,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 .into()
         };
 
-        for (edgepos, list) in &global_state.hints.confirmed_pairs {
+        for (edgepos, list, _) in &global_state.hints.confirmed_pairs {
             let growing_dir = match (
                 pos_on_gui_grid(edgepos.pos.into()),
                 pos_on_gui_grid(list[0].0.into()),
