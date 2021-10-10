@@ -198,9 +198,14 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 keycode: Some(Keycode::Space),
                 ..
             } => {
-                let root = self.image.root_pos;
+                let root = self.image.root_pos.into();
                 let selecting = self.selecting_at;
                 let grid = self.image.recovered_image.grid;
+
+                if selecting == root {
+                    println!("gui: cannot apply blacklist on exact root pos");
+                    return;
+                }
 
                 let reference_side = Self::calc_reference_side(root.into(), selecting);
                 let reference_pos = selecting.move_to(reference_side);
