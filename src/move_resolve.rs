@@ -168,7 +168,11 @@ impl SearchState for GridCompleter<'_> {
 
     type C = u64;
     fn heuristic(&self) -> Self::C {
-        (self.different_cells.0 as f64).powf(1.0 + 41.0 / 256.0) as u64
+        self.board
+            .field()
+            .iter_with_pos()
+            .map(|(p, &e)| self.board.grid().looping_manhattan_dist(p, e).pow(2) as u64)
+            .sum()
     }
 
     fn cost_on(&self, action: Self::A) -> Self::C {

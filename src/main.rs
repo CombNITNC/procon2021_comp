@@ -83,6 +83,12 @@ fn main() {
                 min_cost,
             );
             if result.is_none() {
+                println!(
+                    "move_resolve::resolve_approx() none (threshold: {}-{})",
+                    threshold_x, threshold_y
+                );
+                println!();
+
                 continue;
             }
             let (ops, cost) = result.unwrap();
