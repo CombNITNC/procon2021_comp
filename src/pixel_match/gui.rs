@@ -23,12 +23,12 @@ use crate::{
     pixel_match::gui::image_preview::RecoveredImagePreview,
 };
 
-use super::ResolveHints;
+use super::{LockedPairs, ResolveHints};
 
 mod arrow_texture;
 mod image_preview;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(super) struct EdgePos {
     pub(super) pos: GridPos,
     pub(super) dir: Dir,
@@ -170,8 +170,8 @@ struct GuiState {
 }
 
 enum HintsEditKind {
-    Blocklist,
-    ConfirmedPairs,
+    Blocklist(GridPos, EdgePos),
+    ConfirmedPairs(EdgePos),
 }
 
 #[derive(Debug)]
@@ -184,28 +184,29 @@ impl GuiState {
     fn push_hint(&mut self, hint: Hint) {
         match hint {
             Hint::Blocklist(p, e) => {
-                self.hints_edit_history.push(HintsEditKind::Blocklist);
-                self.hints.blocklist.push((p, e));
+                self.hints_edit_history.push(HintsEditKind::Blocklist(p, e));
+                self.hints.push_blocklist(p, e);
             }
 
             Hint::ConfirmedPair(e, t) => {
                 // ここでは再計算をしない (ロックをしただけでは結果画像は変化しないため)
-                self.hints_edit_history.push(HintsEditKind::ConfirmedPairs);
-                self.hints.confirmed_pairs.push((e, t, true));
+                self.hints_edit_history
+                    .push(HintsEditKind::ConfirmedPairs(e));
+                self.hints.push_locked_pair(e, LockedPairs::new(t));
             }
         }
     }
 
     fn pop_hints(&mut self) {
         match self.hints_edit_history.pop() {
-            Some(HintsEditKind::Blocklist) => {
+            Some(HintsEditKind::Blocklist(p, e)) => {
                 self.hints_updated = true;
-                self.hints.blocklist.pop();
+                self.hints.remove_blocklist(p, e);
             }
 
-            Some(HintsEditKind::ConfirmedPairs) => {
+            Some(HintsEditKind::ConfirmedPairs(e)) => {
                 self.hints_updated = true;
-                self.hints.confirmed_pairs.pop();
+                self.hints.remove_locked_pair(e);
             }
 
             _ => {}
@@ -217,7 +218,7 @@ impl GuiState {
     }
 
     fn stop_continue_last_hint(&mut self) {
-        self.hints.confirmed_pairs.last_mut().unwrap().2 = false;
+        self.hints.locked_pairs.last_mut().unwrap().2 = false;
         self.hints_updated = true;
     }
 

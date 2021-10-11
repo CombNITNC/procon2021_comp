@@ -108,7 +108,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 keycode: Some(Keycode::F),
                 ..
             } => {
-                println!("gui: set confirmed_pair continue field to false");
+                println!("gui: set locked_pair continue field to false");
                 global_state.stop_continue_last_hint();
             }
 
@@ -402,7 +402,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 .into()
         };
 
-        for (edgepos, list, _) in &global_state.hints.confirmed_pairs {
+        for (edgepos, list, _) in &global_state.hints.locked_pairs {
             let growing_dir = match (
                 pos_on_gui_grid(edgepos.pos.into()),
                 pos_on_gui_grid(list[0].0.into()),

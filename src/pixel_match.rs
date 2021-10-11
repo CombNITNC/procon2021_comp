@@ -1,7 +1,8 @@
+use std::collections::HashMap;
 use std::sync::mpsc;
 
 use crate::basis::{Color, Dir, Rot};
-use crate::fragment::Fragment;
+use crate::fragment::{Edge, Fragment};
 use crate::grid::{Grid, Pos, VecOnGrid};
 use crate::pixel_match::gui::{EdgePos, GuiRequest, GuiResponse};
 
@@ -36,7 +37,7 @@ pub fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragment> {
                             "recalculating. blocklists: {} entries",
                             hint.blocklist.len()
                         );
-                        println!("whitelists: {} entries", hint.confirmed_pairs.len());
+                        println!("whitelists: {} entries", hint.locked_pairs.len());
 
                         let (recovered_image, root_pos) = solve(fragments.clone(), grid, hint);
 
@@ -86,7 +87,9 @@ fn solve(
     let mut fragment_grid = VecOnGrid::<Option<Fragment>>::with_default(grid);
 
     // 必ず向きの正しい左上の断片を取得
-    let root = find_and_remove(&mut fragments, grid.pos(0, 0)).unwrap();
+    let root = fragments
+        .find_and_remove(|x| x.pos == grid.pos(0, 0))
+        .unwrap();
 
     // そこから上下左右に伸ばす形で探索
     let (up, down) =
@@ -189,38 +192,66 @@ fn average_distance<'a>(
     sum_of_distance / count as f64
 }
 
-/// vec から pos を持つ Fragment の所有権を取得する
-#[inline]
-fn find_and_remove(vec: &mut Vec<Fragment>, pos: Pos) -> Option<Fragment> {
-    Some(vec.remove(vec.iter().position(|x| x.pos == pos)?))
-}
-
 #[derive(Debug, Default, Clone)]
 struct ResolveHints {
-    blocklist: Vec<(Pos, EdgePos)>,
-    confirmed_pairs: Vec<(EdgePos, Vec<(Pos, Rot)>, bool /* continue */)>,
+    blocklist: HashMap<Pos, Vec<EdgePos>>,
+    locked_pairs: HashMap<EdgePos, LockedPairs>,
+}
+
+#[derive(Debug, Clone)]
+struct LockedPairs {
+    tail: Vec<(Pos, Rot)>,
+    continue_after_apply: bool,
+}
+
+impl LockedPairs {
+    fn new(tail: Vec<(Pos, Rot)>) -> Self {
+        Self {
+            tail,
+            continue_after_apply: true,
+        }
+    }
+
+    fn stop_after_apply(&mut self) {
+        self.continue_after_apply = false;
+    }
 }
 
 impl ResolveHints {
-    fn blocklist_of(&self, pos: Pos) -> impl Iterator<Item = &EdgePos> + Clone {
-        self.blocklist
-            .iter()
-            .filter(move |&(x, _)| *x == pos)
-            .map(|(_, x)| x)
+    fn push_blocklist(&mut self, pos: Pos, against: EdgePos) {
+        self.blocklist.entry(pos).or_default().push(against);
     }
 
-    fn confirmed_pairs_of(
-        &mut self,
-        pos: EdgePos,
-    ) -> Option<(Vec<(Pos, Rot)>, bool /* continue */)> {
-        let (index, _) = self
-            .confirmed_pairs
-            .iter()
-            .enumerate()
-            .filter(|(_, (p, ..))| *p == pos)
-            .max_by_key(|(_, (_, v, ..))| v.len())?;
+    fn push_locked_pair(&mut self, pos: EdgePos, pairs: LockedPairs) {
+        self.locked_pairs.insert(pos, pairs);
+    }
 
-        let (.., a, b) = self.confirmed_pairs.remove(index);
-        Some((a, b))
+    fn remove_blocklist(&mut self, pos: Pos, against: EdgePos) {
+        self.blocklist
+            .entry(pos)
+            .or_default()
+            .find_and_remove(|&x| x == against);
+    }
+
+    fn remove_locked_pair(&mut self, pos: EdgePos) {
+        self.locked_pairs.remove(&pos);
+    }
+
+    fn blocklist_of(&mut self, pos: Pos) -> impl Iterator<Item = &EdgePos> + Clone {
+        self.blocklist.entry(pos).or_default().iter()
+    }
+
+    fn locked_pairs_of(&mut self, pos: EdgePos) -> Option<LockedPairs> {
+        self.locked_pairs.remove(&pos)
+    }
+}
+
+trait FindAndRemove<T> {
+    fn find_and_remove(&mut self, pred: impl FnMut(&T) -> bool) -> Option<T>;
+}
+
+impl<T> FindAndRemove<T> for Vec<T> {
+    fn find_and_remove(&mut self, pred: impl FnMut(&T) -> bool) -> Option<T> {
+        Some(self.remove(self.iter().position(pred)?))
     }
 }

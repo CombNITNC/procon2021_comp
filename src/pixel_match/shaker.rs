@@ -1,4 +1,4 @@
-use super::{average_distance, find_and_remove, find_with, gui::EdgePos, DiffEntry, ResolveHints};
+use super::{average_distance, find_with, gui::EdgePos, DiffEntry, FindAndRemove, ResolveHints};
 use crate::{
     basis::Dir,
     fragment::{Edge, Fragment},
@@ -47,39 +47,40 @@ struct Finder<'a> {
 }
 
 impl<'a> Finder<'a> {
-    fn apply_confirmed_pairs(&mut self) {
+    fn apply_locked_pairs(&mut self) {
         let fragment_pos = self.list.borrow().last().unwrap_or(self.ctx.root_ref).pos;
         let edgepos = EdgePos::new(fragment_pos, self.dir);
 
-        if let Some(pairs) = self.ctx.hints.borrow_mut().confirmed_pairs_of(edgepos) {
-            let (pairs, should_continue) = pairs;
-            if self.list.borrow().len() + self.oppisite_list.borrow().len() + pairs.len() + 1
+        if let Some(pairs) = self.ctx.hints.borrow_mut().locked_pairs_of(edgepos) {
+            let tail_len = pairs.tail.len();
+
+            if self.list.borrow().len() + self.oppisite_list.borrow().len() + tail_len + 1
                 > self.ctx.num_fragment as usize
             {
-                println!("shaker_fill: couldn't apply confirmed_pairs because of size overrun");
-            } else {
-                let mut done = false;
-                let pairs_len = pairs.len();
-                for (i, (pos, rot)) in pairs.into_iter().enumerate() {
-                    let mut fragment = match find_and_remove(*self.ctx.fragments.borrow_mut(), pos)
-                    {
-                        Some(v) => v,
-                        None => {
-                            println!("shaker_fill: partially applied confirmed_pair because fragment in pair is already taken. edgepos: {:?}", edgepos);
-                            break;
-                        }
-                    };
+                println!("shaker_fill: couldn't apply locked_pairs because of size overrun");
+                return;
+            }
 
-                    fragment.rotate(rot);
-                    self.list.borrow_mut().push(fragment);
-
-                    if i == pairs_len - 1 {
-                        done = true;
+            for (pos, rot) in pairs.tail.into_iter() {
+                let mut fragment = match self
+                    .ctx
+                    .fragments
+                    .borrow_mut()
+                    .find_and_remove(|x| x.pos == pos)
+                {
+                    Some(v) => v,
+                    None => {
+                        println!("shaker_fill: partially applied locked_pair because fragment in pair is already taken. edgepos: {:?}", edgepos);
+                        return;
                     }
-                }
-                if done && !should_continue {
-                    self.stop = true;
-                }
+                };
+
+                fragment.rotate(rot);
+                self.list.borrow_mut().push(fragment);
+            }
+
+            if !pairs.continue_after_apply {
+                self.stop = true;
             }
         }
     }
@@ -100,8 +101,14 @@ impl<'a> Finder<'a> {
         result
     }
 
-    fn adopt(&mut self, d: DiffEntry) {
-        let mut fragment = find_and_remove(*self.ctx.fragments.borrow_mut(), d.pos).unwrap();
+    fn apply(&mut self, d: DiffEntry) {
+        let mut fragment = self
+            .ctx
+            .fragments
+            .borrow_mut()
+            .find_and_remove(|x| x.pos == d.pos)
+            .unwrap();
+
         fragment.rotate(self.dir.calc_rot(d.dir));
         self.list.borrow_mut().push(fragment);
     }
@@ -141,8 +148,8 @@ pub(super) fn shaker_fill(
     };
 
     while right.borrow().len() + left.borrow().len() + (1/* for root */) != num_fragment as usize {
-        right_finder.apply_confirmed_pairs();
-        left_finder.apply_confirmed_pairs();
+        right_finder.apply_locked_pairs();
+        left_finder.apply_locked_pairs();
 
         if right.borrow().len() + left.borrow().len() + 1 == num_fragment as usize {
             break;
@@ -152,9 +159,9 @@ pub(super) fn shaker_fill(
         let left_score = left_finder.find_match();
 
         if right_score.score < left_score.score {
-            right_finder.adopt(right_score);
+            right_finder.apply(right_score);
         } else {
-            left_finder.adopt(left_score);
+            left_finder.apply(left_score);
         }
     }
 
