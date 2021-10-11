@@ -24,6 +24,7 @@ where
     let mut heap = BinaryHeap::with_capacity(beam_width);
     let mut visited = HashSet::new();
 
+    visited.insert(initial_state.clone());
     heap.push(Node {
         state: initial_state,
         answer: vec![],
