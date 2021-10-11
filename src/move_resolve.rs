@@ -38,7 +38,7 @@ pub(crate) trait SearchState: Clone + std::fmt::Debug {
 }
 
 /// フィールドにあるマスのゴール位置までの距離の合計.
-#[derive(Clone, Copy, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct DifferentCells(u64);
 
 impl std::fmt::Debug for DifferentCells {
@@ -68,7 +68,7 @@ impl DifferentCells {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq)]
 struct GridCompleter<'b> {
     board: Board<'b>,
     prev_action: Option<GridAction>,
@@ -85,6 +85,14 @@ impl std::fmt::Debug for GridCompleter<'_> {
             .field("different_cells", &self.different_cells)
             .field("remaining_select", &self.remaining_select)
             .finish()
+    }
+}
+
+impl PartialEq for GridCompleter<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.board == other.board
+            && self.different_cells == other.different_cells
+            && self.remaining_select == other.remaining_select
     }
 }
 

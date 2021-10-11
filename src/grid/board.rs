@@ -8,12 +8,18 @@ mod finder;
 
 pub(crate) use finder::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq)]
 pub(crate) struct Board<'b> {
     select: Pos,
     forward: Bos<'b, VecOnGrid<Pos>>,
     reverse: Bos<'b, VecOnGrid<Pos>>,
     locked: Bos<'b, HashSet<Pos>>,
+}
+
+impl PartialEq for Board<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.select == other.select && self.forward == other.forward
+    }
 }
 
 impl Hash for Board<'_> {
