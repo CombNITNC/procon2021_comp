@@ -1,4 +1,4 @@
-use std::{collections::HashSet, ops::Deref};
+use std::{collections::HashSet, hash::Hash, ops::Deref};
 
 use bos::Bos;
 
@@ -14,6 +14,13 @@ pub(crate) struct Board<'b> {
     forward: Bos<'b, VecOnGrid<Pos>>,
     reverse: Bos<'b, VecOnGrid<Pos>>,
     locked: Bos<'b, HashSet<Pos>>,
+}
+
+impl Hash for Board<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.select.hash(state);
+        self.forward.hash(state);
+    }
 }
 
 impl<'b> Board<'b> {

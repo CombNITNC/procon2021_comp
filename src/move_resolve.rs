@@ -38,7 +38,7 @@ pub(crate) trait SearchState: Clone + std::fmt::Debug {
 }
 
 /// フィールドにあるマスのゴール位置までの距離の合計.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 struct DifferentCells(u64);
 
 impl std::fmt::Debug for DifferentCells {
@@ -85,6 +85,14 @@ impl std::fmt::Debug for GridCompleter<'_> {
             .field("different_cells", &self.different_cells)
             .field("remaining_select", &self.remaining_select)
             .finish()
+    }
+}
+
+impl Hash for GridCompleter<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.board.hash(state);
+        self.different_cells.hash(state);
+        self.remaining_select.hash(state);
     }
 }
 

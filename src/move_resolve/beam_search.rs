@@ -13,7 +13,7 @@ pub(crate) fn beam_search<S, A, C>(
     max_cost: C,
 ) -> Option<(Vec<A>, C)>
 where
-    S: SearchState<C = C, A = A>,
+    S: SearchState<C = C, A = A> + Hash,
     A: Copy + std::fmt::Debug + Hash + Eq,
     C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug,
 {

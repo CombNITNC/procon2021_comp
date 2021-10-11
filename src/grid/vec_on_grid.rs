@@ -1,4 +1,4 @@
-use std::ops;
+use std::{hash::Hash, ops};
 
 use smallvec::{smallvec, SmallVec};
 
@@ -7,10 +7,22 @@ use super::{Grid, Pos};
 const STACK_BUFFER: usize = 16 * 16;
 
 /// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Eq)]
 pub(crate) struct VecOnGrid<T> {
     vec: SmallVec<[T; STACK_BUFFER]>,
     pub(crate) grid: Grid,
+}
+
+impl<T: PartialEq> PartialEq for VecOnGrid<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.vec == other.vec
+    }
+}
+
+impl<T: Hash> Hash for VecOnGrid<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.vec.hash(state);
+    }
 }
 
 impl<T> VecOnGrid<T> {
