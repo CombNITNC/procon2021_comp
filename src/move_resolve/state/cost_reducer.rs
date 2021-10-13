@@ -2,7 +2,7 @@ use std::{collections::HashMap, hash::Hash, iter::Sum, ops::Add, sync::Arc};
 
 use crate::{
     grid::{board::Board, Grid, Pos},
-    move_resolve::beam_search::BeamSearchState,
+    move_resolve::{beam_search::BeamSearchState, ResolveParam},
 };
 
 use super::GridAction;
@@ -43,10 +43,11 @@ pub(crate) struct CostReducer {
     initial_dist: SqManhattan,
     dist: SqManhattan,
     pre_calc: Arc<HashMap<(Pos, Pos), SqManhattan>>,
+    param: ResolveParam,
 }
 
 impl CostReducer {
-    pub(crate) fn new(board: Board) -> Self {
+    pub(crate) fn new(board: Board, param: ResolveParam) -> Self {
         let pre_calc = Arc::new(SqManhattan::pre_calc(board.grid()));
         let dist = board
             .field()
@@ -58,6 +59,7 @@ impl CostReducer {
             initial_dist: dist,
             dist,
             pre_calc,
+            param,
         }
     }
 }
@@ -106,8 +108,11 @@ impl BeamSearchState for CostReducer {
     }
 
     type C = u64;
-    fn cost_on(&self, _action: Self::A) -> Self::C {
-        todo!()
+    fn cost_on(&self, action: Self::A) -> Self::C {
+        match action {
+            GridAction::Swap(_) => self.param.swap_cost as u64,
+            GridAction::Select(_) => self.param.select_cost as u64,
+        }
     }
 
     fn enrich(_states: &mut [Self]) {
