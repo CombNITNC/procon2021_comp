@@ -98,7 +98,11 @@ impl BeamSearchState for CostReducer {
     }
 
     fn is_goal(&self) -> bool {
-        todo!()
+        // dist <= 0.8 * initial_dist
+        // => dist <= 8 / 10 * initial_dist
+        // => dist * 10 / 8 <= initial_dist
+        // => dist * 5 / 4 <= initial_dist
+        self.dist.0 * 5 / 4 <= self.initial_dist.0
     }
 
     type C = u64;
