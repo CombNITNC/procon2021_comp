@@ -115,7 +115,7 @@ impl BeamSearchState for CostReducer {
         }
     }
 
-    fn enrich(_states: &mut [Self]) {
-        todo!()
+    fn enrichment_key(&self) -> usize {
+        self.param.select_limit as usize
     }
 }
