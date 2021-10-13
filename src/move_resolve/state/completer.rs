@@ -13,9 +13,7 @@ pub(crate) struct Completer {
     board: Board,
     prev_action: Option<GridAction>,
     different_cells: DifferentCells,
-    swap_cost: u16,
-    select_cost: u16,
-    remaining_select: u8,
+    param: ResolveParam,
 }
 
 impl Completer {
@@ -25,9 +23,7 @@ impl Completer {
             board,
             prev_action,
             different_cells,
-            swap_cost: param.swap_cost,
-            select_cost: param.select_cost,
-            remaining_select: param.select_limit,
+            param,
         }
     }
 }
@@ -37,7 +33,7 @@ impl std::fmt::Debug for Completer {
         f.debug_struct("GridState")
             .field("board", &self.board)
             .field("different_cells", &self.different_cells)
-            .field("remaining_select", &self.remaining_select)
+            .field("remaining_select", &self.param.select_limit)
             .finish()
     }
 }
@@ -46,7 +42,7 @@ impl PartialEq for Completer {
     fn eq(&self, other: &Self) -> bool {
         self.board == other.board
             && self.different_cells == other.different_cells
-            && self.remaining_select == other.remaining_select
+            && self.param.select_limit == other.param.select_limit
     }
 }
 
@@ -54,7 +50,7 @@ impl Hash for Completer {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.board.hash(state);
         self.different_cells.hash(state);
-        self.remaining_select.hash(state);
+        self.param.select_limit.hash(state);
     }
 }
 
@@ -82,9 +78,11 @@ impl IdaSearchState for Completer {
             GridAction::Select(sel) => {
                 let mut new_board = self.board.clone();
                 new_board.select(sel);
+                let mut param = self.param;
+                param.select_limit -= 1;
                 Self {
                     board: new_board,
-                    remaining_select: self.remaining_select - 1,
+                    param,
                     prev_action: Some(action),
                     ..self.clone()
                 }
@@ -117,7 +115,7 @@ impl IdaSearchState for Completer {
                 }
             })
             .map(GridAction::Swap);
-        if matches!(prev, GridAction::Swap(_)) && 1 <= self.remaining_select {
+        if matches!(prev, GridAction::Swap(_)) && 1 <= self.param.select_limit {
             let selecting_states = different_cells
                 .filter(|&p| p != selected)
                 .map(GridAction::Select);
@@ -142,8 +140,8 @@ impl IdaSearchState for Completer {
 
     fn cost_on(&self, action: Self::A) -> Self::C {
         match action {
-            GridAction::Swap(_) => self.swap_cost as u64,
-            GridAction::Select(_) => self.select_cost as u64,
+            GridAction::Swap(_) => self.param.swap_cost as u64,
+            GridAction::Select(_) => self.param.select_cost as u64,
         }
     }
 }
