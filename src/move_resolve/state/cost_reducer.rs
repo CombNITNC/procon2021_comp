@@ -1,7 +1,11 @@
 use std::{collections::HashMap, hash::Hash, iter::Sum, ops::Add, sync::Arc};
 
 use crate::{
-    grid::{board::Board, Grid, Pos},
+    basis::Movement,
+    grid::{
+        board::{Board, BoardFinder},
+        Grid, Pos,
+    },
     move_resolve::{beam_search::BeamSearchState, ResolveParam},
 };
 
@@ -40,6 +44,7 @@ impl Sum for SqManhattan {
 #[derive(Debug)]
 pub(crate) struct CostReducer {
     board: Board,
+    prev_action: Option<GridAction>,
     initial_dist: SqManhattan,
     dist: SqManhattan,
     pre_calc: Arc<HashMap<(Pos, Pos), SqManhattan>>,
@@ -56,6 +61,7 @@ impl CostReducer {
             .sum();
         Self {
             board,
+            prev_action: None,
             initial_dist: dist,
             dist,
             pre_calc,
@@ -90,13 +96,68 @@ impl Hash for CostReducer {
 
 impl BeamSearchState for CostReducer {
     type A = GridAction;
-    fn apply(&self, _action: Self::A) -> Self {
-        todo!()
+    fn apply(&self, action: Self::A) -> Self {
+        match action {
+            GridAction::Swap(mov) => {
+                let selected = self.board.selected();
+                let finder = BoardFinder::new(self.board.grid());
+                let next_swap = finder.move_pos_to(selected, mov);
+                let mut new_board = self.board.clone();
+                new_board.swap_to(next_swap);
+                Self {
+                    board: new_board,
+                    prev_action: Some(action),
+                    ..self.clone()
+                }
+            }
+            GridAction::Select(sel) => {
+                let mut new_board = self.board.clone();
+                new_board.select(sel);
+                let mut param = self.param;
+                param.select_limit -= 1;
+                Self {
+                    board: new_board,
+                    param,
+                    prev_action: Some(action),
+                    ..self.clone()
+                }
+            }
+        }
     }
 
     type AS = Vec<GridAction>;
     fn next_actions(&self) -> Self::AS {
-        todo!()
+        // 揃っているマスどうしは入れ替えない
+        let field = self.board.field();
+        let different_cells = field
+            .iter_with_pos()
+            .filter(|&(pos, &cell)| pos != cell)
+            .map(|(_, &cell)| cell);
+        if self.prev_action.is_none() {
+            return different_cells.map(GridAction::Select).collect();
+        }
+        let selected = self.board.selected();
+        let prev = self.prev_action.unwrap();
+        let swapping_states = self
+            .board
+            .around_of(selected)
+            .map(|to| Movement::between_pos(selected, to))
+            .filter(|&around| {
+                if let GridAction::Swap(dir) = prev {
+                    around != dir.opposite()
+                } else {
+                    true
+                }
+            })
+            .map(GridAction::Swap);
+        if matches!(prev, GridAction::Swap(_)) && 1 <= self.param.select_limit {
+            let selecting_states = different_cells
+                .filter(|&p| p != selected)
+                .map(GridAction::Select);
+            swapping_states.chain(selecting_states).collect()
+        } else {
+            swapping_states.collect()
+        }
     }
 
     fn is_goal(&self) -> bool {
