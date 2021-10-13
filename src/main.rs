@@ -19,7 +19,10 @@ mod fetch;
 #[cfg(feature = "net")]
 mod submit;
 
-use crate::{grid::Grid, move_resolve::approx::gen::FromOutside};
+use crate::{
+    grid::Grid,
+    move_resolve::{approx::gen::FromOutside, ResolveParam},
+};
 
 fn main() {
     #[cfg(feature = "net")]
@@ -76,9 +79,11 @@ fn main() {
             let result = move_resolve::resolve_approximately(
                 grid,
                 &movements,
-                problem.select_limit,
-                problem.swap_cost,
-                problem.select_cost,
+                ResolveParam {
+                    select_limit: problem.select_limit,
+                    swap_cost: problem.swap_cost,
+                    select_cost: problem.select_cost,
+                },
                 (threshold_x, threshold_y),
                 min_cost,
                 FromOutside,
@@ -125,9 +130,11 @@ fn main() {
     let ops = move_resolve::resolve(
         grid,
         &movements,
-        problem.select_limit,
-        problem.swap_cost,
-        problem.select_cost,
+        ResolveParam {
+            select_limit: problem.select_limit,
+            swap_cost: problem.swap_cost,
+            select_cost: problem.select_cost,
+        },
     );
     println!("move_resolve::resolve() done");
 

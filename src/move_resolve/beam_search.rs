@@ -9,7 +9,21 @@ use std::{
 
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use super::SearchState;
+/// ビームサーチする状態が実装するべき trait.
+pub(crate) trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send {
+    type A: Copy + std::fmt::Debug + Send;
+    fn apply(&self, action: Self::A) -> Self;
+
+    type AS: IntoIterator<Item = Self::A> + Send;
+    fn next_actions(&self) -> Self::AS;
+
+    fn is_goal(&self) -> bool;
+
+    type C: Copy + Ord + std::fmt::Debug + Send + Sync;
+    fn cost_on(&self, action: Self::A) -> Self::C;
+
+    fn enrich(states: &mut [Self]);
+}
 
 pub(crate) fn beam_search<S, A, C>(
     initial_state: S,
@@ -17,10 +31,10 @@ pub(crate) fn beam_search<S, A, C>(
     max_cost: C,
 ) -> Option<(Vec<A>, C)>
 where
-    S: SearchState<C = C, A = A> + Hash + Eq + Send,
+    S: BeamSearchState<C = C, A = A>,
     A: Copy + std::fmt::Debug + Hash + Eq + Send,
     C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug + Send + Sync,
-    <<S as SearchState>::AS as IntoIterator>::IntoIter: Send,
+    <<S as BeamSearchState>::AS as IntoIterator>::IntoIter: Send,
 {
     if initial_state.is_goal() {
         return Some((vec![], C::default()));
