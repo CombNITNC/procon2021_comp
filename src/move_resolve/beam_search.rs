@@ -38,7 +38,7 @@ where
 
     while !heap.is_empty() {
         let heap_len = heap.len();
-        let nexts: Vec<_> = heap
+        let nexts: HashSet<_> = heap
             .into_iter()
             .take(beam_width.min(heap_len))
             .par_bridge()
@@ -83,6 +83,12 @@ struct Node<S, A, C> {
     state: S,
     answer: Vec<A>,
     cost: C,
+}
+
+impl<S: Hash, A, C> Hash for Node<S, A, C> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.state.hash(state);
+    }
 }
 
 impl<S, A, C: PartialEq> PartialEq for Node<S, A, C> {
