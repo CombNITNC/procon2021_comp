@@ -91,7 +91,7 @@ where
         for next in nexts {
             enriched
                 .entry(next.state.enrichment_key())
-                .or_insert(BinaryHeap::with_capacity(beam_width))
+                .or_insert_with(|| BinaryHeap::with_capacity(beam_width))
                 .push(next);
         }
         let kinds_of_key = enriched.len();
