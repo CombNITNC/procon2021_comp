@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    collections::{BinaryHeap, HashSet},
+    collections::{BinaryHeap, HashMap, HashSet},
     hash::Hash,
     iter::FromIterator,
     ops::Add,
@@ -22,7 +22,7 @@ pub(crate) trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send {
     type C: Copy + Ord + std::fmt::Debug + Send + Sync;
     fn cost_on(&self, action: Self::A) -> Self::C;
 
-    fn enrich(states: &mut [Self]);
+    fn enrichment_key(&self) -> usize;
 }
 
 pub(crate) fn beam_search<S, A, C>(
@@ -87,8 +87,20 @@ where
                 },
             )
             .collect();
-
-        heap = BinaryHeap::from_iter(nexts.into_iter());
+        let mut enriched = HashMap::new();
+        for next in nexts {
+            enriched
+                .entry(next.state.enrichment_key())
+                .or_insert(BinaryHeap::with_capacity(beam_width))
+                .push(next);
+        }
+        let kinds_of_key = enriched.len();
+        let take_len = beam_width / kinds_of_key;
+        heap = BinaryHeap::from_iter(
+            enriched
+                .into_values()
+                .flat_map(|heap| heap.into_iter().take(take_len)),
+        );
     }
     None
 }
