@@ -1,12 +1,75 @@
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash, iter::Sum, ops::Add, sync::Arc};
 
-use crate::{grid::board::Board, move_resolve::beam_search::BeamSearchState};
+use crate::{
+    grid::{board::Board, Grid, Pos},
+    move_resolve::beam_search::BeamSearchState,
+};
 
 use super::GridAction;
 
-#[derive(Debug, Clone)]
-pub struct CostReducer {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SqManhattan(u32);
+
+impl SqManhattan {
+    fn pre_calc(grid: Grid) -> HashMap<(Pos, Pos), Self> {
+        let mut map = HashMap::new();
+        for from in grid.all_pos() {
+            for to in grid.all_pos() {
+                let dist = grid.looping_manhattan_dist(from, to);
+                map.insert((from, to), Self(dist * dist));
+            }
+        }
+        map
+    }
+}
+
+impl Add<SqManhattan> for SqManhattan {
+    type Output = Self;
+
+    fn add(self, rhs: SqManhattan) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
+impl Sum for SqManhattan {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self(0), |acc, x| acc + x)
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct CostReducer {
     board: Board,
+    initial_dist: SqManhattan,
+    dist: SqManhattan,
+    pre_calc: Arc<HashMap<(Pos, Pos), SqManhattan>>,
+}
+
+impl CostReducer {
+    pub(crate) fn new(board: Board) -> Self {
+        let pre_calc = Arc::new(SqManhattan::pre_calc(board.grid()));
+        let dist = board
+            .field()
+            .iter_with_pos()
+            .map(|(pos, &cell)| pre_calc[&(pos, cell)])
+            .sum();
+        Self {
+            board,
+            initial_dist: dist,
+            dist,
+            pre_calc,
+        }
+    }
+}
+
+impl Clone for CostReducer {
+    fn clone(&self) -> Self {
+        Self {
+            board: self.board.clone(),
+            pre_calc: Arc::clone(&self.pre_calc),
+            ..*self
+        }
+    }
 }
 
 impl PartialEq for CostReducer {
