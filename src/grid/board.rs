@@ -1,7 +1,5 @@
 use std::{collections::HashSet, hash::Hash, ops::Deref};
 
-use bos::Bos;
-
 use super::{Grid, Pos, VecOnGrid};
 
 mod finder;
@@ -9,27 +7,27 @@ mod finder;
 pub(crate) use finder::*;
 
 #[derive(Debug, Clone, Eq)]
-pub(crate) struct Board<'b> {
+pub(crate) struct Board {
     select: Pos,
-    forward: Bos<'b, VecOnGrid<Pos>>,
-    reverse: Bos<'b, VecOnGrid<Pos>>,
-    locked: Bos<'b, HashSet<Pos>>,
+    forward: VecOnGrid<Pos>,
+    reverse: VecOnGrid<Pos>,
+    locked: HashSet<Pos>,
 }
 
-impl PartialEq for Board<'_> {
+impl PartialEq for Board {
     fn eq(&self, other: &Self) -> bool {
         self.select == other.select && self.forward == other.forward
     }
 }
 
-impl Hash for Board<'_> {
+impl Hash for Board {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.select.hash(state);
         self.forward.hash(state);
     }
 }
 
-impl<'b> Board<'b> {
+impl Board {
     pub(crate) fn new(select: Pos, field: VecOnGrid<Pos>) -> Self {
         let mut reverse = field.clone();
         for (pos, &elem) in field.iter_with_pos() {
@@ -37,18 +35,18 @@ impl<'b> Board<'b> {
         }
         Self {
             select,
-            forward: Bos::Owned(field),
-            reverse: Bos::Owned(reverse),
-            locked: Bos::Owned(HashSet::new()),
+            forward: field,
+            reverse,
+            locked: HashSet::new(),
         }
     }
 
     pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
-        self.forward.to_borrowed().grid.looping_manhattan_dist(a, b)
+        self.forward.grid.looping_manhattan_dist(a, b)
     }
 
     pub(crate) fn grid(&self) -> Grid {
-        self.forward.to_borrowed().grid
+        self.forward.grid
     }
 
     pub(crate) fn selected(&self) -> Pos {
@@ -56,22 +54,22 @@ impl<'b> Board<'b> {
     }
 
     pub(crate) fn select(&mut self, to_select: Pos) {
-        if self.locked.to_borrowed().contains(&to_select) {
+        if self.locked.contains(&to_select) {
             panic!("the position was locked: {:?}", to_select);
         }
         self.select = to_select;
     }
 
     pub(crate) fn field(&'_ self) -> impl Deref<Target = VecOnGrid<Pos>> + std::fmt::Debug + '_ {
-        self.forward.to_borrowed()
+        &self.forward
     }
 
     pub(crate) fn forward(&self, pos: Pos) -> Pos {
-        self.forward.to_borrowed()[pos]
+        self.forward[pos]
     }
 
     pub(crate) fn reverse(&self, pos: Pos) -> Pos {
-        self.reverse.to_borrowed()[pos]
+        self.reverse[pos]
     }
 
     pub(crate) fn swap_to(&mut self, to_swap: Pos) {
@@ -79,7 +77,7 @@ impl<'b> Board<'b> {
         if dist == 0 {
             return;
         }
-        if self.locked.to_borrowed().contains(&to_swap) {
+        if self.locked.contains(&to_swap) {
             panic!("the position was locked: {:?}", to_swap);
         }
         assert_eq!(
@@ -87,11 +85,9 @@ impl<'b> Board<'b> {
             "swapping position must be a neighbor\nselect: {:?}, to_swap: {:?}",
             self.select, to_swap
         );
-        self.reverse.to_mut().swap(
-            self.forward.to_borrowed()[self.select],
-            self.forward.to_borrowed()[to_swap],
-        );
-        self.forward.to_mut().swap(self.select, to_swap);
+        self.reverse
+            .swap(self.forward[self.select], self.forward[to_swap]);
+        self.forward.swap(self.select, to_swap);
         self.select = to_swap;
     }
 
@@ -102,10 +98,10 @@ impl<'b> Board<'b> {
     }
 
     fn width(&self) -> u8 {
-        self.forward.to_borrowed().grid.width()
+        self.forward.grid.width()
     }
     fn height(&self) -> u8 {
-        self.forward.to_borrowed().grid.height()
+        self.forward.grid.height()
     }
 
     fn up_of(&self, pos: Pos) -> Pos {
@@ -144,30 +140,29 @@ impl<'b> Board<'b> {
             self.down_of(pos),
             self.left_of(pos),
         ])
-        .filter(move |pos| !self.locked.to_borrowed().contains(pos))
+        .filter(move |pos| !self.locked.contains(pos))
     }
 
     pub(crate) fn is_locked(&self, pos: Pos) -> bool {
-        self.locked.to_borrowed().contains(&pos)
+        self.locked.contains(&pos)
     }
 
     pub(crate) fn lock(&mut self, pos: Pos) -> bool {
         if pos == self.select {
             panic!("tried to lock the selected pos: {:?}", pos);
         }
-        self.locked.to_mut().insert(pos)
+        self.locked.insert(pos)
     }
 
     pub(crate) fn unlock(&mut self, pos: Pos) -> bool {
-        self.locked.to_mut().remove(&pos)
+        self.locked.remove(&pos)
     }
 
     pub(crate) fn first_unlocked(&self) -> Option<Pos> {
         self.forward
-            .to_borrowed()
             .grid
             .all_pos()
-            .find(|p| !self.locked.to_borrowed().contains(p))
+            .find(|p| !self.locked.contains(p))
     }
 
     pub(crate) fn new_finder(&self) -> BoardFinder {

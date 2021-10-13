@@ -2,8 +2,12 @@ use std::{
     cmp::Ordering,
     collections::{BinaryHeap, HashSet},
     hash::Hash,
+    iter::FromIterator,
     ops::Add,
+    sync::Mutex,
 };
+
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use super::SearchState;
 
@@ -13,18 +17,19 @@ pub(crate) fn beam_search<S, A, C>(
     max_cost: C,
 ) -> Option<(Vec<A>, C)>
 where
-    S: SearchState<C = C, A = A> + Hash + Eq,
-    A: Copy + std::fmt::Debug + Hash + Eq,
-    C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug,
+    S: SearchState<C = C, A = A> + Hash + Eq + Send,
+    A: Copy + std::fmt::Debug + Hash + Eq + Send,
+    C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug + Send + Sync,
+    <<S as SearchState>::AS as IntoIterator>::IntoIter: Send,
 {
     if initial_state.is_goal() {
         return Some((vec![], C::default()));
     }
 
     let mut heap = BinaryHeap::with_capacity(beam_width);
-    let mut visited = HashSet::new();
+    let visited: Mutex<_> = HashSet::new().into();
 
-    visited.insert(initial_state.clone());
+    visited.lock().unwrap().insert(initial_state.clone());
     heap.push(Node {
         state: initial_state,
         answer: vec![],
@@ -32,39 +37,44 @@ where
     });
 
     while !heap.is_empty() {
-        let mut next_heap = BinaryHeap::with_capacity(beam_width);
+        let heap_len = heap.len();
+        let nexts: Vec<_> = heap
+            .into_iter()
+            .take(beam_width.min(heap_len))
+            .par_bridge()
+            .flat_map(
+                |Node {
+                     state,
+                     answer,
+                     cost,
+                 }| {
+                    let mut next_states = vec![];
+                    for action in state.next_actions() {
+                        let next_state = state.apply(action);
+                        if !visited.lock().unwrap().contains(&next_state) {
+                            let next_cost = cost + state.cost_on(action);
 
-        for _ in 0..beam_width.min(heap.len()) {
-            let Node {
-                state,
-                answer,
-                cost,
-            } = heap.pop().unwrap();
+                            if max_cost <= next_cost {
+                                continue;
+                            }
 
-            for action in state.next_actions() {
-                let next_state = state.apply(action);
-                if visited.insert(next_state.clone()) {
-                    let next_cost = cost + state.cost_on(action);
+                            let mut next_answer = answer.clone();
+                            next_answer.push(action);
 
-                    if max_cost <= next_cost {
-                        continue;
+                            visited.lock().unwrap().insert(next_state.clone());
+                            next_states.push(Node {
+                                state: next_state,
+                                answer: next_answer,
+                                cost: next_cost,
+                            });
+                        }
                     }
+                    next_states
+                },
+            )
+            .collect();
 
-                    let mut next_answer = answer.clone();
-                    next_answer.push(action);
-                    if next_state.is_goal() {
-                        return Some((next_answer, next_cost));
-                    }
-
-                    next_heap.push(Node {
-                        state: next_state,
-                        answer: next_answer,
-                        cost: next_cost,
-                    });
-                }
-            }
-        }
-        heap = next_heap;
+        heap = BinaryHeap::from_iter(nexts.into_iter());
     }
     None
 }
