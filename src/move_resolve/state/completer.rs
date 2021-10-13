@@ -2,11 +2,45 @@ use std::hash::Hash;
 
 use crate::{
     basis::Movement,
-    grid::board::{Board, BoardFinder},
-    move_resolve::{ida_star::IdaSearchState, DifferentCells, ResolveParam},
+    grid::{
+        board::{Board, BoardFinder},
+        Pos, VecOnGrid,
+    },
+    move_resolve::{ida_star::IdaSearchState, ResolveParam},
 };
 
 use super::GridAction;
+
+/// フィールドにあるマスのゴール位置までの距離の合計.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct DifferentCells(u64);
+
+impl std::fmt::Debug for DifferentCells {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl DifferentCells {
+    fn new(nodes: &VecOnGrid<Pos>) -> Self {
+        let mut distances: Vec<_> = nodes
+            .iter_with_pos()
+            .map(|(p, &n)| nodes.grid.looping_manhattan_dist(p, n) as u64)
+            .collect();
+        distances.sort_unstable();
+        Self(distances.iter().sum())
+    }
+
+    /// a の位置と b の位置のマスを入れ替えた場合を計算する.
+    fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
+        let before = (field.grid.looping_manhattan_dist(field[a], a)
+            + field.grid.looping_manhattan_dist(field[b], b)) as i64;
+        let after = (field.grid.looping_manhattan_dist(field[a], b)
+            + field.grid.looping_manhattan_dist(field[b], a)) as i64;
+        let diff = self.0 as i64 - before + after;
+        Self(diff as _)
+    }
+}
 
 #[derive(Clone, Eq)]
 pub(crate) struct Completer {
@@ -67,7 +101,7 @@ impl IdaSearchState for Completer {
                 Self {
                     board: new_board,
                     different_cells: self.different_cells.on_swap(
-                        self.board.field(),
+                        &self.board.field(),
                         selected,
                         next_swap,
                     ),
