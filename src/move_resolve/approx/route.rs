@@ -58,7 +58,7 @@ pub(super) fn moves_to_swap_target_to_goal(
     let route = route_target_to_goal(board, target, range)?;
     let mut board = board.clone();
     let mut current = target;
-    let mut ret = vec![board.selected()];
+    let mut ret = vec![board.selected().unwrap()];
     for way in route {
         board.lock(current);
         let mut route_to_arrive = route_select_to_target(&board, way)?;
@@ -76,7 +76,7 @@ pub(super) fn moves_to_swap_target_to_goal(
 pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Option<Vec<Pos>> {
     debug_assert_ne!(
         board.selected(),
-        target,
+        Some(target),
         "the target must not be selected: {:#?}",
         board
     );
@@ -106,12 +106,12 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
         }
 
         fn apply(&self, new_pos: Pos) -> Option<Self> {
-            if self.node.board.selected() == new_pos {
+            if self.node.board.selected() == Some(new_pos) {
                 return None;
             }
             let (route, cost) = route_target_around_pos(
                 self.node.board.clone(),
-                self.node.board.selected(),
+                self.node.board.selected().unwrap(),
                 new_pos,
             )?;
             let mut new_node = self.node.clone();
@@ -121,7 +121,7 @@ pub(super) fn route_target_to_pos(board: &Board, target: Pos, pos: Pos) -> Optio
                 new_node
                     .board
                     .grid()
-                    .looping_manhattan_dist(new_pos, new_node.board.selected()),
+                    .looping_manhattan_dist(new_pos, new_node.board.selected().unwrap()),
                 1,
                 "{:#?}",
                 new_node
@@ -257,7 +257,7 @@ pub(super) fn route_select_to_target(board: &Board, target: Pos) -> Option<Vec<P
         board,
         RouteSelectToTarget {
             node: TargetNode {
-                target: board.selected(),
+                target: board.selected().unwrap(),
                 cost: LeastMovements::new(),
             },
             board,
@@ -323,7 +323,7 @@ fn route_select_around_target(board: &Board, target: Pos) -> Option<(Vec<Pos>, L
         board,
         RouteSelectAroundTarget {
             node: TargetNode {
-                target: board.selected(),
+                target: board.selected().unwrap(),
                 cost: LeastMovements::new(),
             },
             board,
@@ -370,7 +370,7 @@ fn route_target_to_goal(board: &Board, target: Pos, range: RangePos) -> Option<V
                 new_node
                     .board
                     .grid()
-                    .looping_manhattan_dist(self.target, new_node.board.selected()),
+                    .looping_manhattan_dist(self.target, new_node.board.selected().unwrap()),
                 1,
                 "{:#?}",
                 new_node

@@ -4,7 +4,7 @@ use crate::{
     basis::Movement,
     grid::{
         board::{Board, BoardFinder},
-        Pos, VecOnGrid,
+        Pos,
     },
 };
 
@@ -24,10 +24,9 @@ pub(crate) struct Solver<G> {
 }
 
 impl<G: NextTargetsGenerator> Solver<G> {
-    pub(super) fn solve(&mut self, select: Pos, field: &VecOnGrid<Pos>) -> Option<Vec<GridAction>> {
-        let mut board = Board::new(select, field.clone());
-        let mut finder = BoardFinder::new(field.grid);
-        let mut actions = vec![GridAction::Select(select)];
+    pub(super) fn solve(&mut self, mut board: Board) -> Option<Vec<GridAction>> {
+        let mut finder = BoardFinder::new(board.grid());
+        let mut actions = vec![];
         loop {
             if finder.height() < finder.width() {
                 finder.rotate_to(3);
@@ -41,7 +40,7 @@ impl<G: NextTargetsGenerator> Solver<G> {
                 .into_iter()
                 .filter(|&p| !board.is_locked(p))
                 .collect();
-            if targets.is_empty() || targets.contains(&board.forward(board.selected())) {
+            if targets.is_empty() || targets.contains(&board.forward(board.selected().unwrap())) {
                 finder.rotate_to(3);
                 continue;
             }

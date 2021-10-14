@@ -8,7 +8,7 @@ pub(crate) use finder::*;
 
 #[derive(Debug, Clone, Eq)]
 pub(crate) struct Board {
-    select: Pos,
+    select: Option<Pos>,
     forward: VecOnGrid<Pos>,
     reverse: VecOnGrid<Pos>,
     locked: HashSet<Pos>,
@@ -28,7 +28,7 @@ impl Hash for Board {
 }
 
 impl Board {
-    pub(crate) fn new(select: Pos, field: VecOnGrid<Pos>) -> Self {
+    pub(crate) fn new(select: Option<Pos>, field: VecOnGrid<Pos>) -> Self {
         let mut reverse = field.clone();
         for (pos, &elem) in field.iter_with_pos() {
             reverse[elem] = pos;
@@ -49,7 +49,7 @@ impl Board {
         self.forward.grid
     }
 
-    pub(crate) fn selected(&self) -> Pos {
+    pub(crate) fn selected(&self) -> Option<Pos> {
         self.select
     }
 
@@ -57,7 +57,7 @@ impl Board {
         if self.locked.contains(&to_select) {
             panic!("the position was locked: {:?}", to_select);
         }
-        self.select = to_select;
+        self.select.replace(to_select);
     }
 
     pub(crate) fn field(&'_ self) -> impl Deref<Target = VecOnGrid<Pos>> + std::fmt::Debug + '_ {
@@ -73,7 +73,8 @@ impl Board {
     }
 
     pub(crate) fn swap_to(&mut self, to_swap: Pos) {
-        let dist = self.looping_manhattan_dist(self.select, to_swap);
+        let select = self.select.unwrap();
+        let dist = self.looping_manhattan_dist(select, to_swap);
         if dist == 0 {
             return;
         }
@@ -83,12 +84,12 @@ impl Board {
         assert_eq!(
             1, dist,
             "swapping position must be a neighbor\nselect: {:?}, to_swap: {:?}",
-            self.select, to_swap
+            select, to_swap
         );
         self.reverse
-            .swap(self.forward[self.select], self.forward[to_swap]);
-        self.forward.swap(self.select, to_swap);
-        self.select = to_swap;
+            .swap(self.forward[select], self.forward[to_swap]);
+        self.forward.swap(select, to_swap);
+        self.select.replace(to_swap);
     }
 
     pub(crate) fn swap_many_to(&mut self, to_swaps: &[Pos]) {
@@ -148,7 +149,7 @@ impl Board {
     }
 
     pub(crate) fn lock(&mut self, pos: Pos) -> bool {
-        if pos == self.select {
+        if Some(pos) == self.select {
             panic!("tried to lock the selected pos: {:?}", pos);
         }
         self.locked.insert(pos)

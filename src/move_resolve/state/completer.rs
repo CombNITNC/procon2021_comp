@@ -93,7 +93,7 @@ impl IdaSearchState for Completer {
     fn apply(&self, action: Self::A) -> Self {
         match action {
             GridAction::Swap(mov) => {
-                let selected = self.board.selected();
+                let selected = self.board.selected().unwrap();
                 let finder = BoardFinder::new(self.board.grid());
                 let next_swap = finder.move_pos_to(selected, mov);
                 let mut new_board = self.board.clone();
@@ -135,7 +135,7 @@ impl IdaSearchState for Completer {
         if self.prev_action.is_none() {
             return different_cells.map(GridAction::Select).collect();
         }
-        let selected = self.board.selected();
+        let selected = self.board.selected().unwrap();
         let prev = self.prev_action.unwrap();
         let swapping_states = self
             .board
