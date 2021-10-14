@@ -64,6 +64,10 @@ impl Board {
         &self.forward
     }
 
+    pub(crate) fn into_field(self) -> VecOnGrid<Pos> {
+        self.forward
+    }
+
     pub(crate) fn forward(&self, pos: Pos) -> Pos {
         self.forward[pos]
     }
