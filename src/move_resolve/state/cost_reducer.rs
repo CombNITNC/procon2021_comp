@@ -12,10 +12,10 @@ use crate::{
 use super::GridAction;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SqManhattan(u32);
+pub(crate) struct SqManhattan(u32);
 
 impl SqManhattan {
-    fn pre_calc(grid: Grid) -> HashMap<(Pos, Pos), Self> {
+    pub(crate) fn pre_calc(grid: Grid) -> HashMap<(Pos, Pos), Self> {
         let mut map = HashMap::new();
         for from in grid.all_pos() {
             for to in grid.all_pos() {
@@ -24,6 +24,10 @@ impl SqManhattan {
             }
         }
         map
+    }
+
+    pub(crate) fn as_u32(self) -> u32 {
+        self.0
     }
 }
 
