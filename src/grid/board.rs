@@ -190,15 +190,15 @@ fn test_reverse() {
             (grid.pos(1, 0), grid.pos(0, 0)),
         ],
     );
-    let board = Board::new(grid.pos(0, 0), nodes);
+    let board = Board::new(Some(grid.pos(0, 0)), nodes);
 
-    assert_eq!(board.forward.to_borrowed()[grid.pos(0, 0)], grid.pos(1, 0));
-    assert_eq!(board.forward.to_borrowed()[grid.pos(1, 0)], grid.pos(1, 1));
-    assert_eq!(board.forward.to_borrowed()[grid.pos(0, 1)], grid.pos(0, 1));
-    assert_eq!(board.forward.to_borrowed()[grid.pos(1, 1)], grid.pos(0, 0));
+    assert_eq!(board.forward(grid.pos(0, 0)), grid.pos(1, 0));
+    assert_eq!(board.forward(grid.pos(1, 0)), grid.pos(1, 1));
+    assert_eq!(board.forward(grid.pos(0, 1)), grid.pos(0, 1));
+    assert_eq!(board.forward(grid.pos(1, 1)), grid.pos(0, 0));
 
-    assert_eq!(board.reverse.to_borrowed()[grid.pos(0, 0)], grid.pos(1, 1));
-    assert_eq!(board.reverse.to_borrowed()[grid.pos(1, 0)], grid.pos(0, 0));
-    assert_eq!(board.reverse.to_borrowed()[grid.pos(0, 1)], grid.pos(0, 1));
-    assert_eq!(board.reverse.to_borrowed()[grid.pos(1, 1)], grid.pos(1, 0));
+    assert_eq!(board.reverse(grid.pos(0, 0)), grid.pos(1, 1));
+    assert_eq!(board.reverse(grid.pos(1, 0)), grid.pos(0, 0));
+    assert_eq!(board.reverse(grid.pos(0, 1)), grid.pos(0, 1));
+    assert_eq!(board.reverse(grid.pos(1, 1)), grid.pos(1, 0));
 }

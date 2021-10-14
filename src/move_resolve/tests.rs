@@ -1,24 +1,16 @@
-use super::{edges_nodes::Nodes, resolve, resolve_approximately, DifferentCells};
+use super::{edges_nodes::Nodes, resolve};
 use crate::{
     basis::{Movement::*, Operation},
     grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
+    move_resolve::{state::cost_reducer::SqManhattan, ResolveParam},
 };
 
 #[test]
-fn test_different_cells() {
-    // 0(0, 0) 1(1, 1)
-    // 2(1, 0) 1(0, 1)
+fn test_sq_manhattan() {
     let grid = Grid::new(2, 2);
-    let case = &[
-        (grid.pos(0, 1), grid.pos(1, 1)),
-        (grid.pos(1, 0), grid.pos(0, 1)),
-        (grid.pos(1, 1), grid.pos(1, 0)),
-    ];
-    let Nodes { nodes: field, .. } = Nodes::new(grid, case);
-
-    let diff = DifferentCells(4);
-    assert_eq!(diff.on_swap(&field, grid.pos(0, 1), grid.pos(1, 1)).0, 2);
-    assert_eq!(diff.on_swap(&field, grid.pos(0, 1), grid.pos(0, 0)).0, 4);
+    let pre_calc = SqManhattan::pre_calc(grid);
+    assert_eq!(pre_calc[&(grid.pos(0, 1), grid.pos(1, 1))].as_u32(), 1);
+    assert_eq!(pre_calc[&(grid.pos(0, 0), grid.pos(1, 1))].as_u32(), 4);
 }
 
 #[test]
@@ -35,10 +27,14 @@ fn smallest_case() {
             (grid.pos(0, 0), grid.pos(1, 0)),
             (grid.pos(1, 0), grid.pos(0, 0)),
         ],
-        1,
-        1,
-        1,
-    );
+        ResolveParam {
+            select_limit: 1,
+            swap_cost: 1,
+            select_cost: 1,
+        },
+    )
+    .next()
+    .unwrap();
     assert_eq!(path.len(), 1);
     assert_eq!(
         Operation {
@@ -67,10 +63,14 @@ fn simple_case() {
             (grid.pos(0, 1), grid.pos(1, 1)),
             (grid.pos(1, 1), grid.pos(1, 0)),
         ],
-        1,
-        1,
-        1,
-    );
+        ResolveParam {
+            select_limit: 1,
+            swap_cost: 1,
+            select_cost: 1,
+        },
+    )
+    .next()
+    .unwrap();
     assert_eq!(path.len(), 1);
     assert_eq!(
         Operation {
@@ -125,7 +125,17 @@ fn case1() {
             movements: vec![Up],
         },
     ];
-    let actual = resolve(grid, case, 2, 1, 2);
+    let actual = resolve(
+        grid,
+        case,
+        ResolveParam {
+            select_limit: 2,
+            swap_cost: 1,
+            select_cost: 2,
+        },
+    )
+    .next()
+    .unwrap();
     test_vec(expected, actual);
 }
 
@@ -150,7 +160,17 @@ fn case2() {
             movements: vec![Up, Right],
         },
     ];
-    let actual = resolve(grid, case, 2, 1, 1);
+    let actual = resolve(
+        grid,
+        case,
+        ResolveParam {
+            select_limit: 2,
+            swap_cost: 1,
+            select_cost: 1,
+        },
+    )
+    .next()
+    .unwrap();
     test_vec(expected, actual);
 }
 
@@ -177,7 +197,17 @@ fn case3() {
             movements: vec![Right, Right, Up],
         },
     ];
-    let actual = resolve(grid, case, 2, 2, 3);
+    let actual = resolve(
+        grid,
+        case,
+        ResolveParam {
+            select_limit: 2,
+            swap_cost: 2,
+            select_cost: 3,
+        },
+    )
+    .next()
+    .unwrap();
     test_vec(expected, actual);
 }
 
@@ -198,7 +228,17 @@ fn case4() {
         select: grid.pos(1, 1),
         movements: vec![Up, Right, Right, Right, Up, Left, Down, Left],
     }];
-    let actual = resolve(grid, case, 8, 1, 8);
+    let actual = resolve(
+        grid,
+        case,
+        ResolveParam {
+            select_limit: 8,
+            swap_cost: 1,
+            select_cost: 8,
+        },
+    )
+    .next()
+    .unwrap();
     test_vec(expected, actual);
 }
 
@@ -217,12 +257,13 @@ fn large_case1() {
         (grid.pos(1, 1), grid.pos(5, 5)),
     ];
     let Nodes { mut nodes, .. } = Nodes::new(grid, case);
-    const SELECT_LIMIT: u8 = 3;
-    const SWAP_COST: u16 = 1;
-    const SELECT_COST: u16 = 8;
+    const PARAM: ResolveParam = ResolveParam {
+        select_limit: 3,
+        swap_cost: 1,
+        select_cost: 8,
+    };
 
-    let (result, _) =
-        resolve_approximately(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST, (2, 2));
+    let result = resolve(grid, case, PARAM).next().unwrap();
 
     let finder = BoardFinder::new(grid);
     for Operation { select, movements } in result {
@@ -284,12 +325,13 @@ fn large_case2() {
         (grid.pos(0, 5), grid.pos(5, 5)),
     ];
     let Nodes { mut nodes, .. } = Nodes::new(grid, case);
-    const SELECT_LIMIT: u8 = 3;
-    const SWAP_COST: u16 = 1;
-    const SELECT_COST: u16 = 8;
+    const PARAM: ResolveParam = ResolveParam {
+        select_limit: 3,
+        swap_cost: 1,
+        select_cost: 8,
+    };
 
-    let (result, _) =
-        resolve_approximately(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST, (2, 2));
+    let result = resolve(grid, case, PARAM).next().unwrap();
 
     let finder = BoardFinder::new(grid);
     for Operation { select, movements } in result {
@@ -349,12 +391,13 @@ fn large_case3() {
         (grid.pos(9, 3), grid.pos(3, 3)),
     ];
     let Nodes { mut nodes, .. } = Nodes::new(grid, case);
-    const SELECT_LIMIT: u8 = 10;
-    const SWAP_COST: u16 = 10;
-    const SELECT_COST: u16 = 4;
+    const PARAM: ResolveParam = ResolveParam {
+        select_limit: 10,
+        swap_cost: 10,
+        select_cost: 4,
+    };
 
-    let (result, _) =
-        resolve_approximately(grid, case, SELECT_LIMIT, SWAP_COST, SELECT_COST, (2, 2));
+    let result = resolve(grid, case, PARAM).next().unwrap();
 
     let finder = BoardFinder::new(grid);
     for Operation { select, movements } in result {
@@ -383,9 +426,11 @@ fn rand_case() {
     }
     const WIDTH: u8 = 16;
     const HEIGHT: u8 = 16;
-    const SELECT_LIMIT: u8 = 8;
-    const SWAP_COST: u16 = 1;
-    const SELECT_COST: u16 = 8;
+    const PARAM: ResolveParam = ResolveParam {
+        select_limit: 8,
+        swap_cost: 1,
+        select_cost: 8,
+    };
     let mut rng = rand::thread_rng();
 
     let grid = Grid::new(WIDTH, HEIGHT);
@@ -399,10 +444,8 @@ fn rand_case() {
     let Nodes { mut nodes, .. } = Nodes::new(grid, &case);
     eprintln!("before: {:#?}", nodes);
 
-    let (result, cost) =
-        resolve_approximately(grid, &case, SELECT_LIMIT, SWAP_COST, SELECT_COST, (2, 2));
+    let result = resolve(grid, &case, PARAM).next().unwrap();
 
-    eprintln!("cost: {}", cost);
     let finder = BoardFinder::new(grid);
     eprintln!("operations: {:?}", result);
     for Operation { select, movements } in result {
