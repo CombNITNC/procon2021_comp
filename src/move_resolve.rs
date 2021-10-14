@@ -1,4 +1,4 @@
-use self::edges_nodes::Nodes;
+use self::{edges_nodes::Nodes, state::actions_to_operations};
 use crate::{
     basis::Operation,
     grid::{
@@ -8,7 +8,8 @@ use crate::{
     move_resolve::{
         approx::{gen::FromOutside, Solver},
         beam_search::beam_search,
-        state::{cost_reducer::CostReducer, GridAction},
+        ida_star::ida_star,
+        state::{completer::Completer, cost_reducer::CostReducer, GridAction},
     },
 };
 
@@ -83,9 +84,9 @@ pub(crate) fn resolve(
         let board = apply_actions(&actions, board.into_field());
         Some((actions, board))
     })
-    .map(|(actions, board): (Vec<GridAction>, Board)| {
-        //
-        todo!("third phase");
+    .map(move |(actions, board): (Vec<GridAction>, Board)| {
+        let (actions, _cost) = ida_star(Completer::new(board, param, actions.last().copied()), 0);
+        actions_to_operations(actions)
     })
 }
 
