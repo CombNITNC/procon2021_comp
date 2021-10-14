@@ -3,9 +3,10 @@ use crate::{
     basis::Operation,
     grid::{
         board::{Board, BoardFinder},
-        Grid, Pos,
+        Grid, Pos, VecOnGrid,
     },
     move_resolve::{
+        approx::{gen::FromOutside, Solver},
         beam_search::beam_search,
         state::{cost_reducer::CostReducer, GridAction},
     },
@@ -67,30 +68,41 @@ pub(crate) fn resolve(
         4000,
         2000,
     )
-    .map(move |(ops, _)| {
-        let mut select = None;
-        let mut nodes = nodes.clone();
-        for &op in &ops {
-            match op {
-                GridAction::Swap(mov) => {
-                    let finder = BoardFinder::new(grid);
-                    let moved = finder.move_pos_to(select.unwrap(), mov);
-                    nodes.swap(select.unwrap(), moved);
-                    select.replace(moved);
-                }
-                GridAction::Select(sel) => {
-                    select.replace(sel);
-                }
-            }
-        }
-        (ops, Board::new(select, nodes))
+    .map(move |(actions, _)| {
+        let board = apply_actions(&actions, nodes.clone());
+        (actions, board)
     })
-    .map(|(actions, board): (Vec<GridAction>, Board)| {
-        //
-        todo!("second phase");
+    .flat_map(|(mut actions, board): (Vec<GridAction>, Board)| {
+        let mut solver = Solver {
+            threshold_x: 3,
+            threshold_y: 3,
+            targets_gen: FromOutside,
+        };
+        let second_actions = solver.solve(board.clone())?;
+        actions.extend(second_actions.into_iter());
+        let board = apply_actions(&actions, board.into_field());
+        Some((actions, board))
     })
     .map(|(actions, board): (Vec<GridAction>, Board)| {
         //
         todo!("third phase");
     })
+}
+
+fn apply_actions(ops: &[GridAction], mut nodes: VecOnGrid<Pos>) -> Board {
+    let mut select = None;
+    for &op in ops {
+        match op {
+            GridAction::Swap(mov) => {
+                let finder = BoardFinder::new(nodes.grid);
+                let moved = finder.move_pos_to(select.unwrap(), mov);
+                nodes.swap(select.unwrap(), moved);
+                select.replace(moved);
+            }
+            GridAction::Select(sel) => {
+                select.replace(sel);
+            }
+        }
+    }
+    Board::new(select, nodes)
 }
