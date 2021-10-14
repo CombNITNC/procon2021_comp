@@ -1,8 +1,14 @@
 use self::edges_nodes::Nodes;
 use crate::{
     basis::Operation,
-    grid::{board::Board, Grid, Pos},
-    move_resolve::state::GridAction,
+    grid::{
+        board::{Board, BoardFinder},
+        Grid, Pos,
+    },
+    move_resolve::{
+        beam_search::beam_search,
+        state::{cost_reducer::CostReducer, GridAction},
+    },
 };
 
 pub mod approx;
@@ -56,9 +62,28 @@ pub(crate) fn resolve(
 ) -> impl Iterator<Item = Vec<Operation>> + '_ {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
 
-    std::iter::from_fn(|| {
-        //
-        todo!("first phase");
+    beam_search(
+        CostReducer::new(Board::new(None, nodes.clone()), param),
+        4000,
+        2000,
+    )
+    .map(move |(ops, _)| {
+        let mut select = None;
+        let mut nodes = nodes.clone();
+        for &op in &ops {
+            match op {
+                GridAction::Swap(mov) => {
+                    let finder = BoardFinder::new(grid);
+                    let moved = finder.move_pos_to(select.unwrap(), mov);
+                    nodes.swap(select.unwrap(), moved);
+                    select.replace(moved);
+                }
+                GridAction::Select(sel) => {
+                    select.replace(sel);
+                }
+            }
+        }
+        (ops, Board::new(select, nodes))
     })
     .map(|(actions, board): (Vec<GridAction>, Board)| {
         //
