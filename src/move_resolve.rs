@@ -86,8 +86,10 @@ pub(crate) fn resolve(
         let board = apply_actions(&actions, board.into_field());
         Some((actions, board))
     })
-    .map(move |(actions, board): (Vec<GridAction>, Board)| {
-        let (actions, _cost) = ida_star(Completer::new(board, param, actions.last().copied()), 0);
+    .map(move |(mut actions, board): (Vec<GridAction>, Board)| {
+        let (third_actions, _cost) =
+            ida_star(Completer::new(board, param, actions.last().copied()), 0);
+        actions.extend(third_actions.into_iter());
         actions_to_operations(actions)
     })
 }
