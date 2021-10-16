@@ -100,7 +100,7 @@ impl Movement {
 }
 
 /// `Operation` は座標 `select` の断片画像を選択してから `movements` の入れ替えを行う操作を表す.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Operation {
     pub(crate) select: Pos,
     pub(crate) movements: Vec<Movement>,
