@@ -81,27 +81,23 @@ fn simple_case() {
     );
 }
 
-fn test_vec<E, A, T>(expected: E, actual: A)
+fn test_answers<E, A, AI, T>(expected: E, actual_gen: A)
 where
-    E: IntoIterator<Item = T>,
-    A: IntoIterator<Item = T>,
+    E: IntoIterator<Item = T> + Clone,
+    A: IntoIterator<Item = AI>,
     T: PartialEq + std::fmt::Debug,
     E::IntoIter: ExactSizeIterator + std::fmt::Debug,
-    A::IntoIter: ExactSizeIterator + std::fmt::Debug,
+    AI: IntoIterator<Item = T>,
+    AI::IntoIter: ExactSizeIterator + std::fmt::Debug,
 {
-    let expected = expected.into_iter();
-    let actual = actual.into_iter();
-    assert_eq!(
-        expected.len(),
-        actual.len(),
-        "expected: {:?}\nactual: {:?}",
-        expected,
-        actual
-    );
-    expected
-        .zip(actual)
-        .enumerate()
-        .for_each(|(i, (e, a))| assert_eq!(e, a, "index: {}", i));
+    assert!(actual_gen.into_iter().any(|actual| {
+        let expected = expected.clone().into_iter();
+        let actual = actual.into_iter();
+        if expected.len() != actual.len() {
+            return false;
+        }
+        expected.zip(actual).all(|(e, a)| e == a)
+    }));
 }
 
 #[test]
@@ -133,10 +129,8 @@ fn case1() {
             swap_cost: 1,
             select_cost: 2,
         },
-    )
-    .next()
-    .unwrap();
-    test_vec(expected, actual);
+    );
+    test_answers(expected, actual);
 }
 
 #[test]
@@ -168,10 +162,8 @@ fn case2() {
             swap_cost: 1,
             select_cost: 1,
         },
-    )
-    .next()
-    .unwrap();
-    test_vec(expected, actual);
+    );
+    test_answers(expected, actual);
 }
 
 #[test]
@@ -205,10 +197,8 @@ fn case3() {
             swap_cost: 2,
             select_cost: 3,
         },
-    )
-    .next()
-    .unwrap();
-    test_vec(expected, actual);
+    );
+    test_answers(expected, actual);
 }
 
 #[test]
@@ -236,10 +226,8 @@ fn case4() {
             swap_cost: 1,
             select_cost: 8,
         },
-    )
-    .next()
-    .unwrap();
-    test_vec(expected, actual);
+    );
+    test_answers(expected, actual);
 }
 
 #[test]
