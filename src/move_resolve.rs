@@ -74,7 +74,11 @@ pub(crate) fn resolve(
         let board = apply_actions(&actions, nodes.clone());
         (actions, board)
     })
-    .chain(std::iter::once((vec![], empty)))
+    .chain(grid.all_pos().map(move |select| {
+        let mut board = empty.clone();
+        board.select(select);
+        (vec![], board)
+    }))
     .flat_map(|(mut actions, board): (Vec<GridAction>, Board)| {
         let mut solver = Solver {
             threshold_x: 3,
