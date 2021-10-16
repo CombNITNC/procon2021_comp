@@ -1,9 +1,11 @@
+use std::rc::Rc;
+
 use self::{edges_nodes::Nodes, state::actions_to_operations};
 use crate::{
     basis::Operation,
     grid::{
         board::{Board, BoardFinder},
-        Grid, Pos, VecOnGrid,
+        Grid, Pos,
     },
     move_resolve::{
         approx::{gen::FromOutside, Solver},
@@ -63,55 +65,49 @@ pub(crate) fn resolve(
     param: ResolveParam,
 ) -> impl Iterator<Item = Vec<Operation>> + '_ {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
-    let empty = Board::new(None, nodes.clone());
+    let empty = Rc::new(Board::new(None, nodes));
+    let phase1 = Rc::clone(&empty);
+    let chain = Rc::clone(&empty);
 
-    beam_search(
-        CostReducer::new(Board::new(None, nodes.clone()), param),
-        4000,
-        2000,
-    )
-    .map(move |(actions, _)| {
-        let board = apply_actions(&actions, nodes.clone());
-        (actions, board)
-    })
-    .chain(grid.all_pos().map(move |select| {
-        let mut board = empty.clone();
-        board.select(select);
-        (vec![], board)
-    }))
-    .flat_map(|(mut actions, board): (Vec<GridAction>, Board)| {
-        let mut solver = Solver {
-            threshold_x: 3,
-            threshold_y: 3,
-            targets_gen: FromOutside,
-        };
-        let second_actions = solver.solve(board.clone())?;
-        actions.extend(second_actions.into_iter());
-        let board = apply_actions(&actions, board.into_field());
-        Some((actions, board))
-    })
-    .map(move |(mut actions, board): (Vec<GridAction>, Board)| {
-        let (third_actions, _cost) =
-            ida_star(Completer::new(board, param, actions.last().copied()), 0);
-        actions.extend(third_actions.into_iter());
-        actions_to_operations(actions)
-    })
+    beam_search(CostReducer::new(empty.as_ref().clone(), param), 4000, 2000)
+        .map(move |(actions, _)| {
+            let mut board = phase1.as_ref().clone();
+            apply_actions(&mut board, &actions);
+            (actions, board)
+        })
+        .chain(grid.all_pos().map(move |select| {
+            let mut board = chain.as_ref().clone();
+            board.select(select);
+            (vec![], board)
+        }))
+        .flat_map(|(mut actions, mut board): (Vec<GridAction>, Board)| {
+            let mut solver = Solver {
+                threshold_x: 3,
+                threshold_y: 3,
+                targets_gen: FromOutside,
+            };
+            let second_actions = solver.solve(board.clone())?;
+            actions.extend(second_actions.into_iter());
+            apply_actions(&mut board, &actions);
+            Some((actions, board))
+        })
+        .map(move |(mut actions, board): (Vec<GridAction>, Board)| {
+            let (third_actions, _cost) =
+                ida_star(Completer::new(board, param, actions.last().copied()), 0);
+            actions.extend(third_actions.into_iter());
+            actions_to_operations(actions)
+        })
 }
 
-fn apply_actions(ops: &[GridAction], mut nodes: VecOnGrid<Pos>) -> Board {
-    let mut select = None;
+fn apply_actions(board: &mut Board, ops: &[GridAction]) {
     for &op in ops {
         match op {
             GridAction::Swap(mov) => {
-                let finder = BoardFinder::new(nodes.grid);
-                let moved = finder.move_pos_to(select.unwrap(), mov);
-                nodes.swap(select.unwrap(), moved);
-                select.replace(moved);
+                let finder = BoardFinder::new(board.grid());
+                let moved = finder.move_pos_to(board.selected().unwrap(), mov);
+                board.swap_to(moved);
             }
-            GridAction::Select(sel) => {
-                select.replace(sel);
-            }
+            GridAction::Select(sel) => board.select(sel),
         }
     }
-    Board::new(select, nodes)
 }
