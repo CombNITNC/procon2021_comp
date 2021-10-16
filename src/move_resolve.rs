@@ -63,6 +63,7 @@ pub(crate) fn resolve(
     param: ResolveParam,
 ) -> impl Iterator<Item = Vec<Operation>> + '_ {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
+    let empty = Board::new(None, nodes.clone());
 
     beam_search(
         CostReducer::new(Board::new(None, nodes.clone()), param),
@@ -73,6 +74,7 @@ pub(crate) fn resolve(
         let board = apply_actions(&actions, nodes.clone());
         (actions, board)
     })
+    .chain(std::iter::once((vec![], empty)))
     .flat_map(|(mut actions, board): (Vec<GridAction>, Board)| {
         let mut solver = Solver {
             threshold_x: 3,
