@@ -78,7 +78,7 @@ pub(crate) fn resolve(
         .chain(grid.all_pos().map(move |select| {
             let mut board = chain.as_ref().clone();
             board.select(select);
-            (vec![], board)
+            (vec![GridAction::Select(select)], board)
         }))
         .flat_map(|(mut actions, mut board): (Vec<GridAction>, Board)| {
             let mut solver = Solver {
