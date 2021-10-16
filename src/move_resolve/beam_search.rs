@@ -90,6 +90,9 @@ where
                 .collect();
             let mut enriched = HashMap::new();
             for next in nexts {
+                if next.state.is_goal() {
+                    return Some((next.answer, next.cost));
+                }
                 enriched
                     .entry(next.state.enrichment_key())
                     .or_insert_with(|| BinaryHeap::with_capacity(beam_width))
