@@ -88,6 +88,9 @@ where
                     },
                 )
                 .collect();
+            if nexts.is_empty() {
+                break;
+            }
             let mut enriched = HashMap::new();
             for next in nexts {
                 if next.state.is_goal() {
