@@ -117,15 +117,10 @@ fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option
     let mut min_cost = 10_000_000_000_u64;
     move |(mut actions, board): (Vec<GridAction>, Board)| {
         let mut param = param;
-        for &action in &actions {
-            if let GridAction::Select(_) = action {
-                param.select_limit -= 1;
-            }
-        }
-        let cost_until_2nd = {
-            let (selects, swaps) = actions_counts(&actions);
-            selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64
-        };
+        let (selects, swaps) = actions_counts(&actions);
+        param.select_limit -= selects as u8;
+        let cost_until_2nd =
+            { selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64 };
         let (third_actions, cost) = ida_star(
             Completer::new(board, param, actions.last().copied()),
             0,
