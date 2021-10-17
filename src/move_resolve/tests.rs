@@ -2,7 +2,7 @@ use super::{edges_nodes::Nodes, resolve};
 use crate::{
     basis::{Movement::*, Operation},
     grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
-    move_resolve::{state::cost_reducer::SqManhattan, ResolveParam},
+    move_resolve::{state::SqManhattan, ResolveParam},
 };
 
 #[test]

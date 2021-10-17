@@ -1,62 +1,38 @@
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use crate::{
     basis::Movement,
     grid::{
         board::{Board, BoardFinder},
-        Pos, VecOnGrid,
+        Pos,
     },
     move_resolve::{ida_star::IdaSearchState, ResolveParam},
 };
 
-use super::GridAction;
-
-/// フィールドにあるマスのゴール位置までの距離の合計.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-struct DifferentCells(u64);
-
-impl std::fmt::Debug for DifferentCells {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl DifferentCells {
-    fn new(nodes: &VecOnGrid<Pos>) -> Self {
-        let mut distances: Vec<_> = nodes
-            .iter_with_pos()
-            .map(|(p, &n)| nodes.grid.looping_manhattan_dist(p, n) as u64)
-            .collect();
-        distances.sort_unstable();
-        Self(distances.iter().sum())
-    }
-
-    /// a の位置と b の位置のマスを入れ替えた場合を計算する.
-    fn on_swap(self, field: &VecOnGrid<Pos>, a: Pos, b: Pos) -> Self {
-        let before = (field.grid.looping_manhattan_dist(field[a], a)
-            + field.grid.looping_manhattan_dist(field[b], b)) as i64;
-        let after = (field.grid.looping_manhattan_dist(field[a], b)
-            + field.grid.looping_manhattan_dist(field[b], a)) as i64;
-        let diff = self.0 as i64 - before + after;
-        Self(diff as _)
-    }
-}
+use super::{GridAction, SqManhattan};
 
 #[derive(Clone, Eq)]
 pub(crate) struct Completer {
     board: Board,
     prev_action: Option<GridAction>,
-    different_cells: DifferentCells,
+    dist: SqManhattan,
+    pre_calc: Arc<HashMap<(Pos, Pos), SqManhattan>>,
     param: ResolveParam,
 }
 
 impl Completer {
     pub(crate) fn new(board: Board, param: ResolveParam, prev_action: Option<GridAction>) -> Self {
-        let different_cells = DifferentCells::new(&board.field());
+        let pre_calc = SqManhattan::pre_calc(board.grid());
+        let dist = board
+            .field()
+            .iter_with_pos()
+            .map(|(pos, &cell)| pre_calc[&(pos, cell)])
+            .sum();
         Self {
             board,
             prev_action,
-            different_cells,
+            dist,
+            pre_calc: Arc::new(pre_calc),
             param,
         }
     }
@@ -66,7 +42,7 @@ impl std::fmt::Debug for Completer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridState")
             .field("board", &self.board)
-            .field("different_cells", &self.different_cells)
+            .field("dist", &self.dist)
             .field("remaining_select", &self.param.select_limit)
             .finish()
     }
@@ -75,7 +51,7 @@ impl std::fmt::Debug for Completer {
 impl PartialEq for Completer {
     fn eq(&self, other: &Self) -> bool {
         self.board == other.board
-            && self.different_cells == other.different_cells
+            && self.dist == other.dist
             && self.param.select_limit == other.param.select_limit
     }
 }
@@ -83,7 +59,7 @@ impl PartialEq for Completer {
 impl Hash for Completer {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.board.hash(state);
-        self.different_cells.hash(state);
+        self.dist.hash(state);
         self.param.select_limit.hash(state);
     }
 }
@@ -100,10 +76,10 @@ impl IdaSearchState for Completer {
                 new_board.swap_to(next_swap);
                 Self {
                     board: new_board,
-                    different_cells: self.different_cells.on_swap(
+                    dist: self.dist.swap_on(
+                        (selected, next_swap),
                         &self.board.field(),
-                        selected,
-                        next_swap,
+                        &self.pre_calc,
                     ),
                     prev_action: Some(action),
                     ..self.clone()
@@ -160,7 +136,7 @@ impl IdaSearchState for Completer {
     }
 
     fn is_goal(&self) -> bool {
-        self.different_cells.0 == 0
+        self.dist.0 == 0
     }
 
     type C = u64;
