@@ -92,6 +92,12 @@ pub(crate) fn resolve(
             Some((actions, board))
         })
         .map(move |(mut actions, board): (Vec<GridAction>, Board)| {
+            let mut param = param;
+            for &action in &actions {
+                if let GridAction::Select(_) = action {
+                    param.select_limit -= 1;
+                }
+            }
             let (third_actions, _cost) =
                 ida_star(Completer::new(board, param, actions.last().copied()), 0);
             actions.extend(third_actions.into_iter());
