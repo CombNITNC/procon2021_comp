@@ -25,11 +25,13 @@ mod state;
 #[cfg(test)]
 mod tests;
 
-/// [`Operation`] 列からその選択回数と交換回数の合計を計算する.
-pub(crate) fn operations_counts(ops: &[Operation]) -> (usize, usize) {
-    ops.iter().fold((0, 0), |(selects, swaps), op| {
-        (selects + 1, swaps + op.movements.len())
-    })
+/// [`GridAction`] 列からその選択回数と交換回数の合計を計算する.
+fn actions_counts(ops: &[GridAction]) -> (usize, usize) {
+    ops.iter()
+        .fold((0, 0), |(selects, swaps), action| match action {
+            GridAction::Swap(_) => (selects, swaps + 1),
+            GridAction::Select(_) => (selects + 1, swaps),
+        })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -120,11 +122,16 @@ fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option
                 param.select_limit -= 1;
             }
         }
+        let cost_until_2nd = {
+            let (selects, swaps) = actions_counts(&actions);
+            selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64
+        };
         let (third_actions, cost) = ida_star(
             Completer::new(board, param, actions.last().copied()),
             0,
-            min_cost,
+            min_cost - cost_until_2nd,
         );
+        let cost = cost_until_2nd + cost;
         if cost < min_cost {
             min_cost = cost;
             actions.extend(third_actions.into_iter());
