@@ -1,4 +1,10 @@
-use std::{collections::HashMap, hash::Hash, iter::Sum, ops::Add, sync::Arc};
+use std::{
+    collections::HashMap,
+    hash::Hash,
+    iter::Sum,
+    ops::{Add, Sub},
+    sync::Arc,
+};
 
 use crate::{
     basis::Movement,
@@ -36,6 +42,14 @@ impl Add<SqManhattan> for SqManhattan {
 
     fn add(self, rhs: SqManhattan) -> Self::Output {
         Self(self.0 + rhs.0)
+    }
+}
+
+impl Sub<SqManhattan> for SqManhattan {
+    type Output = Self;
+
+    fn sub(self, rhs: SqManhattan) -> Self::Output {
+        Self(self.0 - rhs.0)
     }
 }
 
@@ -110,9 +124,15 @@ impl BeamSearchState for CostReducer {
                 let next_swap = finder.move_pos_to(selected, mov);
                 let mut new_board = self.board.clone();
                 new_board.swap_to(next_swap);
+
+                let prev = self.pre_calc[&(selected, self.board.forward(selected))]
+                    + self.pre_calc[&(next_swap, self.board.forward(next_swap))];
+                let next = self.pre_calc[&(selected, self.board.forward(next_swap))]
+                    + self.pre_calc[&(next_swap, self.board.forward(selected))];
                 Self {
                     board: new_board,
                     prev_action: Some(action),
+                    dist: self.dist + next - prev,
                     ..self.clone()
                 }
             }
