@@ -120,8 +120,11 @@ fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option
                 param.select_limit -= 1;
             }
         }
-        let (third_actions, cost) =
-            ida_star(Completer::new(board, param, actions.last().copied()), 0);
+        let (third_actions, cost) = ida_star(
+            Completer::new(board, param, actions.last().copied()),
+            0,
+            min_cost,
+        );
         if cost < min_cost {
             min_cost = cost;
             actions.extend(third_actions.into_iter());

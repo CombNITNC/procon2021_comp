@@ -32,12 +32,16 @@ fn find<V, A, C>(
     hasher: impl Hasher + Clone,
     distance: C,
     bound: C,
+    limit_cost: C,
 ) -> FindResult<C>
 where
     V: IdaSearchState<C = C, A = A>,
     A: Copy + std::fmt::Debug + Eq + Hash,
     C: PartialOrd + Add<Output = C> + Copy + std::fmt::Debug,
 {
+    if limit_cost <= distance {
+        return FindResult::None;
+    }
     let total_estimated = distance + node.heuristic();
     if bound < total_estimated {
         return FindResult::Deeper(total_estimated);
@@ -58,6 +62,7 @@ where
                 next_hasher,
                 next_distance,
                 bound,
+                limit_cost,
             ) {
                 FindResult::Found => return FindResult::Found,
                 FindResult::Deeper(cost) => {
@@ -77,7 +82,7 @@ where
 }
 
 /// 反復深化 A* アルゴリズムの実装.
-pub(crate) fn ida_star<V, A, C>(start: V, lower_bound: C) -> (Vec<A>, C)
+pub(crate) fn ida_star<V, A, C>(start: V, lower_bound: C, limit_cost: C) -> (Vec<A>, C)
 where
     V: IdaSearchState<C = C, A = A>,
     A: Copy + std::fmt::Debug + Hash + Eq,
@@ -87,7 +92,14 @@ where
     let mut bound = lower_bound;
     loop {
         let hasher = DefaultHasher::new();
-        match find(start.clone(), &mut history, hasher, C::default(), bound) {
+        match find(
+            start.clone(),
+            &mut history,
+            hasher,
+            C::default(),
+            bound,
+            limit_cost,
+        ) {
             FindResult::Found => return (history, bound),
             FindResult::Deeper(cost) => bound = cost,
             FindResult::None => return (vec![], C::default()),
