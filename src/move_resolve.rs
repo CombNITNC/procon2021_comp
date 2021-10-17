@@ -73,7 +73,7 @@ pub(crate) fn resolve(
 ) -> impl Iterator<Item = Vec<Operation>> + '_ {
     phase1(grid, movements, param)
         .flat_map(phase2)
-        .map(phase3(param))
+        .flat_map(phase3(param))
 }
 
 fn phase1(
@@ -111,7 +111,8 @@ fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<Gri
     Some((actions, board))
 }
 
-fn phase3(param: ResolveParam) -> impl Fn((Vec<GridAction>, Board)) -> Vec<Operation> {
+fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option<Vec<Operation>> {
+    let mut min_cost = 10_000_000_000_u64;
     move |(mut actions, board): (Vec<GridAction>, Board)| {
         let mut param = param;
         for &action in &actions {
@@ -119,10 +120,15 @@ fn phase3(param: ResolveParam) -> impl Fn((Vec<GridAction>, Board)) -> Vec<Opera
                 param.select_limit -= 1;
             }
         }
-        let (third_actions, _cost) =
+        let (third_actions, cost) =
             ida_star(Completer::new(board, param, actions.last().copied()), 0);
-        actions.extend(third_actions.into_iter());
-        actions_to_operations(actions)
+        if cost < min_cost {
+            min_cost = cost;
+            actions.extend(third_actions.into_iter());
+            Some(actions_to_operations(actions))
+        } else {
+            None
+        }
     }
 }
 
