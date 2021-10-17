@@ -64,6 +64,16 @@ pub(crate) fn resolve(
     movements: &'_ [(Pos, Pos)],
     param: ResolveParam,
 ) -> impl Iterator<Item = Vec<Operation>> + '_ {
+    phase1(grid, movements, param)
+        .flat_map(phase2)
+        .map(phase3(param))
+}
+
+fn phase1(
+    grid: Grid,
+    movements: &[(Pos, Pos)],
+    param: ResolveParam,
+) -> impl Iterator<Item = (Vec<GridAction>, Board)> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let empty = Rc::new(Board::new(None, nodes));
     let phase1 = Rc::clone(&empty);
@@ -80,29 +90,33 @@ pub(crate) fn resolve(
             board.select(select);
             (vec![GridAction::Select(select)], board)
         }))
-        .flat_map(|(mut actions, mut board): (Vec<GridAction>, Board)| {
-            let mut solver = Solver {
-                threshold_x: 3,
-                threshold_y: 3,
-                targets_gen: FromOutside,
-            };
-            let second_actions = solver.solve(board.clone())?;
-            actions.extend(second_actions.into_iter());
-            apply_actions(&mut board, &actions);
-            Some((actions, board))
-        })
-        .map(move |(mut actions, board): (Vec<GridAction>, Board)| {
-            let mut param = param;
-            for &action in &actions {
-                if let GridAction::Select(_) = action {
-                    param.select_limit -= 1;
-                }
+}
+
+fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<GridAction>, Board)> {
+    let mut solver = Solver {
+        threshold_x: 3,
+        threshold_y: 3,
+        targets_gen: FromOutside,
+    };
+    let second_actions = solver.solve(board.clone())?;
+    actions.extend(second_actions.into_iter());
+    apply_actions(&mut board, &actions);
+    Some((actions, board))
+}
+
+fn phase3(param: ResolveParam) -> impl Fn((Vec<GridAction>, Board)) -> Vec<Operation> {
+    move |(mut actions, board): (Vec<GridAction>, Board)| {
+        let mut param = param;
+        for &action in &actions {
+            if let GridAction::Select(_) = action {
+                param.select_limit -= 1;
             }
-            let (third_actions, _cost) =
-                ida_star(Completer::new(board, param, actions.last().copied()), 0);
-            actions.extend(third_actions.into_iter());
-            actions_to_operations(actions)
-        })
+        }
+        let (third_actions, _cost) =
+            ida_star(Completer::new(board, param, actions.last().copied()), 0);
+        actions.extend(third_actions.into_iter());
+        actions_to_operations(actions)
+    }
 }
 
 fn apply_actions(board: &mut Board, ops: &[GridAction]) {
