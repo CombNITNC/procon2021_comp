@@ -22,7 +22,7 @@ fn test_route_target_to_pos() {
         (grid.pos(3, 2), grid.pos(3, 1)),
     ];
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
-    let board = Board::new(grid.pos(3, 1), nodes);
+    let board = Board::new(Some(grid.pos(3, 1)), nodes);
 
     let actual = route_target_to_pos(&board, grid.pos(2, 2), grid.pos(0, 0)).unwrap();
 
@@ -60,7 +60,7 @@ fn test_route_target_to_goal() {
         (grid.pos(3, 2), grid.pos(3, 1)),
     ];
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
-    let board = Board::new(grid.pos(3, 1), nodes);
+    let board = Board::new(Some(grid.pos(3, 1)), nodes);
 
     let actual =
         route_target_to_goal(&board, grid.pos(2, 2), RangePos::single(grid.pos(0, 0))).unwrap();

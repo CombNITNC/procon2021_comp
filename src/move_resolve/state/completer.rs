@@ -1,28 +1,38 @@
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use crate::{
     basis::Movement,
-    grid::board::{Board, BoardFinder},
-    move_resolve::{ida_star::IdaSearchState, DifferentCells, ResolveParam},
+    grid::{
+        board::{Board, BoardFinder},
+        Pos,
+    },
+    move_resolve::{ida_star::IdaSearchState, ResolveParam},
 };
 
-use super::GridAction;
+use super::{GridAction, SqManhattan};
 
 #[derive(Clone, Eq)]
 pub(crate) struct Completer {
     board: Board,
     prev_action: Option<GridAction>,
-    different_cells: DifferentCells,
+    dist: SqManhattan,
+    pre_calc: Arc<HashMap<(Pos, Pos), SqManhattan>>,
     param: ResolveParam,
 }
 
 impl Completer {
     pub(crate) fn new(board: Board, param: ResolveParam, prev_action: Option<GridAction>) -> Self {
-        let different_cells = DifferentCells::new(&board.field());
+        let pre_calc = SqManhattan::pre_calc(board.grid());
+        let dist = board
+            .field()
+            .iter_with_pos()
+            .map(|(pos, &cell)| pre_calc[&(pos, cell)])
+            .sum();
         Self {
             board,
             prev_action,
-            different_cells,
+            dist,
+            pre_calc: Arc::new(pre_calc),
             param,
         }
     }
@@ -32,7 +42,7 @@ impl std::fmt::Debug for Completer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridState")
             .field("board", &self.board)
-            .field("different_cells", &self.different_cells)
+            .field("dist", &self.dist)
             .field("remaining_select", &self.param.select_limit)
             .finish()
     }
@@ -41,7 +51,7 @@ impl std::fmt::Debug for Completer {
 impl PartialEq for Completer {
     fn eq(&self, other: &Self) -> bool {
         self.board == other.board
-            && self.different_cells == other.different_cells
+            && self.dist == other.dist
             && self.param.select_limit == other.param.select_limit
     }
 }
@@ -49,7 +59,7 @@ impl PartialEq for Completer {
 impl Hash for Completer {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.board.hash(state);
-        self.different_cells.hash(state);
+        self.dist.hash(state);
         self.param.select_limit.hash(state);
     }
 }
@@ -59,17 +69,17 @@ impl IdaSearchState for Completer {
     fn apply(&self, action: Self::A) -> Self {
         match action {
             GridAction::Swap(mov) => {
-                let selected = self.board.selected();
+                let selected = self.board.selected().unwrap();
                 let finder = BoardFinder::new(self.board.grid());
                 let next_swap = finder.move_pos_to(selected, mov);
                 let mut new_board = self.board.clone();
                 new_board.swap_to(next_swap);
                 Self {
                     board: new_board,
-                    different_cells: self.different_cells.on_swap(
-                        self.board.field(),
-                        selected,
-                        next_swap,
+                    dist: self.dist.swap_on(
+                        (selected, next_swap),
+                        &self.board.field(),
+                        &self.pre_calc,
                     ),
                     prev_action: Some(action),
                     ..self.clone()
@@ -101,7 +111,7 @@ impl IdaSearchState for Completer {
         if self.prev_action.is_none() {
             return different_cells.map(GridAction::Select).collect();
         }
-        let selected = self.board.selected();
+        let selected = self.board.selected().unwrap();
         let prev = self.prev_action.unwrap();
         let swapping_states = self
             .board
@@ -126,7 +136,7 @@ impl IdaSearchState for Completer {
     }
 
     fn is_goal(&self) -> bool {
-        self.different_cells.0 == 0
+        self.dist.0 == 0
     }
 
     type C = u64;

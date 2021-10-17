@@ -19,10 +19,7 @@ mod fetch;
 #[cfg(feature = "net")]
 mod submit;
 
-use crate::{
-    grid::Grid,
-    move_resolve::{approx::gen::FromOutside, ResolveParam},
-};
+use crate::{grid::Grid, move_resolve::ResolveParam};
 
 fn main() {
     #[cfg(feature = "net")]
@@ -72,62 +69,8 @@ fn main() {
     println!("pixel_match::resolve() done");
 
     let movements = fragment::map_fragment::map_fragment(&recovered_image);
-    let mut min_cost = 20000;
 
-    for threshold_x in 2..=4 {
-        for threshold_y in 2..=4 {
-            let result = move_resolve::resolve_approximately(
-                grid,
-                &movements,
-                ResolveParam {
-                    select_limit: problem.select_limit,
-                    swap_cost: problem.swap_cost,
-                    select_cost: problem.select_cost,
-                },
-                (threshold_x, threshold_y),
-                min_cost,
-                FromOutside,
-            );
-            if result.is_none() {
-                println!(
-                    "move_resolve::resolve_approx() none (threshold: {}-{})",
-                    threshold_x, threshold_y
-                );
-                println!();
-
-                continue;
-            }
-            let (ops, cost) = result.unwrap();
-
-            println!(
-                "move_resolve::resolve_approx() done (threshold: {}-{})",
-                threshold_x, threshold_y
-            );
-
-            if cost < min_cost {
-                min_cost = cost;
-                println!("best cost. submitting");
-                let answer = kaitou::ans(&ops, &rots);
-
-                #[cfg(feature = "net")]
-                submit(answer, &token, &endpoint);
-                #[cfg(not(feature = "net"))]
-                submit(
-                    answer,
-                    &format!(
-                        "answer-{}-approx-{}-{}.txt",
-                        epoch, threshold_x, threshold_y
-                    ),
-                );
-
-                std::thread::sleep(std::time::Duration::from_secs(1));
-            }
-            println!();
-        }
-    }
-
-    println!("finding best score");
-    let ops = move_resolve::resolve(
+    let operations_candidate = move_resolve::resolve(
         grid,
         &movements,
         ResolveParam {
@@ -138,12 +81,14 @@ fn main() {
     );
     println!("move_resolve::resolve() done");
 
-    let answer = kaitou::ans(&ops, &rots);
+    operations_candidate.for_each(|ops| {
+        let answer = kaitou::ans(&ops, &rots);
 
-    #[cfg(feature = "net")]
-    submit(answer, &token, &endpoint);
-    #[cfg(not(feature = "net"))]
-    submit(answer, &format!("answer-{}.txt", epoch));
+        #[cfg(feature = "net")]
+        submit(answer, &token, &endpoint);
+        #[cfg(not(feature = "net"))]
+        submit(answer, &format!("answer-{}.txt", epoch));
+    });
 }
 
 #[cfg(feature = "net")]
