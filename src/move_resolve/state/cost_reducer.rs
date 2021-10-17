@@ -1,63 +1,15 @@
-use std::{
-    collections::HashMap,
-    hash::Hash,
-    iter::Sum,
-    ops::{Add, Sub},
-    sync::Arc,
-};
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use crate::{
     basis::Movement,
     grid::{
         board::{Board, BoardFinder},
-        Grid, Pos,
+        Pos,
     },
     move_resolve::{beam_search::BeamSearchState, ResolveParam},
 };
 
-use super::GridAction;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) struct SqManhattan(u32);
-
-impl SqManhattan {
-    pub(crate) fn pre_calc(grid: Grid) -> HashMap<(Pos, Pos), Self> {
-        let mut map = HashMap::new();
-        for from in grid.all_pos() {
-            for to in grid.all_pos() {
-                let dist = grid.looping_manhattan_dist(from, to);
-                map.insert((from, to), Self(dist * dist));
-            }
-        }
-        map
-    }
-
-    pub(crate) fn as_u32(self) -> u32 {
-        self.0
-    }
-}
-
-impl Add<SqManhattan> for SqManhattan {
-    type Output = Self;
-
-    fn add(self, rhs: SqManhattan) -> Self::Output {
-        Self(self.0 + rhs.0)
-    }
-}
-
-impl Sub<SqManhattan> for SqManhattan {
-    type Output = Self;
-
-    fn sub(self, rhs: SqManhattan) -> Self::Output {
-        Self(self.0 - rhs.0)
-    }
-}
-
-impl Sum for SqManhattan {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Self(0), |acc, x| acc + x)
-    }
-}
+use super::{GridAction, SqManhattan};
 
 #[derive(Debug)]
 pub(crate) struct CostReducer {
@@ -125,14 +77,14 @@ impl BeamSearchState for CostReducer {
                 let mut new_board = self.board.clone();
                 new_board.swap_to(next_swap);
 
-                let prev = self.pre_calc[&(selected, self.board.forward(selected))]
-                    + self.pre_calc[&(next_swap, self.board.forward(next_swap))];
-                let next = self.pre_calc[&(selected, self.board.forward(next_swap))]
-                    + self.pre_calc[&(next_swap, self.board.forward(selected))];
                 Self {
                     board: new_board,
                     prev_action: Some(action),
-                    dist: self.dist + next - prev,
+                    dist: self.dist.swap_on(
+                        (selected, next_swap),
+                        &self.board.field(),
+                        &self.pre_calc,
+                    ),
                     ..self.clone()
                 }
             }

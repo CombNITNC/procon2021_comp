@@ -1,10 +1,65 @@
+use std::{collections::HashMap, iter::Sum, ops};
+
 use crate::{
     basis::{Movement, Operation},
-    grid::Pos,
+    grid::{Grid, Pos, VecOnGrid},
 };
 
 pub mod completer;
 pub mod cost_reducer;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(crate) struct SqManhattan(u32);
+
+impl SqManhattan {
+    pub(crate) fn pre_calc(grid: Grid) -> HashMap<(Pos, Pos), Self> {
+        let mut map = HashMap::new();
+        for from in grid.all_pos() {
+            for to in grid.all_pos() {
+                let dist = grid.looping_manhattan_dist(from, to);
+                map.insert((from, to), Self(dist * dist));
+            }
+        }
+        map
+    }
+
+    pub(crate) fn as_u32(self) -> u32 {
+        self.0
+    }
+
+    pub(crate) fn swap_on(
+        self,
+        pair: (Pos, Pos),
+        field: &VecOnGrid<Pos>,
+        pre_calc: &HashMap<(Pos, Pos), Self>,
+    ) -> Self {
+        let prev = pre_calc[&(pair.0, field[pair.0])] + pre_calc[&(pair.1, field[pair.1])];
+        let next = pre_calc[&(pair.0, field[pair.1])] + pre_calc[&(pair.1, field[pair.0])];
+        self + next - prev
+    }
+}
+
+impl ops::Add<SqManhattan> for SqManhattan {
+    type Output = Self;
+
+    fn add(self, rhs: SqManhattan) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
+impl ops::Sub<SqManhattan> for SqManhattan {
+    type Output = Self;
+
+    fn sub(self, rhs: SqManhattan) -> Self::Output {
+        Self(self.0 - rhs.0)
+    }
+}
+
+impl Sum for SqManhattan {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self(0), |acc, x| acc + x)
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum GridAction {
