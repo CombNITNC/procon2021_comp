@@ -99,8 +99,8 @@ fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<Gri
         targets_gen: FromOutside,
     };
     let second_actions = solver.solve(board.clone())?;
+    apply_actions(&mut board, &second_actions);
     actions.extend(second_actions.into_iter());
-    apply_actions(&mut board, &actions);
     Some((actions, board))
 }
 
