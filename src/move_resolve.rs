@@ -25,6 +25,13 @@ mod state;
 #[cfg(test)]
 mod tests;
 
+/// [`Operation`] 列からその選択回数と交換回数の合計を計算する.
+pub(crate) fn operations_counts(ops: &[Operation]) -> (usize, usize) {
+    ops.iter().fold((0, 0), |(selects, swaps), op| {
+        (selects + 1, swaps + op.movements.len())
+    })
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct ResolveParam {
     pub select_limit: u8,
