@@ -125,11 +125,12 @@ fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option
             Completer::new(board, param, actions.last().copied()),
             0,
             min_cost - cost_until_2nd,
-        );
+        )?;
         let cost = cost_until_2nd + cost;
         if cost < min_cost {
             min_cost = cost;
             actions.extend(third_actions.into_iter());
+            eprintln!("{:?}", actions);
             Some(actions_to_operations(actions))
         } else {
             None
