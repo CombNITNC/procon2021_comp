@@ -115,17 +115,27 @@ fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<Gri
 
 fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option<Vec<Operation>> {
     let mut min_cost = 10_000_000_000_u64;
-    move |(mut actions, board): (Vec<GridAction>, Board)| {
+    move |(mut actions, mut board): (Vec<GridAction>, Board)| {
         let mut param = param;
         let (selects, swaps) = actions_counts(&actions);
         param.select_limit -= selects as u8;
         let cost_until_2nd =
             { selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64 };
         let (third_actions, cost) = ida_star(
-            Completer::new(board, param, actions.last().copied()),
+            Completer::new(board.clone(), param, actions.last().copied()),
             0,
             min_cost - cost_until_2nd,
         )?;
+
+        apply_actions(&mut board, &third_actions);
+        debug_assert!(
+            board
+                .field()
+                .iter_with_pos()
+                .all(|(pos, &cell)| pos == cell),
+            "the board must be completed"
+        );
+
         let cost = cost_until_2nd + cost;
         if cost < min_cost {
             min_cost = cost;
