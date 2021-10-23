@@ -16,7 +16,7 @@ fn main() {
 
     let problem = {
         let path = std::env::args()
-            .next()
+            .nth(1)
             .expect("the problem file must be given");
         let file = File::open(path).expect("failed to open problem file");
         let reader = std::io::BufReader::new(file);
