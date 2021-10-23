@@ -1,28 +1,17 @@
-#![allow(dead_code)]
-
 use std::{
     fs::File,
     io::Write,
     time::{SystemTime, UNIX_EPOCH},
 };
 
-mod basis;
-mod fragment;
-mod grid;
-mod image;
-mod kaitou;
-mod move_resolve;
-mod pixel_match;
+use procon2021_comp::{
+    fragment, grid::Grid, image, kaitou, move_resolve, move_resolve::ResolveParam, pixel_match,
+};
 
-#[cfg(feature = "net")]
-mod fetch;
-#[cfg(feature = "net")]
-mod submit;
-
-use crate::{grid::Grid, move_resolve::ResolveParam};
+#[cfg(not(feature = "net"))]
+compile_error!("The `net` feature is required for main");
 
 fn main() {
-    #[cfg(feature = "net")]
     let (token, endpoint) = {
         dotenv::dotenv().ok();
         (
@@ -37,14 +26,6 @@ fn main() {
         .unwrap()
         .as_secs();
 
-    #[cfg(not(feature = "net"))]
-    let problem = {
-        let file = File::open("problem.ppm").expect("failed to open problem file");
-        let reader = std::io::BufReader::new(file);
-        image::read_problem(reader).unwrap()
-    };
-
-    #[cfg(feature = "net")]
     let problem = {
         let data = fetch::fetch_ppm(&endpoint).unwrap();
         println!("fetch::fetch_ppm() done");
@@ -84,25 +65,91 @@ fn main() {
     operations_candidate.for_each(|ops| {
         let answer = kaitou::ans(&ops, &rots);
 
-        #[cfg(feature = "net")]
         submit(answer, &token, &endpoint);
-        #[cfg(not(feature = "net"))]
-        submit(answer, &format!("answer-{}.txt", epoch));
     });
 }
 
-#[cfg(feature = "net")]
 fn submit(answer: String, token: &str, endpoint: &str) {
     println!("submitting");
     let submit_result = submit::submit(endpoint, token, answer);
     println!("submit result: {:#?}", submit_result);
 }
 
-#[cfg(not(feature = "net"))]
-fn submit(answer: String, filename: &str) {
-    File::create(filename)
-        .unwrap()
-        .write_all(answer.as_bytes())
-        .unwrap();
-    println!("saved answer to {}", filename);
+mod fetch {
+    pub fn fetch_ppm(endpoint: &str) -> reqwest::Result<bytes::Bytes> {
+        let mut endpoint = endpoint.to_owned();
+        endpoint.push_str("/problem.ppm");
+        reqwest::blocking::get(endpoint).and_then(|x| x.bytes())
+    }
+}
+mod submit {
+    use anyhow::{bail, ensure, Context as _, Result};
+
+    #[derive(Debug)]
+    pub struct SubmitResult {
+        pub pos_mismatch_count: usize,
+        pub rot_mismatch_count: usize,
+        pub request_id: Option<String>,
+    }
+
+    pub fn submit(endpoint: &str, token: &str, answer: String) -> Result<SubmitResult> {
+        let res = reqwest::blocking::Client::builder()
+            .build()
+            .context("failed to build reqwest client")?
+            .post(endpoint)
+            .header("procon-token", token)
+            .body(answer)
+            .send()
+            .context("failed to send answer to procon server")?;
+
+        if !res.status().is_success() {
+            bail!("PORT request failed. {:#?}", res);
+        }
+
+        let request_id = res
+            .headers()
+            .get("procon-request-id")
+            .map(|x| x.to_str().unwrap().to_string());
+
+        let body = res.text().context("failed to decode body")?;
+
+        let (pos_mismatch_count, rot_mismatch_count) = parse_post_response(&body)
+            .with_context(|| format!("failed to parse body. raw: '{}'", body))?;
+
+        Ok(SubmitResult {
+            pos_mismatch_count,
+            rot_mismatch_count,
+            request_id,
+        })
+    }
+
+    fn parse_post_response(body: &str) -> Result<(usize, usize)> {
+        let mut body_tokens = body.split_ascii_whitespace();
+
+        ensure!(
+            body_tokens.next() == Some("ACCEPTED"),
+            "excepted 'ACCEPTED'"
+        );
+
+        let pos = body_tokens
+            .next()
+            .context("excepted pos_mismatch_count")?
+            .parse()
+            .context("failed to parse pos_mismatch_count")?;
+
+        let rot = body_tokens
+            .next()
+            .context("excepted rot_mismatch_count")?
+            .parse()
+            .context("failed to parse rot_mismatch_count")?;
+
+        Ok((pos, rot))
+    }
+
+    #[test]
+    fn test_parse_post_response() {
+        assert_eq!(parse_post_response("ACCEPTED 2 3").unwrap(), (2, 3));
+        assert_eq!(parse_post_response("ACCEPTED 04 23").unwrap(), (4, 23));
+        assert_eq!(parse_post_response("HOGE FUGA").ok(), None);
+    }
 }

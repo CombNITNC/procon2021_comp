@@ -8,7 +8,7 @@ use {
     },
 };
 
-pub(crate) fn read_problem(mut data: impl BufRead) -> Result<Problem> {
+pub fn read_problem(mut data: impl BufRead) -> Result<Problem> {
     let nl = &mut || {
         let mut buf = String::new();
         data.read_line(&mut buf).context("failed to read line")?;

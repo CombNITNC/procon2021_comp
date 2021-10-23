@@ -1,14 +1,14 @@
-pub(crate) use vec_on_grid::*;
+pub use vec_on_grid::*;
 
-pub(crate) mod board;
-pub(crate) mod on_grid;
+pub mod board;
+pub mod on_grid;
 mod vec_on_grid;
 
 /// `Pos` は `Grid` に存在する座標を表す.
 ///
 /// フィールドの `u8` の上位 4 ビットに X 座標, 下位 4 ビットに Y 座標を格納する. それぞれは必ず `Grid` の `width` と `height` 未満になる.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub(crate) struct Pos(u8);
+pub struct Pos(u8);
 
 impl std::fmt::Debug for Pos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -23,15 +23,15 @@ impl Pos {
         Self((x as u8) << 4 | y as u8)
     }
 
-    pub(crate) fn x(&self) -> u8 {
+    pub fn x(&self) -> u8 {
         self.0 >> 4 & 0xf
     }
 
-    pub(crate) fn y(&self) -> u8 {
+    pub fn y(&self) -> u8 {
         self.0 & 0xf
     }
 
-    pub(crate) fn manhattan_distance(self, other: Self) -> u32 {
+    pub fn manhattan_distance(self, other: Self) -> u32 {
         ((self.x() as i32 - other.x() as i32).abs() + (self.y() as i32 - other.y() as i32).abs())
             as u32
     }
@@ -39,7 +39,7 @@ impl Pos {
 
 /// `RangePos` は `Grid` 上の矩形領域を表し, `Iterator` で走査できる.
 #[derive(Debug, Clone)]
-pub(crate) struct RangePos {
+pub struct RangePos {
     start: Pos,
     end: Pos,
     x: usize,
@@ -47,7 +47,7 @@ pub(crate) struct RangePos {
 }
 
 impl RangePos {
-    pub(crate) fn single(pos: Pos) -> Self {
+    pub fn single(pos: Pos) -> Self {
         Self {
             start: pos,
             end: pos,
@@ -56,7 +56,7 @@ impl RangePos {
         }
     }
 
-    pub(crate) fn is_in(&self, pos: Pos) -> bool {
+    pub fn is_in(&self, pos: Pos) -> bool {
         (self.start.x()..=self.end.x()).contains(&pos.x())
             && (self.start.y()..=self.end.y()).contains(&pos.y())
     }
@@ -81,39 +81,39 @@ impl Iterator for RangePos {
 
 /// `Grid` は原画像を断片画像に分ける時の分割グリッドを表す. `Pos` はこれを介してのみ作成できる.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Grid {
+pub struct Grid {
     width: u8,
     height: u8,
 }
 
 impl Grid {
-    pub(crate) fn new(width: u8, height: u8) -> Self {
+    pub fn new(width: u8, height: u8) -> Self {
         Self { width, height }
     }
 
-    pub(crate) fn width(&self) -> u8 {
+    pub fn width(&self) -> u8 {
         self.width
     }
 
-    pub(crate) fn height(&self) -> u8 {
+    pub fn height(&self) -> u8 {
         self.height
     }
 
-    pub(crate) fn is_pos_valid(&self, pos: Pos) -> bool {
+    pub fn is_pos_valid(&self, pos: Pos) -> bool {
         pos.x() < self.width && pos.y() < self.height
     }
 
-    pub(crate) fn clamping_pos(&self, x: u8, y: u8) -> Pos {
+    pub fn clamping_pos(&self, x: u8, y: u8) -> Pos {
         Pos::new(x.clamp(0, self.width - 1), y.clamp(0, self.height - 1))
     }
 
-    pub(crate) fn pos(&self, x: u8, y: u8) -> Pos {
+    pub fn pos(&self, x: u8, y: u8) -> Pos {
         debug_assert!(x < self.width);
         debug_assert!(y < self.height);
         Pos::new(x, y)
     }
 
-    pub(crate) fn range(&self, up_left: Pos, down_right: Pos) -> RangePos {
+    pub fn range(&self, up_left: Pos, down_right: Pos) -> RangePos {
         assert!(up_left.x() <= down_right.x());
         assert!(up_left.y() <= down_right.y());
         RangePos {
@@ -124,7 +124,7 @@ impl Grid {
         }
     }
 
-    pub(crate) fn all_pos(&self) -> RangePos {
+    pub fn all_pos(&self) -> RangePos {
         RangePos {
             start: Pos::new(0, 0),
             end: Pos::new(self.width - 1, self.height - 1),
@@ -137,12 +137,12 @@ impl Grid {
         pos.y() as usize * self.width as usize + pos.x() as usize
     }
 
-    pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
+    pub fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
         let vec = self.looping_min_vec(a, b);
         manhattan_dist(vec) as u32
     }
 
-    pub(crate) fn looping_min_vec(&self, from: Pos, to: Pos) -> (i32, i32) {
+    pub fn looping_min_vec(&self, from: Pos, to: Pos) -> (i32, i32) {
         let width = self.width as i32;
         let height = self.height as i32;
         let to_x = to.x() as i32;

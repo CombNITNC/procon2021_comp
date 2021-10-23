@@ -12,7 +12,7 @@ use crate::{
 use super::{GridAction, SqManhattan};
 
 #[derive(Clone, Eq)]
-pub(crate) struct Completer {
+pub struct Completer {
     board: Board,
     prev_action: Option<GridAction>,
     dist: SqManhattan,
@@ -21,7 +21,7 @@ pub(crate) struct Completer {
 }
 
 impl Completer {
-    pub(crate) fn new(board: Board, param: ResolveParam, prev_action: Option<GridAction>) -> Self {
+    pub fn new(board: Board, param: ResolveParam, prev_action: Option<GridAction>) -> Self {
         let pre_calc = SqManhattan::pre_calc(board.grid());
         let dist = board
             .field()

@@ -1,4 +1,4 @@
-pub(crate) mod map_fragment;
+pub mod map_fragment;
 #[cfg(test)]
 mod tests;
 
@@ -11,14 +11,14 @@ use crate::{
 
 /// `Edge` は断片画像における辺のピクセル列を表す.
 #[derive(Debug, Clone)]
-pub(crate) struct Edge {
-    pub(crate) dir: Dir,
-    pub(crate) pixels: Vec<Color>,
+pub struct Edge {
+    pub dir: Dir,
+    pub pixels: Vec<Color>,
 }
 
 /// `Edges` は断片画像の縁の四辺を表す. また, 断片画像を回転させたときでも同じように扱えるようにする.
 #[derive(Debug, Clone)]
-pub(crate) struct Edges([Edge; 4]);
+pub struct Edges([Edge; 4]);
 
 impl Edges {
     fn new(north: Vec<Color>, east: Vec<Color>, south: Vec<Color>, west: Vec<Color>) -> Self {
@@ -51,11 +51,11 @@ impl Edges {
         }
     }
 
-    pub(crate) fn iter(&self) -> impl Iterator<Item = &Edge> {
+    pub fn iter(&self) -> impl Iterator<Item = &Edge> {
         self.0.iter()
     }
 
-    pub(crate) fn edge(&self, dir: Dir) -> &Edge {
+    pub fn edge(&self, dir: Dir) -> &Edge {
         self.0
             .iter()
             .find(|edge| edge.dir == dir)
@@ -65,38 +65,38 @@ impl Edges {
 
 /// `Fragment` は原画像から切り取った断片画像を表す.
 #[derive(Debug, Clone)]
-pub(crate) struct Fragment {
+pub struct Fragment {
     /// 原画像におけるこの断片画像の座標.
-    pub(crate) pos: Pos,
+    pub pos: Pos,
     /// この断片画像のを元の原画像から回転させている座標.
-    pub(crate) rot: Rot,
+    pub rot: Rot,
     /// この断片画像の縁四辺.
-    pub(crate) edges: Edges,
+    pub edges: Edges,
     pixels: LazyRotate,
 }
 
 impl Fragment {
-    pub(crate) fn side_length(&self) -> usize {
+    pub fn side_length(&self) -> usize {
         self.edges.0[0].pixels.len()
     }
 
-    pub(crate) fn rotate(&mut self, rot: Rot) {
+    pub fn rotate(&mut self, rot: Rot) {
         self.rot += rot;
         self.edges.rotate(rot);
     }
 
-    pub(crate) fn pixels(&mut self) -> &[Color] {
+    pub fn pixels(&mut self) -> &[Color] {
         self.pixels.get(self.rot)
     }
 
-    pub(crate) fn apply_rotate(&mut self) {
+    pub fn apply_rotate(&mut self) {
         let _ = self.pixels.get(self.rot);
 
         self.pixels.rot = Rot::R0;
         self.rot = Rot::R0;
     }
 
-    pub(crate) fn new_all(
+    pub fn new_all(
         &Problem {
             rows,
             cols,

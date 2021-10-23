@@ -6,7 +6,7 @@ use crate::{
 use super::NextTargetsGenerator;
 
 #[derive(Debug, Clone)]
-pub(crate) struct FromOutside;
+pub struct FromOutside;
 
 impl NextTargetsGenerator for FromOutside {
     fn next_targets(&mut self, finder: &BoardFinder) -> Vec<Pos> {

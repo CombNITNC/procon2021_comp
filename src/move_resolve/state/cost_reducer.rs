@@ -12,7 +12,7 @@ use crate::{
 use super::{GridAction, SqManhattan};
 
 #[derive(Debug)]
-pub(crate) struct CostReducer {
+pub struct CostReducer {
     board: Board,
     prev_action: Option<GridAction>,
     initial_dist: SqManhattan,
@@ -22,7 +22,7 @@ pub(crate) struct CostReducer {
 }
 
 impl CostReducer {
-    pub(crate) fn new(board: Board, param: ResolveParam) -> Self {
+    pub fn new(board: Board, param: ResolveParam) -> Self {
         let pre_calc = Arc::new(SqManhattan::pre_calc(board.grid()));
         let dist = board
             .field()

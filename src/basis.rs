@@ -6,16 +6,16 @@ use crate::grid::Pos;
 
 /// `Color` は 24 ビットの RGB カラーを表す.
 #[derive(Clone, Copy, PartialEq)]
-pub(crate) struct Color {
-    pub(crate) r: u8,
-    pub(crate) g: u8,
-    pub(crate) b: u8,
+pub struct Color {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
 }
 
 impl Color {
     /// RGB色空間での色同士の距離を求める
     #[inline]
-    pub(crate) fn euclidean_distance(&self, c: Color) -> f64 {
+    pub fn euclidean_distance(&self, c: Color) -> f64 {
         let r = (self.r as i16 - c.r as i16) as f64;
         let g = (self.g as i16 - c.g as i16) as f64;
         let b = (self.b as i16 - c.b as i16) as f64;
@@ -36,7 +36,7 @@ impl std::fmt::Debug for Color {
 
 /// `Movement` はある断片画像を動かして入れ替える向きを表す.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) enum Movement {
+pub enum Movement {
     Up,
     Right,
     Down,
@@ -46,7 +46,7 @@ pub(crate) enum Movement {
 impl Movement {
     /// `from` から `to` へ移動させるときの向きを求める.
     /// 要件: (from.x() == to.x()) ^ (from.y() == to.y())`
-    pub(crate) fn between_pos(from: Pos, to: Pos) -> Self {
+    pub fn between_pos(from: Pos, to: Pos) -> Self {
         use Movement::*;
         let from_x = from.x() as i32;
         let from_y = from.y() as i32;
@@ -71,7 +71,7 @@ impl Movement {
         }
     }
 
-    pub(crate) fn turn_right(self) -> Self {
+    pub fn turn_right(self) -> Self {
         match self {
             Movement::Up => Movement::Right,
             Movement::Right => Movement::Down,
@@ -80,7 +80,7 @@ impl Movement {
         }
     }
 
-    pub(crate) fn turn_left(self) -> Self {
+    pub fn turn_left(self) -> Self {
         match self {
             Movement::Up => Movement::Left,
             Movement::Right => Movement::Up,
@@ -89,7 +89,7 @@ impl Movement {
         }
     }
 
-    pub(crate) fn opposite(self) -> Self {
+    pub fn opposite(self) -> Self {
         match self {
             Movement::Up => Movement::Down,
             Movement::Right => Movement::Left,
@@ -101,14 +101,14 @@ impl Movement {
 
 /// `Operation` は座標 `select` の断片画像を選択してから `movements` の入れ替えを行う操作を表す.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Operation {
-    pub(crate) select: Pos,
-    pub(crate) movements: Vec<Movement>,
+pub struct Operation {
+    pub select: Pos,
+    pub movements: Vec<Movement>,
 }
 
 /// `Rot` はある断片画像を原画像の状態から時計回りに回転させた角度を表す.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Rot {
+pub enum Rot {
     R0,
     R90,
     R180,
@@ -117,7 +117,7 @@ pub(crate) enum Rot {
 
 impl Rot {
     #[inline]
-    pub(crate) fn as_num(self) -> u8 {
+    pub fn as_num(self) -> u8 {
         match self {
             Rot::R0 => 0,
             Rot::R90 => 1,
@@ -127,7 +127,7 @@ impl Rot {
     }
 
     #[inline]
-    pub(crate) fn from_num(rot: u8) -> Self {
+    pub fn from_num(rot: u8) -> Self {
         assert!(rot <= 3, "rot must be lower than 4");
         match rot {
             0 => Rot::R0,
@@ -138,7 +138,7 @@ impl Rot {
         }
     }
 
-    pub(crate) fn as_degrees(self) -> f64 {
+    pub fn as_degrees(self) -> f64 {
         match self {
             Rot::R0 => 0.0,
             Rot::R90 => 90.0,
@@ -165,7 +165,7 @@ impl AddAssign for Rot {
 
 /// `Dir` はある断片画像において辺が位置する向きを表す.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Dir {
+pub enum Dir {
     North,
     East,
     South,
@@ -183,7 +183,7 @@ impl Dir {
     }
 
     /// `self` の値を `rot` だけ回転させた向きの値にする.
-    pub(crate) fn rotate(self, rot: Rot) -> Self {
+    pub fn rotate(self, rot: Rot) -> Self {
         match rot {
             Rot::R0 => self,
             Rot::R90 => self.r90(),
@@ -194,7 +194,7 @@ impl Dir {
 
     /// 自分を四角形の辺の方向としたとき、対辺の方向を返す。
     #[inline]
-    pub(crate) fn opposite(self) -> Self {
+    pub fn opposite(self) -> Self {
         match self {
             Dir::North => Dir::South,
             Dir::East => Dir::West,
@@ -204,7 +204,7 @@ impl Dir {
     }
 
     /// この辺 `self` に別の断片画像を回転させてその辺 `other` をつなげるとき, 別の断片画像を回転させる角度を計算する.
-    pub(crate) fn calc_rot(mut self, mut other: Self) -> Rot {
+    pub fn calc_rot(mut self, mut other: Self) -> Rot {
         while !matches!(self, Dir::North) {
             self = self.r90();
             other = other.r90();
@@ -221,19 +221,19 @@ impl Dir {
 
 /// `Problem` は原画像から抽出される問題設定の情報を表す.
 #[derive(Debug)]
-pub(crate) struct Problem {
-    pub(crate) select_limit: u8,
-    pub(crate) select_cost: u16,
-    pub(crate) swap_cost: u16,
-    pub(crate) rows: u8,
-    pub(crate) cols: u8,
-    pub(crate) image: Image,
+pub struct Problem {
+    pub select_limit: u8,
+    pub select_cost: u16,
+    pub swap_cost: u16,
+    pub rows: u8,
+    pub cols: u8,
+    pub image: Image,
 }
 
-pub(crate) struct Image {
-    pub(crate) width: u16,
-    pub(crate) height: u16,
-    pub(crate) pixels: Vec<Color>,
+pub struct Image {
+    pub width: u16,
+    pub height: u16,
+    pub pixels: Vec<Color>,
 }
 
 impl std::fmt::Debug for Image {

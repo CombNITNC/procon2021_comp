@@ -2,13 +2,13 @@ use std::{cmp::Reverse, collections::BinaryHeap};
 
 use crate::grid::{board::Board, Pos, VecOnGrid};
 
-pub(crate) trait DijkstraCost: Copy + Ord + std::fmt::Debug {
+pub trait DijkstraCost: Copy + Ord + std::fmt::Debug {
     const IDENTITY: Self;
 
     fn op(self, other: Self) -> Self;
 }
 
-pub(crate) trait DijkstraState: Clone + std::fmt::Debug {
+pub trait DijkstraState: Clone + std::fmt::Debug {
     type C: DijkstraCost;
     fn cost(&self) -> Self::C;
 
@@ -41,7 +41,7 @@ impl<S: DijkstraState> Ord for DijkstraNode<S> {
     }
 }
 
-pub(crate) fn dijkstra<S, C>(board: &Board, start: S) -> Option<(Vec<Pos>, C)>
+pub fn dijkstra<S, C>(board: &Board, start: S) -> Option<(Vec<Pos>, C)>
 where
     S: DijkstraState<C = C>,
     C: DijkstraCost,

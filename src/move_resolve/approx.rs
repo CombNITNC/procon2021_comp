@@ -9,18 +9,18 @@ use crate::{
 };
 
 mod estimate;
-pub(crate) mod gen;
+pub mod gen;
 mod route;
 
-pub(crate) trait NextTargetsGenerator {
+pub trait NextTargetsGenerator {
     fn next_targets(&mut self, finder: &BoardFinder) -> Vec<Pos>;
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct Solver<G> {
-    pub(crate) threshold_x: u8,
-    pub(crate) threshold_y: u8,
-    pub(crate) targets_gen: G,
+pub struct Solver<G> {
+    pub threshold_x: u8,
+    pub threshold_y: u8,
+    pub targets_gen: G,
 }
 
 impl<G: NextTargetsGenerator> Solver<G> {

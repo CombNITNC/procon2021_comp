@@ -2,7 +2,7 @@ use crate::basis::{Movement, Operation, Rot};
 
 const NEW_LINE: &str = "\r\n";
 
-pub(crate) fn ans(ope: &[Operation], rot: &[Rot]) -> String {
+pub fn ans(ope: &[Operation], rot: &[Rot]) -> String {
     let mut result = String::new();
 
     //回転情報

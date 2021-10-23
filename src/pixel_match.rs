@@ -11,7 +11,7 @@ mod shaker;
 
 use self::gui::RecalculateArtifact;
 
-pub(crate) fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragment> {
+pub fn resolve(fragments: Vec<Fragment>, grid: Grid) -> VecOnGrid<Fragment> {
     let (gtx, rx) = mpsc::channel();
     let (tx, grx) = mpsc::channel();
 
