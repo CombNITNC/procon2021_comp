@@ -2,7 +2,7 @@
 name = "procon2021_comp"
 version = "0.1.0"
 authors = ["combnitnc"]
-edition = "2018"
+edition = "2021"
 default-run = "procon2021_comp"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
