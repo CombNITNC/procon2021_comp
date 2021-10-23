@@ -96,7 +96,10 @@ where
             limit_cost,
         ) {
             FindResult::Found => return Some((history, bound)),
-            FindResult::Deeper(cost) => bound = cost,
+            FindResult::Deeper(cost) => {
+                visited.clear();
+                bound = cost;
+            }
             FindResult::None => return None,
         }
     }
