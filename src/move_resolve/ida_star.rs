@@ -1,11 +1,7 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-    ops::Add,
-};
+use std::{collections::HashSet, hash::Hash, ops::Add};
 
 /// IDA* 探索する状態が実装するべき trait.
-pub trait IdaSearchState: Clone + std::fmt::Debug {
+pub trait IdaSearchState: Hash + Eq + Clone + std::fmt::Debug {
     type A: Copy + std::fmt::Debug;
     fn apply(&self, action: Self::A) -> Self;
 
@@ -29,15 +25,19 @@ enum FindResult<C> {
 fn find<V, A, C>(
     node: V,
     history: &mut Vec<A>,
-    hasher: impl Hasher + Clone,
+    visited: &mut HashSet<V>,
     distance: C,
     bound: C,
+    limit_cost: C,
 ) -> FindResult<C>
 where
     V: IdaSearchState<C = C, A = A>,
-    A: Copy + std::fmt::Debug + Eq + Hash,
+    A: Copy + std::fmt::Debug,
     C: PartialOrd + Add<Output = C> + Copy + std::fmt::Debug,
 {
+    if limit_cost <= distance {
+        return FindResult::None;
+    }
     let total_estimated = distance + node.heuristic();
     if bound < total_estimated {
         return FindResult::Deeper(total_estimated);
@@ -47,17 +47,17 @@ where
     }
     let mut min = None;
     for action in node.next_actions() {
-        history.push(action);
-        let next_distance = distance + node.cost_on(action);
-        let mut next_hasher = hasher.clone();
-        action.hash(&mut next_hasher);
-        if hasher.finish() != next_hasher.finish() {
+        let next_state = node.apply(action);
+        if visited.insert(next_state.clone()) {
+            history.push(action);
+            let next_distance = distance + node.cost_on(action);
             match find(
-                node.apply(action),
+                next_state,
                 history,
-                next_hasher,
+                visited,
                 next_distance,
                 bound,
+                limit_cost,
             ) {
                 FindResult::Found => return FindResult::Found,
                 FindResult::Deeper(cost) => {
@@ -67,8 +67,8 @@ where
                 }
                 _ => {}
             }
+            history.pop();
         }
-        history.pop();
     }
     match min {
         Some(cost) => FindResult::Deeper(cost),
@@ -77,7 +77,7 @@ where
 }
 
 /// 反復深化 A* アルゴリズムの実装.
-pub fn ida_star<V, A, C>(start: V, lower_bound: C) -> (Vec<A>, C)
+pub fn ida_star<V, A, C>(start: V, lower_bound: C, limit_cost: C) -> Option<(Vec<A>, C)>
 where
     V: IdaSearchState<C = C, A = A>,
     A: Copy + std::fmt::Debug + Hash + Eq,
@@ -85,12 +85,22 @@ where
 {
     let mut history = vec![];
     let mut bound = lower_bound;
+    let mut visited = HashSet::new();
     loop {
-        let hasher = DefaultHasher::new();
-        match find(start.clone(), &mut history, hasher, C::default(), bound) {
-            FindResult::Found => return (history, bound),
-            FindResult::Deeper(cost) => bound = cost,
-            FindResult::None => return (vec![], C::default()),
+        match find(
+            start.clone(),
+            &mut history,
+            &mut visited,
+            C::default(),
+            bound,
+            limit_cost,
+        ) {
+            FindResult::Found => return Some((history, bound)),
+            FindResult::Deeper(cost) => {
+                visited.clear();
+                bound = cost;
+            }
+            FindResult::None => return None,
         }
     }
 }

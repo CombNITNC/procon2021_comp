@@ -139,12 +139,13 @@ impl Board {
     }
 
     pub fn around_of(&'_ self, pos: Pos) -> impl Iterator<Item = Pos> + '_ {
-        std::array::IntoIter::new([
+        [
             self.up_of(pos),
             self.right_of(pos),
             self.down_of(pos),
             self.left_of(pos),
-        ])
+        ]
+        .into_iter()
         .filter(move |pos| !self.locked.contains(pos))
     }
 

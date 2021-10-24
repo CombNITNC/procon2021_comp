@@ -141,11 +141,7 @@ impl IdaSearchState for Completer {
 
     type C = u64;
     fn heuristic(&self) -> Self::C {
-        self.board
-            .field()
-            .iter_with_pos()
-            .map(|(p, &e)| self.board.grid().looping_manhattan_dist(p, e).pow(2) as u64)
-            .sum()
+        self.dist.0 as u64
     }
 
     fn cost_on(&self, action: Self::A) -> Self::C {

@@ -25,6 +25,15 @@ mod state;
 #[cfg(test)]
 mod tests;
 
+/// [`GridAction`] 列からその選択回数と交換回数の合計を計算する.
+fn actions_counts(ops: &[GridAction]) -> (usize, usize) {
+    ops.iter()
+        .fold((0, 0), |(selects, swaps), action| match action {
+            GridAction::Swap(_) => (selects, swaps + 1),
+            GridAction::Select(_) => (selects + 1, swaps),
+        })
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ResolveParam {
     pub select_limit: u8,
@@ -66,7 +75,7 @@ pub fn resolve(
 ) -> impl Iterator<Item = Vec<Operation>> + '_ {
     phase1(grid, movements, param)
         .flat_map(phase2)
-        .map(phase3(param))
+        .flat_map(phase3(param))
 }
 
 fn phase1(
@@ -93,8 +102,12 @@ fn phase1(
 }
 
 fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<GridAction>, Board)> {
+    let grid = board.grid();
+    if grid.width() <= 4 && grid.height() <= 4 {
+        return Some((actions, board));
+    }
     let mut solver = Solver {
-        threshold_x: 3,
+        threshold_x: 2,
         threshold_y: 3,
         targets_gen: FromOutside,
     };
@@ -104,18 +117,38 @@ fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<Gri
     Some((actions, board))
 }
 
-fn phase3(param: ResolveParam) -> impl Fn((Vec<GridAction>, Board)) -> Vec<Operation> {
-    move |(mut actions, board): (Vec<GridAction>, Board)| {
+fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option<Vec<Operation>> {
+    let mut min_cost = 10_000_000_000_u64;
+    move |(mut actions, mut board): (Vec<GridAction>, Board)| {
         let mut param = param;
-        for &action in &actions {
-            if let GridAction::Select(_) = action {
-                param.select_limit -= 1;
-            }
+        let (selects, swaps) = actions_counts(&actions);
+        param.select_limit -= selects as u8;
+        let cost_until_2nd =
+            { selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64 };
+        let (third_actions, cost) = ida_star(
+            Completer::new(board.clone(), param, actions.last().copied()),
+            0,
+            min_cost - cost_until_2nd,
+        )?;
+
+        apply_actions(&mut board, &third_actions);
+        debug_assert!(
+            board
+                .field()
+                .iter_with_pos()
+                .all(|(pos, &cell)| pos == cell),
+            "the board must be completed"
+        );
+
+        let cost = cost_until_2nd + cost;
+        if cost < min_cost {
+            min_cost = cost;
+            actions.extend(third_actions.into_iter());
+            eprintln!("{:?}", actions);
+            Some(actions_to_operations(actions))
+        } else {
+            None
         }
-        let (third_actions, _cost) =
-            ida_star(Completer::new(board, param, actions.last().copied()), 0);
-        actions.extend(third_actions.into_iter());
-        actions_to_operations(actions)
     }
 }
 
