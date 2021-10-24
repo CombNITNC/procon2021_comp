@@ -114,11 +114,11 @@ fn case1() {
     let expected = vec![
         Operation {
             select: grid.pos(2, 0),
-            movements: vec![Left, Down, Left, Left],
+            movements: vec![Left, Left, Down, Left],
         },
         Operation {
-            select: grid.pos(1, 1),
-            movements: vec![Up],
+            select: grid.pos(1, 0),
+            movements: vec![Left],
         },
     ];
     let actual = resolve(
@@ -147,11 +147,11 @@ fn case2() {
     let expected = vec![
         Operation {
             select: grid.pos(0, 1),
-            movements: vec![Up],
+            movements: vec![Left, Up],
         },
         Operation {
-            select: grid.pos(3, 1),
-            movements: vec![Up, Right],
+            select: grid.pos(0, 1),
+            movements: vec![Up],
         },
     ];
     let actual = resolve(
@@ -181,12 +181,12 @@ fn case3() {
     ];
     let expected = vec![
         Operation {
-            select: grid.pos(2, 0),
-            movements: vec![Right, Right],
+            select: grid.pos(1, 1),
+            movements: vec![Up, Right, Right],
         },
         Operation {
-            select: grid.pos(1, 1),
-            movements: vec![Right, Right, Up],
+            select: grid.pos(2, 1),
+            movements: vec![Right, Right],
         },
     ];
     let actual = resolve(
