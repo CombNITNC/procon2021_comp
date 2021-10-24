@@ -4,10 +4,10 @@ use super::{Grid, Pos, VecOnGrid};
 
 mod finder;
 
-pub(crate) use finder::*;
+pub use finder::*;
 
 #[derive(Debug, Clone, Eq)]
-pub(crate) struct Board {
+pub struct Board {
     select: Option<Pos>,
     forward: VecOnGrid<Pos>,
     reverse: VecOnGrid<Pos>,
@@ -28,7 +28,7 @@ impl Hash for Board {
 }
 
 impl Board {
-    pub(crate) fn new(select: Option<Pos>, field: VecOnGrid<Pos>) -> Self {
+    pub fn new(select: Option<Pos>, field: VecOnGrid<Pos>) -> Self {
         let mut reverse = field.clone();
         for (pos, &elem) in field.iter_with_pos() {
             reverse[elem] = pos;
@@ -41,42 +41,42 @@ impl Board {
         }
     }
 
-    pub(crate) fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
+    pub fn looping_manhattan_dist(&self, a: Pos, b: Pos) -> u32 {
         self.forward.grid.looping_manhattan_dist(a, b)
     }
 
-    pub(crate) fn grid(&self) -> Grid {
+    pub fn grid(&self) -> Grid {
         self.forward.grid
     }
 
-    pub(crate) fn selected(&self) -> Option<Pos> {
+    pub fn selected(&self) -> Option<Pos> {
         self.select
     }
 
-    pub(crate) fn select(&mut self, to_select: Pos) {
+    pub fn select(&mut self, to_select: Pos) {
         if self.locked.contains(&to_select) {
             panic!("the position was locked: {:?}", to_select);
         }
         self.select.replace(to_select);
     }
 
-    pub(crate) fn field(&'_ self) -> impl Deref<Target = VecOnGrid<Pos>> + std::fmt::Debug + '_ {
+    pub fn field(&'_ self) -> impl Deref<Target = VecOnGrid<Pos>> + std::fmt::Debug + '_ {
         &self.forward
     }
 
-    pub(crate) fn into_field(self) -> VecOnGrid<Pos> {
+    pub fn into_field(self) -> VecOnGrid<Pos> {
         self.forward
     }
 
-    pub(crate) fn forward(&self, pos: Pos) -> Pos {
+    pub fn forward(&self, pos: Pos) -> Pos {
         self.forward[pos]
     }
 
-    pub(crate) fn reverse(&self, pos: Pos) -> Pos {
+    pub fn reverse(&self, pos: Pos) -> Pos {
         self.reverse[pos]
     }
 
-    pub(crate) fn swap_to(&mut self, to_swap: Pos) {
+    pub fn swap_to(&mut self, to_swap: Pos) {
         let select = self.select.unwrap();
         let dist = self.looping_manhattan_dist(select, to_swap);
         if dist == 0 {
@@ -96,7 +96,7 @@ impl Board {
         self.select.replace(to_swap);
     }
 
-    pub(crate) fn swap_many_to(&mut self, to_swaps: &[Pos]) {
+    pub fn swap_many_to(&mut self, to_swaps: &[Pos]) {
         for &to_swap in to_swaps {
             self.swap_to(to_swap);
         }
@@ -138,7 +138,7 @@ impl Board {
         }
     }
 
-    pub(crate) fn around_of(&'_ self, pos: Pos) -> impl Iterator<Item = Pos> + '_ {
+    pub fn around_of(&'_ self, pos: Pos) -> impl Iterator<Item = Pos> + '_ {
         [
             self.up_of(pos),
             self.right_of(pos),
@@ -149,29 +149,29 @@ impl Board {
         .filter(move |pos| !self.locked.contains(pos))
     }
 
-    pub(crate) fn is_locked(&self, pos: Pos) -> bool {
+    pub fn is_locked(&self, pos: Pos) -> bool {
         self.locked.contains(&pos)
     }
 
-    pub(crate) fn lock(&mut self, pos: Pos) -> bool {
+    pub fn lock(&mut self, pos: Pos) -> bool {
         if Some(pos) == self.select {
             panic!("tried to lock the selected pos: {:?}", pos);
         }
         self.locked.insert(pos)
     }
 
-    pub(crate) fn unlock(&mut self, pos: Pos) -> bool {
+    pub fn unlock(&mut self, pos: Pos) -> bool {
         self.locked.remove(&pos)
     }
 
-    pub(crate) fn first_unlocked(&self) -> Option<Pos> {
+    pub fn first_unlocked(&self) -> Option<Pos> {
         self.forward
             .grid
             .all_pos()
             .find(|p| !self.locked.contains(p))
     }
 
-    pub(crate) fn new_finder(&self) -> BoardFinder {
+    pub fn new_finder(&self) -> BoardFinder {
         BoardFinder::new(self.grid())
     }
 }

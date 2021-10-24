@@ -10,7 +10,7 @@ use std::{
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 /// ビームサーチする状態が実装するべき trait.
-pub(crate) trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send {
+pub trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send {
     type A: Copy + std::fmt::Debug + Send;
     fn apply(&self, action: Self::A) -> Self;
 
@@ -25,7 +25,7 @@ pub(crate) trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send {
     fn enrichment_key(&self) -> usize;
 }
 
-pub(crate) fn beam_search<S, A, C>(
+pub fn beam_search<S, A, C>(
     initial_state: S,
     beam_width: usize,
     max_cost: C,

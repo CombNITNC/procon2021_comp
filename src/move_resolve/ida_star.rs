@@ -1,7 +1,7 @@
 use std::{collections::HashSet, hash::Hash, ops::Add};
 
 /// IDA* 探索する状態が実装するべき trait.
-pub(crate) trait IdaSearchState: Hash + Eq + Clone + std::fmt::Debug {
+pub trait IdaSearchState: Hash + Eq + Clone + std::fmt::Debug {
     type A: Copy + std::fmt::Debug;
     fn apply(&self, action: Self::A) -> Self;
 
@@ -77,7 +77,7 @@ where
 }
 
 /// 反復深化 A* アルゴリズムの実装.
-pub(crate) fn ida_star<V, A, C>(start: V, lower_bound: C, limit_cost: C) -> Option<(Vec<A>, C)>
+pub fn ida_star<V, A, C>(start: V, lower_bound: C, limit_cost: C) -> Option<(Vec<A>, C)>
 where
     V: IdaSearchState<C = C, A = A>,
     A: Copy + std::fmt::Debug + Hash + Eq,

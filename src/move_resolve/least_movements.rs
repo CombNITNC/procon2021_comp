@@ -19,14 +19,14 @@ fn least_movements((dx, dy): (i32, i32)) -> u32 {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct LeastMovements(u32);
+pub struct LeastMovements(u32);
 
 impl LeastMovements {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self::default()
     }
 
-    pub(crate) fn swap_on(
+    pub fn swap_on(
         self,
         field: impl Deref<Target = VecOnGrid<Pos>> + std::fmt::Debug,
         from: Pos,

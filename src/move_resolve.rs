@@ -35,7 +35,7 @@ fn actions_counts(ops: &[GridAction]) -> (usize, usize) {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct ResolveParam {
+pub struct ResolveParam {
     pub select_limit: u8,
     pub swap_cost: u16,
     pub select_cost: u16,
@@ -68,7 +68,7 @@ pub(crate) struct ResolveParam {
 ///     path[0]
 /// );
 /// ```
-pub(crate) fn resolve(
+pub fn resolve(
     grid: Grid,
     movements: &'_ [(Pos, Pos)],
     param: ResolveParam,

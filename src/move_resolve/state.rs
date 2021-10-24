@@ -9,10 +9,10 @@ pub mod completer;
 pub mod cost_reducer;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) struct SqManhattan(u32);
+pub struct SqManhattan(u32);
 
 impl SqManhattan {
-    pub(crate) fn pre_calc(grid: Grid) -> HashMap<(Pos, Pos), Self> {
+    pub fn pre_calc(grid: Grid) -> HashMap<(Pos, Pos), Self> {
         let mut map = HashMap::new();
         for from in grid.all_pos() {
             for to in grid.all_pos() {
@@ -23,11 +23,11 @@ impl SqManhattan {
         map
     }
 
-    pub(crate) fn as_u32(self) -> u32 {
+    pub fn as_u32(self) -> u32 {
         self.0
     }
 
-    pub(crate) fn swap_on(
+    pub fn swap_on(
         self,
         pair: (Pos, Pos),
         field: &VecOnGrid<Pos>,
@@ -62,13 +62,13 @@ impl Sum for SqManhattan {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) enum GridAction {
+pub enum GridAction {
     Swap(Movement),
     Select(Pos),
 }
 
 /// 操作の履歴 Vec<GridAction> を Vec<Operation> に変換する.
-pub(crate) fn actions_to_operations(actions: Vec<GridAction>) -> Vec<Operation> {
+pub fn actions_to_operations(actions: Vec<GridAction>) -> Vec<Operation> {
     if actions.is_empty() {
         return vec![];
     }

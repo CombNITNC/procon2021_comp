@@ -3,7 +3,7 @@ use std::ops::{Index, IndexMut};
 use super::{Grid, Pos, VecOnGrid};
 
 /// `VecOnGrid` 及びその派生系に座標変換を提供する.
-pub(crate) trait OnGrid: Index<Pos> + IndexMut<Pos> {
+pub trait OnGrid: Index<Pos> + IndexMut<Pos> {
     /// この座標変換をした系のサイズである `Grid` を返す.
     fn grid(&self) -> Grid;
 
@@ -65,7 +65,7 @@ impl<T> OnGrid for VecOnGrid<T> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Transpose<V>(V);
+pub struct Transpose<V>(V);
 
 impl<V: OnGrid + Index<Pos>> Index<Pos> for Transpose<V> {
     type Output = V::Output;
@@ -94,7 +94,7 @@ impl<V: OnGrid + Index<Pos> + IndexMut<Pos>> OnGrid for Transpose<V> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct FlipX<V>(V);
+pub struct FlipX<V>(V);
 
 impl<V: OnGrid + Index<Pos>> Index<Pos> for FlipX<V> {
     type Output = V::Output;
@@ -120,7 +120,7 @@ impl<V: OnGrid + Index<Pos> + IndexMut<Pos>> OnGrid for FlipX<V> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct FlipY<V>(V);
+pub struct FlipY<V>(V);
 
 impl<V: OnGrid + Index<Pos>> Index<Pos> for FlipY<V> {
     type Output = V::Output;

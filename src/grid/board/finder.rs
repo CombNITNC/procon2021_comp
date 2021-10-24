@@ -5,7 +5,7 @@ use crate::{
 
 /// `Board` に移動や回転を加えてアクセスするための覗き窓.
 #[derive(Debug, Clone)]
-pub(crate) struct BoardFinder {
+pub struct BoardFinder {
     offset: Pos,
     original: Grid,
     width: u8,
@@ -14,7 +14,7 @@ pub(crate) struct BoardFinder {
 }
 
 impl BoardFinder {
-    pub(crate) fn new(grid: Grid) -> Self {
+    pub fn new(grid: Grid) -> Self {
         Self {
             offset: grid.pos(0, 0),
             original: grid,
@@ -24,16 +24,16 @@ impl BoardFinder {
         }
     }
 
-    pub(crate) fn width(&self) -> u8 {
+    pub fn width(&self) -> u8 {
         self.width
     }
-    pub(crate) fn height(&self) -> u8 {
+    pub fn height(&self) -> u8 {
         self.height
     }
-    pub(crate) fn offset(&self) -> Pos {
+    pub fn offset(&self) -> Pos {
         self.offset
     }
-    pub(crate) fn rotation(&self) -> u8 {
+    pub fn rotation(&self) -> u8 {
         self.rotation
     }
 
@@ -41,7 +41,7 @@ impl BoardFinder {
         Grid::new(self.width, self.height)
     }
 
-    pub(crate) fn move_pos_to(&self, pos: Pos, movement: Movement) -> Pos {
+    pub fn move_pos_to(&self, pos: Pos, movement: Movement) -> Pos {
         let grid = self.original;
         let movement = match self.rotation {
             0 => movement,
@@ -83,7 +83,7 @@ impl BoardFinder {
     }
 
     /// 時計回りに 90 度単位の `rotation` で回転する.
-    pub(crate) fn rotate_to(&mut self, rotation: u8) {
+    pub fn rotate_to(&mut self, rotation: u8) {
         let grid = self.original;
         let original_up_left = match self.rotation {
             0 => self.offset,
@@ -116,7 +116,7 @@ impl BoardFinder {
     }
 
     /// 窓の上端を 1 つ削る.
-    pub(crate) fn slice_up(&mut self) {
+    pub fn slice_up(&mut self) {
         self.offset = self.move_pos_to(self.offset, Movement::Down);
         self.height -= 1;
     }

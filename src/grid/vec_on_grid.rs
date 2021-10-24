@@ -8,9 +8,9 @@ const STACK_BUFFER: usize = 16 * 16;
 
 /// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
 #[derive(Clone, Eq)]
-pub(crate) struct VecOnGrid<T> {
+pub struct VecOnGrid<T> {
     vec: SmallVec<[T; STACK_BUFFER]>,
-    pub(crate) grid: Grid,
+    pub grid: Grid,
 }
 
 impl<T: PartialEq> PartialEq for VecOnGrid<T> {
@@ -26,7 +26,7 @@ impl<T: Hash> Hash for VecOnGrid<T> {
 }
 
 impl<T> VecOnGrid<T> {
-    pub(crate) fn with_init(grid: Grid, init: T) -> Self
+    pub fn with_init(grid: Grid, init: T) -> Self
     where
         T: Clone,
     {
@@ -36,7 +36,7 @@ impl<T> VecOnGrid<T> {
         }
     }
 
-    pub(crate) fn with_default(grid: Grid) -> Self
+    pub fn with_default(grid: Grid) -> Self
     where
         T: Default,
     {
@@ -48,7 +48,7 @@ impl<T> VecOnGrid<T> {
         }
     }
 
-    pub(crate) fn from_vec(grid: Grid, vec: Vec<T>) -> Option<Self> {
+    pub fn from_vec(grid: Grid, vec: Vec<T>) -> Option<Self> {
         if vec.len() != grid.width as usize * grid.height as usize {
             return None;
         }
@@ -60,12 +60,12 @@ impl<T> VecOnGrid<T> {
     }
 
     /// `a` の位置と `b` の位置の要素を入れ替える.
-    pub(crate) fn swap(&mut self, a: Pos, b: Pos) {
+    pub fn swap(&mut self, a: Pos, b: Pos) {
         self.vec
             .swap(self.grid.pos_as_index(a), self.grid.pos_as_index(b))
     }
 
-    pub(crate) fn pick_two(&self, a: Pos, b: Pos) -> (&T, &T) {
+    pub fn pick_two(&self, a: Pos, b: Pos) -> (&T, &T) {
         assert!(self.grid.is_pos_valid(a));
         assert!(self.grid.is_pos_valid(b));
         let (a, b) = if self.grid.pos_as_index(b) < self.grid.pos_as_index(a) {
@@ -77,7 +77,7 @@ impl<T> VecOnGrid<T> {
         (&a_seg[self.grid.pos_as_index(a)], &b_seg[0])
     }
 
-    pub(crate) fn pick_two_mut(&mut self, a: Pos, b: Pos) -> (&mut T, &mut T) {
+    pub fn pick_two_mut(&mut self, a: Pos, b: Pos) -> (&mut T, &mut T) {
         assert!(self.grid.is_pos_valid(a));
         assert!(self.grid.is_pos_valid(b));
         let (a, b) = if self.grid.pos_as_index(b) < self.grid.pos_as_index(a) {
@@ -90,27 +90,27 @@ impl<T> VecOnGrid<T> {
     }
 
     /// 借用のイテレータを作る.
-    pub(crate) fn iter(&self) -> impl Iterator<Item = &T> {
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.into_iter()
     }
 
     /// 可変借用のイテレータを作る.
-    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
         self.into_iter()
     }
 
     /// 各 Pos のタプルとなるイテレータを作る.
-    pub(crate) fn iter_with_pos(&self) -> impl Iterator<Item = (Pos, &T)> {
+    pub fn iter_with_pos(&self) -> impl Iterator<Item = (Pos, &T)> {
         self.grid.all_pos().zip(self.iter())
     }
 
     /// 各 Pos のタプルとなる所有権を持つイテレータを作る.
-    pub(crate) fn into_iter_with_pos(self) -> impl Iterator<Item = (Pos, T)> {
+    pub fn into_iter_with_pos(self) -> impl Iterator<Item = (Pos, T)> {
         self.grid.all_pos().zip(self.vec.into_iter())
     }
 
     /// 各 Pos のタプルとなる可変借用のイテレータを作る.
-    pub(crate) fn iter_mut_with_pos(&mut self) -> impl Iterator<Item = (Pos, &mut T)> {
+    pub fn iter_mut_with_pos(&mut self) -> impl Iterator<Item = (Pos, &mut T)> {
         self.grid.all_pos().zip(self.iter_mut())
     }
 
@@ -119,7 +119,7 @@ impl<T> VecOnGrid<T> {
     /// # Safety
     ///
     /// 範囲外の `Pos` で呼び出すと未定義動作となる.
-    pub(crate) unsafe fn get_unchecked(&self, pos: Pos) -> &T {
+    pub unsafe fn get_unchecked(&self, pos: Pos) -> &T {
         self.vec.get_unchecked(self.grid.pos_as_index(pos))
     }
 
@@ -128,24 +128,24 @@ impl<T> VecOnGrid<T> {
     /// # Safety
     ///
     /// 範囲外の `Pos` で呼び出すと未定義動作となる.
-    pub(crate) unsafe fn get_unchecked_mut(&mut self, pos: Pos) -> &mut T {
+    pub unsafe fn get_unchecked_mut(&mut self, pos: Pos) -> &mut T {
         self.vec.get_unchecked_mut(self.grid.pos_as_index(pos))
     }
 
     /// 要素にアクセスする.
-    pub(crate) fn get(&self, pos: Pos) -> Option<&T> {
+    pub fn get(&self, pos: Pos) -> Option<&T> {
         assert!(self.grid.is_pos_valid(pos));
         self.vec.get(self.grid.pos_as_index(pos))
     }
 
     /// 可変要素にアクセスする.
-    pub(crate) fn get_mut(&mut self, pos: Pos) -> Option<&mut T> {
+    pub fn get_mut(&mut self, pos: Pos) -> Option<&mut T> {
         assert!(self.grid.is_pos_valid(pos));
         self.vec.get_mut(self.grid.pos_as_index(pos))
     }
 
     /// `Grid` の X 方向で全体を巡回させる.
-    pub(crate) fn rotate_x(&mut self, offset: isize) {
+    pub fn rotate_x(&mut self, offset: isize) {
         for y in 0..self.grid.height() {
             let start = self.grid.pos_as_index(self.grid.pos(0, y));
             let end = self
@@ -160,7 +160,7 @@ impl<T> VecOnGrid<T> {
     }
 
     /// `Grid` の Y 方向で全体を巡回させる.
-    pub(crate) fn rotate_y(&mut self, offset: isize) {
+    pub fn rotate_y(&mut self, offset: isize) {
         let mut chunks: Vec<_> = self.vec.chunks_exact(self.grid.width() as usize).collect();
         if 0 < offset {
             chunks.rotate_right(offset.max(0) as usize);
