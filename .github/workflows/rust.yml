@@ -18,14 +18,6 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v7
-        with:
-          setupOnly: true
-          vcpkgDirectory: "${{ github.workspace }}/vcpkg"
-          appendedCacheKey: ${{ hashFiles( '**/vcpkg_manifest/vcpkg.json' ) }}
-          additionalCachedPaths: ${{ env.BUILD_DIR }}/vcpkg_installed
-          vcpkgGitCommitId: 5568f110b509a9fd90711978a7cb76bae75bb092
       - name: Install cargo-vcpkg
         run: cargo install cargo-vcpkg
       - name: Install dependencies
@@ -44,14 +36,6 @@ jobs:
         with:
           toolchain: stable
           components: clippy
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v7
-        with:
-          setupOnly: true
-          vcpkgDirectory: "${{ github.workspace }}/vcpkg"
-          appendedCacheKey: ${{ hashFiles( '**/vcpkg_manifest/vcpkg.json' ) }}
-          additionalCachedPaths: ${{ env.BUILD_DIR }}/vcpkg_installed
-          vcpkgGitCommitId: 5568f110b509a9fd90711978a7cb76bae75bb092
       - name: Install cargo-vcpkg
         run: cargo install cargo-vcpkg
       - name: Install dependencies
