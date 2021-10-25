@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
@@ -18,10 +18,18 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: Setup SDL2
-        run: |
-         sudo apt update
-         sudo apt install libsdl2-dev libsdl2-ttf-dev
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v7
+        with:
+          setupOnly: true
+          vcpkgDirectory: "${{ github.workspace }}/vcpkg"
+          appendedCacheKey: ${{ hashFiles( '**/vcpkg_manifest/vcpkg.json' ) }}
+          additionalCachedPaths: ${{ env.BUILD_DIR }}/vcpkg_installed
+          vcpkgGitCommitId: 5568f110b509a9fd90711978a7cb76bae75bb092
+      - name: Install cargo-vcpkg
+        run: cargo install cargo-vcpkg
+      - name: Install dependencies
+        run: cargo vcpkg -v build
       - name: Build
         run: cargo build --release --verbose
       - name: Run tests
@@ -35,11 +43,19 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: Setup SDL2
-        run: |
-         sudo apt update
-         sudo apt install libsdl2-dev libsdl2-ttf-dev
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v7
+        with:
+          setupOnly: true
+          vcpkgDirectory: "${{ github.workspace }}/vcpkg"
+          appendedCacheKey: ${{ hashFiles( '**/vcpkg_manifest/vcpkg.json' ) }}
+          additionalCachedPaths: ${{ env.BUILD_DIR }}/vcpkg_installed
+          vcpkgGitCommitId: 5568f110b509a9fd90711978a7cb76bae75bb092
+      - name: Install cargo-vcpkg
+        run: cargo install cargo-vcpkg
+      - name: Install dependencies
+        run: cargo vcpkg -v build
       - run: rustup component add clippy
-      - uses: actions-rs/clippy-check@v1
+        uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
