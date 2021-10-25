@@ -43,6 +43,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: clippy
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v7
         with:
@@ -55,7 +56,6 @@ jobs:
         run: cargo install cargo-vcpkg
       - name: Install dependencies
         run: cargo vcpkg -v build
-      - run: rustup component add clippy
-        uses: actions-rs/clippy-check@v1
+      - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
