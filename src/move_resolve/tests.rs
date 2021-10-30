@@ -50,35 +50,26 @@ fn simple_case() {
     // 00 11
     // 10 01
     let grid = Grid::new(2, 2);
-    let mut field = VecOnGrid::with_init(grid, grid.pos(0, 0));
-    field[grid.pos(0, 0)] = grid.pos(0, 0);
-    field[grid.pos(1, 0)] = grid.pos(1, 1);
-    field[grid.pos(0, 1)] = grid.pos(1, 0);
-    field[grid.pos(1, 1)] = grid.pos(0, 1);
+    let movements = &[
+        (grid.pos(1, 0), grid.pos(0, 1)),
+        (grid.pos(0, 1), grid.pos(1, 1)),
+        (grid.pos(1, 1), grid.pos(1, 0)),
+    ];
 
-    let path = resolve(
+    let expected = vec![Operation {
+        select: grid.pos(0, 1),
+        movements: vec![Right, Up],
+    }];
+    let actual = resolve(
         grid,
-        &[
-            (grid.pos(1, 0), grid.pos(0, 1)),
-            (grid.pos(0, 1), grid.pos(1, 1)),
-            (grid.pos(1, 1), grid.pos(1, 0)),
-        ],
+        movements,
         ResolveParam {
             select_limit: 1,
             swap_cost: 1,
             select_cost: 1,
         },
-    )
-    .next()
-    .unwrap();
-    assert_eq!(path.len(), 1);
-    assert_eq!(
-        Operation {
-            select: grid.pos(0, 1),
-            movements: vec![Right, Up],
-        },
-        path[0]
     );
+    test_answers(expected, actual);
 }
 
 fn test_answers<E, A, AI, T>(expected: E, actual_gen: A)
