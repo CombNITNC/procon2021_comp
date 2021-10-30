@@ -44,6 +44,9 @@ pub struct ResolveParam {
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の近似解を複数求める.
 ///
 /// ```
+/// use procon2021_comp::basis::Operation;
+/// use procon2021_comp::grid::{Grid, VecOnGrid};
+/// use procon2021_comp::move_resolve::{ResolveParam, resolve};
 /// // 10 00
 /// let grid = Grid::new(2, 1);
 /// let mut field = VecOnGrid::with_init(grid, grid.pos(0, 0));
@@ -55,15 +58,19 @@ pub struct ResolveParam {
 ///         (grid.pos(0, 0), grid.pos(1, 0)),
 ///         (grid.pos(1, 0), grid.pos(0, 0)),
 ///     ],
-///     1,
-///     1,
-///     1,
-/// );
+///     ResolveParam {
+///         select_limit: 1,
+///         swap_cost: 1,
+///         select_cost: 1,
+///     },
+/// ).next().expect("the solution must be found");
+///
+/// use procon2021_comp::basis::Movement;
 /// assert_eq!(path.len(), 1);
 /// assert_eq!(
 ///     Operation {
 ///         select: grid.pos(1, 0),
-///         movements: vec![Right],
+///         movements: vec![Movement::Left],
 ///     },
 ///     path[0]
 /// );
