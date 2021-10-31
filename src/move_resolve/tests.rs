@@ -56,10 +56,6 @@ fn simple_case() {
         (grid.pos(1, 1), grid.pos(1, 0)),
     ];
 
-    let expected = vec![Operation {
-        select: grid.pos(0, 1),
-        movements: vec![Right, Up],
-    }];
     let actual = resolve(
         grid,
         movements,
@@ -69,25 +65,18 @@ fn simple_case() {
             select_cost: 1,
         },
     );
-    test_answers(expected, actual);
+    test_answers(1, 2, actual);
 }
 
-fn test_answers<E, A, AI, T>(expected: E, actual_gen: A)
-where
-    E: IntoIterator<Item = T> + Clone,
-    A: IntoIterator<Item = AI>,
-    T: PartialEq + std::fmt::Debug,
-    E::IntoIter: ExactSizeIterator + std::fmt::Debug,
-    AI: IntoIterator<Item = T>,
-    AI::IntoIter: ExactSizeIterator + std::fmt::Debug,
-{
+fn test_answers(
+    select_count: usize,
+    swap_count: usize,
+    actual_gen: impl Iterator<Item = Vec<Operation>>,
+) {
     assert!(actual_gen.into_iter().any(|actual| {
-        let expected = expected.clone().into_iter();
-        let actual = actual.into_iter();
-        if expected.len() != actual.len() {
-            return false;
-        }
-        expected.zip(actual).all(|(e, a)| e == a)
+        actual.into_iter().fold((0, 0), |(selects, swaps), op| {
+            (selects + 1, swaps + op.movements.len())
+        }) == (select_count, swap_count)
     }));
 }
 
@@ -102,16 +91,7 @@ fn case1() {
         (grid.pos(1, 0), grid.pos(0, 1)),
         (grid.pos(2, 0), grid.pos(1, 0)),
     ];
-    let expected = vec![
-        Operation {
-            select: grid.pos(2, 0),
-            movements: vec![Left, Left, Down, Left],
-        },
-        Operation {
-            select: grid.pos(1, 0),
-            movements: vec![Left],
-        },
-    ];
+
     let actual = resolve(
         grid,
         case,
@@ -121,7 +101,7 @@ fn case1() {
             select_cost: 2,
         },
     );
-    test_answers(expected, actual);
+    test_answers(2, 5, actual);
 }
 
 #[test]
@@ -135,16 +115,7 @@ fn case2() {
         (grid.pos(3, 0), grid.pos(0, 1)),
         (grid.pos(0, 1), grid.pos(0, 0)),
     ];
-    let expected = vec![
-        Operation {
-            select: grid.pos(0, 1),
-            movements: vec![Left, Up],
-        },
-        Operation {
-            select: grid.pos(0, 1),
-            movements: vec![Up],
-        },
-    ];
+
     let actual = resolve(
         grid,
         case,
@@ -154,7 +125,7 @@ fn case2() {
             select_cost: 1,
         },
     );
-    test_answers(expected, actual);
+    test_answers(2, 3, actual);
 }
 
 #[test]
@@ -170,16 +141,7 @@ fn case3() {
         (grid.pos(1, 1), grid.pos(2, 1)),
         (grid.pos(2, 1), grid.pos(0, 1)),
     ];
-    let expected = vec![
-        Operation {
-            select: grid.pos(1, 1),
-            movements: vec![Up, Right, Right],
-        },
-        Operation {
-            select: grid.pos(2, 1),
-            movements: vec![Right, Right],
-        },
-    ];
+
     let actual = resolve(
         grid,
         case,
@@ -189,7 +151,7 @@ fn case3() {
             select_cost: 3,
         },
     );
-    test_answers(expected, actual);
+    test_answers(2, 5, actual);
 }
 
 #[test]
@@ -205,10 +167,7 @@ fn case4() {
         (grid.pos(1, 2), grid.pos(0, 2)),
         (grid.pos(1, 0), grid.pos(1, 2)),
     ];
-    let expected = vec![Operation {
-        select: grid.pos(1, 1),
-        movements: vec![Up, Right, Right, Right, Up, Left, Down, Left],
-    }];
+
     let actual = resolve(
         grid,
         case,
@@ -218,7 +177,7 @@ fn case4() {
             select_cost: 8,
         },
     );
-    test_answers(expected, actual);
+    test_answers(1, 8, actual);
 }
 
 #[test]
