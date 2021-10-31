@@ -36,6 +36,81 @@ impl Completer {
             param,
         }
     }
+
+    fn cost_on(&self, action: GridAction) -> u64 {
+        match action {
+            GridAction::Swap(_) => self.param.swap_cost as u64,
+            GridAction::Select(_) => self.param.select_cost as u64,
+        }
+    }
+
+    fn apply(&self, action: GridAction) -> Self {
+        match action {
+            GridAction::Swap(mov) => {
+                let selected = self.board.selected().unwrap();
+                let finder = BoardFinder::new(self.board.grid());
+                let next_swap = finder.move_pos_to(selected, mov);
+                let mut new_board = self.board.clone();
+                new_board.swap_to(next_swap);
+                Self {
+                    board: new_board,
+                    dist: self.dist.swap_on(
+                        (selected, next_swap),
+                        &self.board.field(),
+                        &self.pre_calc,
+                    ),
+                    prev_action: Some(action),
+                    ..self.clone()
+                }
+            }
+            GridAction::Select(sel) => {
+                let mut new_board = self.board.clone();
+                new_board.select(sel);
+                let mut param = self.param;
+                param.select_limit -= 1;
+                Self {
+                    board: new_board,
+                    param,
+                    prev_action: Some(action),
+                    ..self.clone()
+                }
+            }
+        }
+    }
+
+    fn next_actions(&self) -> Vec<GridAction> {
+        // 揃っているマスどうしは入れ替えない
+        let field = self.board.field();
+        let different_cells = field
+            .iter_with_pos()
+            .filter(|&(pos, &cell)| pos != cell)
+            .map(|(_, &cell)| cell);
+        if self.prev_action.is_none() {
+            return different_cells.map(GridAction::Select).collect();
+        }
+        let selected = self.board.selected().unwrap();
+        let prev = self.prev_action.unwrap();
+        let swapping_states = self
+            .board
+            .around_of(selected)
+            .map(|to| Movement::between_pos(selected, to))
+            .filter(|&around| {
+                if let GridAction::Swap(dir) = prev {
+                    around != dir.opposite()
+                } else {
+                    true
+                }
+            })
+            .map(GridAction::Swap);
+        if matches!(prev, GridAction::Swap(_)) && 1 <= self.param.select_limit {
+            let selecting_states = different_cells
+                .filter(|&p| p != selected)
+                .map(GridAction::Select);
+            swapping_states.chain(selecting_states).collect()
+        } else {
+            swapping_states.collect()
+        }
+    }
 }
 
 impl std::fmt::Debug for Completer {
@@ -67,72 +142,12 @@ impl Hash for Completer {
 impl IdaSearchState for Completer {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
-        match action {
-            GridAction::Swap(mov) => {
-                let selected = self.board.selected().unwrap();
-                let finder = BoardFinder::new(self.board.grid());
-                let next_swap = finder.move_pos_to(selected, mov);
-                let mut new_board = self.board.clone();
-                new_board.swap_to(next_swap);
-                Self {
-                    board: new_board,
-                    dist: self.dist.swap_on(
-                        (selected, next_swap),
-                        &self.board.field(),
-                        &self.pre_calc,
-                    ),
-                    prev_action: Some(action),
-                    ..self.clone()
-                }
-            }
-            GridAction::Select(sel) => {
-                let mut new_board = self.board.clone();
-                new_board.select(sel);
-                let mut param = self.param;
-                param.select_limit -= 1;
-                Self {
-                    board: new_board,
-                    param,
-                    prev_action: Some(action),
-                    ..self.clone()
-                }
-            }
-        }
+        self.apply(action)
     }
 
     type AS = Vec<GridAction>;
     fn next_actions(&self) -> Self::AS {
-        // 揃っているマスどうしは入れ替えない
-        let field = self.board.field();
-        let different_cells = field
-            .iter_with_pos()
-            .filter(|&(pos, &cell)| pos != cell)
-            .map(|(_, &cell)| cell);
-        if self.prev_action.is_none() {
-            return different_cells.map(GridAction::Select).collect();
-        }
-        let selected = self.board.selected().unwrap();
-        let prev = self.prev_action.unwrap();
-        let swapping_states = self
-            .board
-            .around_of(selected)
-            .map(|to| Movement::between_pos(selected, to))
-            .filter(|&around| {
-                if let GridAction::Swap(dir) = prev {
-                    around != dir.opposite()
-                } else {
-                    true
-                }
-            })
-            .map(GridAction::Swap);
-        if matches!(prev, GridAction::Swap(_)) && 1 <= self.param.select_limit {
-            let selecting_states = different_cells
-                .filter(|&p| p != selected)
-                .map(GridAction::Select);
-            swapping_states.chain(selecting_states).collect()
-        } else {
-            swapping_states.collect()
-        }
+        self.next_actions()
     }
 
     fn is_goal(&self) -> bool {
@@ -145,82 +160,19 @@ impl IdaSearchState for Completer {
     }
 
     fn cost_on(&self, action: Self::A) -> Self::C {
-        match action {
-            GridAction::Swap(_) => self.param.swap_cost as u64,
-            GridAction::Select(_) => self.param.select_cost as u64,
-        }
+        self.cost_on(action)
     }
 }
 
 impl BeamSearchState for Completer {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
-        match action {
-            GridAction::Swap(mov) => {
-                let selected = self.board.selected().unwrap();
-                let finder = BoardFinder::new(self.board.grid());
-                let next_swap = finder.move_pos_to(selected, mov);
-                let mut new_board = self.board.clone();
-                new_board.swap_to(next_swap);
-                Self {
-                    board: new_board,
-                    dist: self.dist.swap_on(
-                        (selected, next_swap),
-                        &self.board.field(),
-                        &self.pre_calc,
-                    ),
-                    prev_action: Some(action),
-                    ..self.clone()
-                }
-            }
-            GridAction::Select(sel) => {
-                let mut new_board = self.board.clone();
-                new_board.select(sel);
-                let mut param = self.param;
-                param.select_limit -= 1;
-                Self {
-                    board: new_board,
-                    param,
-                    prev_action: Some(action),
-                    ..self.clone()
-                }
-            }
-        }
+        self.apply(action)
     }
 
     type AS = Vec<GridAction>;
     fn next_actions(&self) -> Self::AS {
-        // 揃っているマスどうしは入れ替えない
-        let field = self.board.field();
-        let different_cells = field
-            .iter_with_pos()
-            .filter(|&(pos, &cell)| pos != cell)
-            .map(|(_, &cell)| cell);
-        if self.prev_action.is_none() {
-            return different_cells.map(GridAction::Select).collect();
-        }
-        let selected = self.board.selected().unwrap();
-        let prev = self.prev_action.unwrap();
-        let swapping_states = self
-            .board
-            .around_of(selected)
-            .map(|to| Movement::between_pos(selected, to))
-            .filter(|&around| {
-                if let GridAction::Swap(dir) = prev {
-                    around != dir.opposite()
-                } else {
-                    true
-                }
-            })
-            .map(GridAction::Swap);
-        if matches!(prev, GridAction::Swap(_)) && 1 <= self.param.select_limit {
-            let selecting_states = different_cells
-                .filter(|&p| p != selected)
-                .map(GridAction::Select);
-            swapping_states.chain(selecting_states).collect()
-        } else {
-            swapping_states.collect()
-        }
+        self.next_actions()
     }
 
     fn is_goal(&self) -> bool {
@@ -229,10 +181,7 @@ impl BeamSearchState for Completer {
 
     type C = u64;
     fn cost_on(&self, action: Self::A) -> Self::C {
-        match action {
-            GridAction::Swap(_) => self.param.swap_cost as u64,
-            GridAction::Select(_) => self.param.select_cost as u64,
-        }
+        self.cost_on(action)
     }
 
     fn enrichment_key(&self) -> usize {
