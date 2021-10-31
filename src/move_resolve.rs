@@ -10,7 +10,6 @@ use crate::{
     move_resolve::{
         approx::{gen::FromOutside, Solver},
         beam_search::beam_search,
-        ida_star::ida_star,
         state::{completer::Completer, cost_reducer::CostReducer, GridAction},
     },
 };
@@ -132,30 +131,33 @@ fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option
         param.select_limit -= selects as u8;
         let cost_until_2nd =
             { selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64 };
-        let (third_actions, cost) = ida_star(
+        beam_search(
             Completer::new(board.clone(), param, actions.last().copied()),
-            0,
+            1000,
             min_cost - cost_until_2nd,
-        )?;
+        )
+        .next()
+        .map(|(third_actions, cost)| {
+            apply_actions(&mut board, &third_actions);
+            debug_assert!(
+                board
+                    .field()
+                    .iter_with_pos()
+                    .all(|(pos, &cell)| pos == cell),
+                "the board must be completed"
+            );
 
-        apply_actions(&mut board, &third_actions);
-        debug_assert!(
-            board
-                .field()
-                .iter_with_pos()
-                .all(|(pos, &cell)| pos == cell),
-            "the board must be completed"
-        );
-
-        let cost = cost_until_2nd + cost;
-        if cost < min_cost {
-            min_cost = cost;
-            actions.extend(third_actions.into_iter());
-            eprintln!("{:?}", actions);
-            Some(actions_to_operations(actions))
-        } else {
-            None
-        }
+            let cost = cost_until_2nd + cost;
+            if cost < min_cost {
+                min_cost = cost;
+                actions.extend(third_actions.into_iter());
+                eprintln!("{:?}", actions);
+                Some(actions_to_operations(actions))
+            } else {
+                None
+            }
+        })
+        .flatten()
     }
 }
 
