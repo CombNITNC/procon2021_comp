@@ -94,7 +94,7 @@ fn phase1(
     let phase1 = Rc::clone(&empty);
     let chain = Rc::clone(&empty);
 
-    beam_search(CostReducer::new(empty.as_ref().clone(), param), 4000, 2000)
+    beam_search(CostReducer::new(empty.as_ref().clone(), param), 500, 2000)
         .map(move |(actions, _)| {
             let mut board = phase1.as_ref().clone();
             apply_actions(&mut board, &actions);
@@ -133,11 +133,11 @@ fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option
             { selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64 };
         beam_search(
             Completer::new(board.clone(), param, actions.last().copied()),
-            1000,
+            250,
             min_cost - cost_until_2nd,
         )
         .next()
-        .map(|(third_actions, cost)| {
+        .and_then(|(third_actions, cost)| {
             apply_actions(&mut board, &third_actions);
             debug_assert!(
                 board
@@ -157,7 +157,6 @@ fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option
                 None
             }
         })
-        .flatten()
     }
 }
 
