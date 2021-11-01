@@ -1,7 +1,5 @@
 use std::{hash::Hash, ops};
 
-use smallvec::{smallvec, SmallVec};
-
 use super::{Grid, Pos};
 
 /// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
@@ -9,6 +7,18 @@ use super::{Grid, Pos};
 pub struct VecOnGrid<T> {
     vec: Vec<T>,
     pub grid: Grid,
+}
+
+impl<T: PartialEq> PartialEq for VecOnGrid<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.vec == other.vec
+    }
+}
+
+impl<T: Hash> Hash for VecOnGrid<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.vec.hash(state);
+    }
 }
 
 impl<T: PartialEq> PartialEq for VecOnGrid<T> {
