@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::mpsc;
 
 use crate::basis::{Color, Dir, Rot};
-use crate::fragment::{Fragment};
+use crate::fragment::Fragment;
 use crate::grid::{Grid, Pos, VecOnGrid};
 use crate::pixel_match::gui::{EdgePos, GuiRequest, GuiResponse};
 
@@ -239,7 +239,7 @@ impl ResolveHints {
 
     fn lock_pair_as_end(&mut self, pos: EdgePos) {
         if let Some(r) = self.locked_pairs.get_mut(&pos) {
-            r.continue_after_apply = true;
+            r.continue_after_apply = false;
         }
     }
 
