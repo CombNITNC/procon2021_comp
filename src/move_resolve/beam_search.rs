@@ -1,12 +1,8 @@
 use std::{
-    cmp::Ordering,
-    collections::{BinaryHeap, HashMap, HashSet},
-    hash::Hash,
-    iter::FromIterator,
-    ops::Add,
-    sync::Mutex,
+    cmp::Ordering, collections::BinaryHeap, hash::Hash, iter::FromIterator, ops::Add, sync::Mutex,
 };
 
+use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 /// ビームサーチする状態が実装するべき trait.
@@ -42,7 +38,7 @@ where
         }
 
         let mut heap = BinaryHeap::with_capacity(beam_width);
-        let visited: Mutex<_> = HashSet::new().into();
+        let visited: Mutex<_> = HashSet::default().into();
 
         visited.lock().unwrap().insert(initial_state.clone());
         heap.push(Node {
@@ -91,7 +87,7 @@ where
             if nexts.is_empty() {
                 break;
             }
-            let mut enriched = HashMap::new();
+            let mut enriched = HashMap::default();
             for next in nexts {
                 if next.state.is_goal() {
                     return Some((next.answer, next.cost));
