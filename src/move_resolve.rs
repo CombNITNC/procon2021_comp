@@ -77,22 +77,23 @@ pub fn resolve(
     movements: &'_ [(Pos, Pos)],
     param: ResolveParam,
 ) -> impl Iterator<Item = Vec<Operation>> + '_ {
-    phase1(grid, movements, param)
+    phase1(grid, movements, param, 500)
         .flat_map(phase2)
-        .flat_map(phase3(param))
+        .flat_map(phase3(param, 250))
 }
 
 fn phase1(
     grid: Grid,
     movements: &[(Pos, Pos)],
     param: ResolveParam,
+    beam_width: usize,
 ) -> impl Iterator<Item = (Vec<GridAction>, Board)> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
     let empty = Board::new(None, nodes);
     let phase1 = empty.clone();
     let chain = empty.clone();
 
-    beam_search(CostReducer::new(empty, param), 500, 2000)
+    beam_search(CostReducer::new(empty, param), beam_width, 2000)
         .map(move |(actions, _)| {
             let mut board = phase1.clone();
             apply_actions(&mut board, &actions);
@@ -121,7 +122,10 @@ fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<Gri
     Some((actions, board))
 }
 
-fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option<Vec<Operation>> {
+fn phase3(
+    param: ResolveParam,
+    beam_width: usize,
+) -> impl FnMut((Vec<GridAction>, Board)) -> Option<Vec<Operation>> {
     let mut min_cost = 10_000_000_000_u64;
     move |(mut actions, mut board): (Vec<GridAction>, Board)| {
         let mut param = param;
@@ -131,7 +135,7 @@ fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option
             { selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64 };
         beam_search(
             Completer::new(board.clone(), param, actions.last().copied()),
-            250,
+            beam_width,
             min_cost - cost_until_2nd,
         )
         .next()
