@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use self::{edges_nodes::Nodes, state::actions_to_operations};
 use crate::{
     basis::Operation,
@@ -90,18 +88,18 @@ fn phase1(
     param: ResolveParam,
 ) -> impl Iterator<Item = (Vec<GridAction>, Board)> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
-    let empty = Rc::new(Board::new(None, nodes));
-    let phase1 = Rc::clone(&empty);
-    let chain = Rc::clone(&empty);
+    let empty = Board::new(None, nodes);
+    let phase1 = empty.clone();
+    let chain = empty.clone();
 
-    beam_search(CostReducer::new(empty.as_ref().clone(), param), 500, 2000)
+    beam_search(CostReducer::new(empty, param), 500, 2000)
         .map(move |(actions, _)| {
-            let mut board = phase1.as_ref().clone();
+            let mut board = phase1.clone();
             apply_actions(&mut board, &actions);
             (actions, board)
         })
         .chain(grid.all_pos().map(move |select| {
-            let mut board = chain.as_ref().clone();
+            let mut board = chain.clone();
             board.select(select);
             (vec![GridAction::Select(select)], board)
         }))
