@@ -4,7 +4,7 @@ use crate::{
     grid::{Pos, VecOnGrid},
 };
 
-use super::{average_distance, find_and_remove, find_with, gui::EdgePos, DiffEntry, ResolveHints};
+use super::{average_distance, find_with, gui::EdgePos, DiffEntry, FindAndRemove, ResolveHints};
 
 fn get_edge_pixels(grid: &VecOnGrid<Option<Fragment>>, pos: Pos, dir: Dir) -> Option<&Vec<Color>> {
     Some(&grid[pos].as_ref()?.edges.edge(dir).pixels)
@@ -72,11 +72,11 @@ fn fill_by_double_side_inner(
     };
 
     let blocklist_pos = fragment_grid[blocklist_pos].as_ref().unwrap().pos;
-    let blocklist = hints.blocklist_of(blocklist_pos);
+    let blocklist = hints.take_blacklist(blocklist_pos);
 
     let min = find_by_double_side(fragments, reference_iter, (blocklist, index));
 
-    let mut fragment = find_and_remove(fragments, min.pos).unwrap();
+    let mut fragment = fragments.find_and_remove(|x| x.pos == min.pos).unwrap();
     fragment.rotate(ref1_dir.calc_rot(min.dir));
 
     fragment_grid[pos] = Some(fragment);

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::mpsc;
 
 use crate::basis::{Color, Dir, Rot};
-use crate::fragment::{Edge, Fragment};
+use crate::fragment::{Fragment};
 use crate::grid::{Grid, Pos, VecOnGrid};
 use crate::pixel_match::gui::{EdgePos, GuiRequest, GuiResponse};
 
@@ -237,11 +237,17 @@ impl ResolveHints {
         self.locked_pairs.remove(&pos);
     }
 
-    fn blocklist_of(&mut self, pos: Pos) -> impl Iterator<Item = &EdgePos> + Clone {
-        self.blocklist.entry(pos).or_default().iter()
+    fn lock_pair_as_end(&mut self, pos: EdgePos) {
+        if let Some(r) = self.locked_pairs.get_mut(&pos) {
+            r.continue_after_apply = true;
+        }
     }
 
-    fn locked_pairs_of(&mut self, pos: EdgePos) -> Option<LockedPairs> {
+    fn take_blacklist(&self, pos: Pos) -> impl Iterator<Item = &EdgePos> + Clone {
+        self.blocklist.get(&pos).into_iter().flatten()
+    }
+
+    fn take_locked_pairs(&mut self, pos: EdgePos) -> Option<LockedPairs> {
         self.locked_pairs.remove(&pos)
     }
 }

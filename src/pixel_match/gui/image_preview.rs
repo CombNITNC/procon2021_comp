@@ -10,7 +10,9 @@ use crate::{
     basis::{Dir, Rot},
     fragment::Fragment,
     grid::VecOnGrid,
-    pixel_match::gui::{EdgePos, Hint},
+    pixel_match::{
+        gui::{EdgePos, Hint},
+    },
 };
 
 use super::{
@@ -207,7 +209,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                     return;
                 }
 
-                let reference_side = Self::calc_reference_side(root.into(), selecting);
+                let reference_side = Self::calc_reference_side(root, selecting);
                 let reference_pos = selecting.move_to(reference_side);
 
                 let selecting = grid.pos(selecting.0, selecting.1);
@@ -402,7 +404,9 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 .into()
         };
 
-        for (edgepos, list, _) in &global_state.hints.locked_pairs {
+        for (edgepos, entry) in &global_state.hints.locked_pairs {
+            let list = &entry.tail;
+
             let growing_dir = match (
                 pos_on_gui_grid(edgepos.pos.into()),
                 pos_on_gui_grid(list[0].0.into()),

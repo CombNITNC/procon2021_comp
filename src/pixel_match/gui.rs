@@ -171,7 +171,7 @@ struct GuiState {
 
 enum HintsEditKind {
     Blocklist(GridPos, EdgePos),
-    ConfirmedPairs(EdgePos),
+    LockedPairs(EdgePos),
 }
 
 #[derive(Debug)]
@@ -190,8 +190,7 @@ impl GuiState {
 
             Hint::ConfirmedPair(e, t) => {
                 // ここでは再計算をしない (ロックをしただけでは結果画像は変化しないため)
-                self.hints_edit_history
-                    .push(HintsEditKind::ConfirmedPairs(e));
+                self.hints_edit_history.push(HintsEditKind::LockedPairs(e));
                 self.hints.push_locked_pair(e, LockedPairs::new(t));
             }
         }
@@ -204,7 +203,7 @@ impl GuiState {
                 self.hints.remove_blocklist(p, e);
             }
 
-            Some(HintsEditKind::ConfirmedPairs(e)) => {
+            Some(HintsEditKind::LockedPairs(e)) => {
                 self.hints_updated = true;
                 self.hints.remove_locked_pair(e);
             }
@@ -218,8 +217,16 @@ impl GuiState {
     }
 
     fn stop_continue_last_hint(&mut self) {
-        self.hints.locked_pairs.last_mut().unwrap().2 = false;
-        self.hints_updated = true;
+        let last_locked_pair = self
+            .hints_edit_history
+            .iter()
+            .rev()
+            .find(|x| matches!(x, HintsEditKind::LockedPairs(_)));
+
+        if let Some(&HintsEditKind::LockedPairs(p)) = last_locked_pair {
+            self.hints.lock_pair_as_end(p);
+            self.hints_updated = true;
+        }
     }
 
     fn process_sdl_event(&mut self, event: &Event) {

@@ -51,7 +51,7 @@ impl<'a> Finder<'a> {
         let fragment_pos = self.list.borrow().last().unwrap_or(self.ctx.root_ref).pos;
         let edgepos = EdgePos::new(fragment_pos, self.dir);
 
-        if let Some(pairs) = self.ctx.hints.borrow_mut().locked_pairs_of(edgepos) {
+        if let Some(pairs) = self.ctx.hints.borrow_mut().take_locked_pairs(edgepos) {
             let tail_len = pairs.tail.len();
 
             if self.list.borrow().len() + self.oppisite_list.borrow().len() + tail_len + 1
@@ -91,7 +91,7 @@ impl<'a> Finder<'a> {
         let mut result = find_by_single_side(
             *self.ctx.fragments.borrow(),
             fragment_ref.edges.edge(self.dir),
-            self.ctx.hints.borrow().blocklist_of(fragment_ref.pos),
+            self.ctx.hints.borrow().take_blacklist(fragment_ref.pos),
         );
 
         if self.stop {
