@@ -1,10 +1,5 @@
 use std::{
-    cmp::Ordering,
-    collections::BinaryHeap,
-    hash::Hash,
-    iter::FromIterator,
-    ops::Add,
-    sync::{Mutex, RwLock},
+    cmp::Ordering, collections::BinaryHeap, hash::Hash, iter::FromIterator, ops::Add, sync::Mutex,
 };
 
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -50,9 +45,9 @@ where
             return Some((vec![], C::default()));
         }
 
-        let visited: RwLock<_> = HashSet::default().into();
+        let mut visited = HashSet::default();
 
-        visited.write().unwrap().insert(initial_state.clone());
+        visited.insert(initial_state.clone());
 
         'search: loop {
             let nexts = Mutex::new(HashSet::default());
@@ -69,7 +64,7 @@ where
                         let mut next_states = HashSet::default();
                         for action in state.next_actions() {
                             let next_state = state.apply(action);
-                            if !visited.read().unwrap().contains(&next_state) {
+                            if !visited.contains(&next_state) {
                                 let next_cost = cost + state.cost_on(action);
 
                                 if max_cost <= next_cost {
@@ -94,12 +89,11 @@ where
                 break None;
             }
             let mut enriched = HashMap::default();
-            let mut write_ref = visited.write().unwrap();
             for next in nexts {
                 if next.state.is_goal() {
                     break 'search Some((next.answer, next.cost));
                 }
-                write_ref.insert(next.state.clone());
+                visited.insert(next.state.clone());
                 enriched
                     .entry(next.state.enrichment_key())
                     .or_insert_with(|| BinaryHeap::with_capacity(beam_width))
