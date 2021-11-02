@@ -47,7 +47,7 @@ where
             cost: C::default(),
         });
 
-        while !heap.is_empty() {
+        loop {
             let heap_len = heap.len();
             let nexts: HashSet<_> = heap
                 .into_iter()
@@ -85,12 +85,12 @@ where
                 )
                 .collect();
             if nexts.is_empty() {
-                break;
+                break None;
             }
             let mut enriched = HashMap::default();
             for next in nexts {
                 if next.state.is_goal() {
-                    return Some((next.answer, next.cost));
+                    break Some((next.answer, next.cost));
                 }
                 enriched
                     .entry(next.state.enrichment_key())
@@ -105,7 +105,6 @@ where
                     .flat_map(|heap| heap.into_iter().take(take_len)),
             );
         }
-        None
     })
 }
 
