@@ -51,6 +51,7 @@ where
 
         'search: loop {
             let nexts = Mutex::new(HashSet::default());
+            nexts.lock().unwrap().reserve(beam_width);
             heap.clone()
                 .into_iter()
                 .par_bridge()
@@ -61,6 +62,7 @@ where
                          cost,
                      }| {
                         let mut next_states = HashSet::default();
+                        next_states.reserve(300);
                         for action in state.next_actions() {
                             let next_cost = cost + state.cost_on(action);
 
@@ -88,6 +90,7 @@ where
                 break None;
             }
             let mut enriched = HashMap::default();
+            enriched.reserve(nexts.len());
             for next in nexts {
                 if next.state.is_goal() {
                     break 'search Some((next.answer, next.cost));
