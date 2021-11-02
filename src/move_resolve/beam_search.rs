@@ -1,12 +1,17 @@
 use std::{
-    cmp::Ordering, collections::BinaryHeap, hash::Hash, iter::FromIterator, ops::Add, sync::Mutex,
+    cmp::Ordering,
+    collections::BinaryHeap,
+    hash::Hash,
+    iter::FromIterator,
+    ops::Add,
+    sync::{Mutex, RwLock},
 };
 
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 /// ビームサーチする状態が実装するべき trait.
-pub trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send {
+pub trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send + Sync {
     type A: Copy + std::fmt::Debug + Send;
     fn apply(&self, action: Self::A) -> Self;
 
@@ -32,26 +37,28 @@ where
     C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug + Send + Sync,
     <<S as BeamSearchState>::AS as IntoIterator>::IntoIter: Send,
 {
+    let mut heap = BinaryHeap::with_capacity(beam_width);
+
+    heap.push(Node {
+        state: initial_state.clone(),
+        answer: vec![],
+        cost: C::default(),
+    });
+
     std::iter::from_fn(move || {
         if initial_state.is_goal() {
             return Some((vec![], C::default()));
         }
 
-        let mut heap = BinaryHeap::with_capacity(beam_width);
-        let visited: Mutex<_> = HashSet::default().into();
+        let visited: RwLock<_> = HashSet::default().into();
 
-        visited.lock().unwrap().insert(initial_state.clone());
-        heap.push(Node {
-            state: initial_state.clone(),
-            answer: vec![],
-            cost: C::default(),
-        });
+        visited.write().unwrap().insert(initial_state.clone());
 
         'search: loop {
-            let heap_len = heap.len();
             let nexts = Mutex::new(HashSet::default());
-            heap.into_iter()
-                .take(beam_width.min(heap_len))
+            heap.clone()
+                .into_iter()
+                .take(beam_width)
                 .par_bridge()
                 .map(
                     |Node {
@@ -62,7 +69,7 @@ where
                         let mut next_states = HashSet::default();
                         for action in state.next_actions() {
                             let next_state = state.apply(action);
-                            if !visited.lock().unwrap().contains(&next_state) {
+                            if !visited.read().unwrap().contains(&next_state) {
                                 let next_cost = cost + state.cost_on(action);
 
                                 if max_cost <= next_cost {
@@ -71,8 +78,6 @@ where
 
                                 let mut next_answer = answer.clone();
                                 next_answer.push(action);
-
-                                visited.lock().unwrap().insert(next_state.clone());
                                 next_states.insert(Node {
                                     state: next_state,
                                     answer: next_answer,
@@ -89,10 +94,12 @@ where
                 break None;
             }
             let mut enriched = HashMap::default();
+            let mut write_ref = visited.write().unwrap();
             for next in nexts {
                 if next.state.is_goal() {
                     break 'search Some((next.answer, next.cost));
                 }
+                write_ref.insert(next.state.clone());
                 enriched
                     .entry(next.state.enrichment_key())
                     .or_insert_with(|| BinaryHeap::with_capacity(beam_width))
@@ -109,6 +116,7 @@ where
     })
 }
 
+#[derive(Debug, Clone)]
 struct Node<S, A, C> {
     state: S,
     answer: Vec<A>,
