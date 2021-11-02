@@ -53,7 +53,6 @@ where
             let nexts = Mutex::new(HashSet::default());
             heap.clone()
                 .into_iter()
-                .take(beam_width)
                 .par_bridge()
                 .map(
                     |Node {
