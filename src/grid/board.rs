@@ -1,4 +1,6 @@
-use std::{collections::HashSet, hash::Hash, ops::Deref};
+use std::{hash::Hash, ops::Deref};
+
+use fxhash::FxHashSet as HashSet;
 
 use super::{Grid, Pos, VecOnGrid};
 
@@ -37,7 +39,7 @@ impl Board {
             select,
             forward: field,
             reverse,
-            locked: HashSet::new(),
+            locked: HashSet::default(),
         }
     }
 

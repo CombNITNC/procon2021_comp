@@ -1,4 +1,6 @@
-use std::{collections::HashMap, hash::Hash, sync::Arc};
+use std::{hash::Hash, sync::Arc};
+
+use fxhash::FxHashMap as HashMap;
 
 use crate::{
     basis::Movement,
@@ -22,7 +24,7 @@ pub struct Completer {
 
 impl Completer {
     pub fn new(board: Board, param: ResolveParam, prev_action: Option<GridAction>) -> Self {
-        let pre_calc = SqManhattan::pre_calc(board.grid());
+        let pre_calc: HashMap<_, _> = SqManhattan::pre_calc(board.grid()).collect();
         let dist = board
             .field()
             .iter_with_pos()

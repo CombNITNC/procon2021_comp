@@ -1,4 +1,6 @@
-use std::{collections::HashSet, hash::Hash, ops::Add};
+use std::{hash::Hash, ops::Add};
+
+use fxhash::FxHashSet as HashSet;
 
 /// IDA* 探索する状態が実装するべき trait.
 pub trait IdaSearchState: Hash + Eq + Clone + std::fmt::Debug {
@@ -85,7 +87,7 @@ where
 {
     let mut history = vec![];
     let mut bound = lower_bound;
-    let mut visited = HashSet::new();
+    let mut visited = HashSet::default();
     loop {
         match find(
             start.clone(),

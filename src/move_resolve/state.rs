@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter::Sum, ops};
+use std::{iter::Sum, ops};
 
 use crate::{
     basis::{Movement, Operation},
@@ -12,27 +12,25 @@ pub mod cost_reducer;
 pub struct SqManhattan(u32);
 
 impl SqManhattan {
-    pub fn pre_calc(grid: Grid) -> HashMap<(Pos, Pos), Self> {
-        let mut map = HashMap::new();
-        for from in grid.all_pos() {
-            for to in grid.all_pos() {
+    pub fn pre_calc(grid: Grid) -> impl Iterator<Item = ((Pos, Pos), Self)> {
+        grid.all_pos().flat_map(move |from| {
+            grid.all_pos().map(move |to| {
                 let dist = grid.looping_manhattan_dist(from, to);
-                map.insert((from, to), Self(dist * dist));
-            }
-        }
-        map
+                ((from, to), Self(dist * dist))
+            })
+        })
     }
 
     pub fn as_u32(self) -> u32 {
         self.0
     }
 
-    pub fn swap_on(
-        self,
-        pair: (Pos, Pos),
-        field: &VecOnGrid<Pos>,
-        pre_calc: &HashMap<(Pos, Pos), Self>,
-    ) -> Self {
+    pub fn swap_on<P, T>(self, pair: (Pos, Pos), field: &VecOnGrid<Pos>, pre_calc: P) -> Self
+    where
+        P: AsRef<T>,
+        T: for<'a> ops::Index<&'a (Pos, Pos), Output = Self>,
+    {
+        let pre_calc = pre_calc.as_ref();
         let prev = pre_calc[&(pair.0, field[pair.0])] + pre_calc[&(pair.1, field[pair.1])];
         let next = pre_calc[&(pair.0, field[pair.1])] + pre_calc[&(pair.1, field[pair.0])];
         self + next - prev
