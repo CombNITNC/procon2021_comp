@@ -47,7 +47,7 @@ where
             cost: C::default(),
         });
 
-        loop {
+        'search: loop {
             let heap_len = heap.len();
             let nexts: HashSet<_> = heap
                 .into_iter()
@@ -90,7 +90,7 @@ where
             let mut enriched = HashMap::default();
             for next in nexts {
                 if next.state.is_goal() {
-                    break Some((next.answer, next.cost));
+                    break 'search Some((next.answer, next.cost));
                 }
                 enriched
                     .entry(next.state.enrichment_key())
