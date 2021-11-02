@@ -49,17 +49,17 @@ where
 
         'search: loop {
             let heap_len = heap.len();
-            let nexts: HashSet<_> = heap
-                .into_iter()
+            let nexts = Mutex::new(HashSet::default());
+            heap.into_iter()
                 .take(beam_width.min(heap_len))
                 .par_bridge()
-                .flat_map(
+                .map(
                     |Node {
                          state,
                          answer,
                          cost,
                      }| {
-                        let mut next_states = vec![];
+                        let mut next_states = HashSet::default();
                         for action in state.next_actions() {
                             let next_state = state.apply(action);
                             if !visited.lock().unwrap().contains(&next_state) {
@@ -73,7 +73,7 @@ where
                                 next_answer.push(action);
 
                                 visited.lock().unwrap().insert(next_state.clone());
-                                next_states.push(Node {
+                                next_states.insert(Node {
                                     state: next_state,
                                     answer: next_answer,
                                     cost: next_cost,
@@ -83,7 +83,8 @@ where
                         next_states
                     },
                 )
-                .collect();
+                .for_each(|next_set| nexts.lock().unwrap().extend(next_set.into_iter()));
+            let nexts = nexts.into_inner().unwrap();
             if nexts.is_empty() {
                 break None;
             }
