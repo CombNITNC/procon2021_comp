@@ -62,14 +62,14 @@ where
                      }| {
                         let mut next_states = HashSet::default();
                         for action in state.next_actions() {
+                            let next_cost = cost + state.cost_on(action);
+
+                            if max_cost <= next_cost {
+                                continue;
+                            }
+
                             let next_state = state.apply(action);
                             if !visited.contains(&next_state) {
-                                let next_cost = cost + state.cost_on(action);
-
-                                if max_cost <= next_cost {
-                                    continue;
-                                }
-
                                 let mut next_answer = answer.clone();
                                 next_answer.push(action);
                                 next_states.insert(Node {
