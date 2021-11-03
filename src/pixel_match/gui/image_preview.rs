@@ -10,9 +10,7 @@ use crate::{
     basis::{Dir, Rot},
     fragment::Fragment,
     grid::VecOnGrid,
-    pixel_match::{
-        gui::{EdgePos, Hint},
-    },
+    pixel_match::gui::{EdgePos, Hint},
 };
 
 use super::{
