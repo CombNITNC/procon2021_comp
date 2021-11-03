@@ -61,7 +61,7 @@ impl<'a> Finder<'a> {
                 return;
             }
 
-            for (pos, rot) in pairs.tail.into_iter() {
+            for (pos, rot) in pairs.tail {
                 let mut fragment = match self
                     .ctx
                     .fragments
