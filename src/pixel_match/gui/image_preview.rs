@@ -108,7 +108,7 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 keycode: Some(Keycode::F),
                 ..
             } => {
-                println!("gui: set confirmed_pair continue field to false");
+                println!("gui: set locked_pair continue field to false");
                 global_state.stop_continue_last_hint();
             }
 
@@ -203,11 +203,11 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 let grid = self.image.recovered_image.grid;
 
                 if selecting == root {
-                    println!("gui: cannot apply blacklist on exact root pos");
+                    println!("gui: cannot apply blocklist on exact root pos");
                     return;
                 }
 
-                let reference_side = Self::calc_reference_side(root.into(), selecting);
+                let reference_side = Self::calc_reference_side(root, selecting);
                 let reference_pos = selecting.move_to(reference_side);
 
                 let selecting = grid.pos(selecting.0, selecting.1);
@@ -223,8 +223,8 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 .as_ref()
                 .unwrap();
 
-                global_state.push_hint(Hint::Blacklist(reference_fragment.pos, entry));
-                println!("gui: blacklist updated silently")
+                global_state.push_hint(Hint::Blocklist(reference_fragment.pos, entry));
+                println!("gui: blocklist updated silently")
             }
 
             _ => {}
@@ -402,7 +402,9 @@ impl<'tc> RecoveredImagePreview<'tc> {
                 .into()
         };
 
-        for (edgepos, list, _) in &global_state.hints.confirmed_pairs {
+        for (edgepos, entry) in &global_state.hints.locked_pairs {
+            let list = &entry.tail;
+
             let growing_dir = match (
                 pos_on_gui_grid(edgepos.pos.into()),
                 pos_on_gui_grid(list[0].0.into()),

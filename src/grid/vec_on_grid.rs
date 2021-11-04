@@ -1,16 +1,24 @@
 use std::{hash::Hash, ops};
 
-use smallvec::{smallvec, SmallVec};
-
 use super::{Grid, Pos};
-
-const STACK_BUFFER: usize = 16 * 16;
 
 /// `VecOnGrid` は `Grid` 上の `Pos` に対応付けた値を格納し `Pos` でアクセスできるコンテナを提供する.
 #[derive(Clone, Eq)]
 pub struct VecOnGrid<T> {
-    vec: SmallVec<[T; STACK_BUFFER]>,
+    vec: Vec<T>,
     pub grid: Grid,
+}
+
+impl<T: PartialEq> PartialEq for VecOnGrid<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.vec == other.vec
+    }
+}
+
+impl<T: Hash> Hash for VecOnGrid<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.vec.hash(state);
+    }
 }
 
 impl<T: PartialEq> PartialEq for VecOnGrid<T> {
@@ -31,7 +39,7 @@ impl<T> VecOnGrid<T> {
         T: Clone,
     {
         Self {
-            vec: smallvec![init; grid.width as usize * grid.height as usize],
+            vec: vec![init; grid.width as usize * grid.height as usize],
             grid,
         }
     }
@@ -194,7 +202,7 @@ impl<T: std::fmt::Debug> std::fmt::Debug for VecOnGrid<T> {
 impl<T> std::iter::IntoIterator for VecOnGrid<T> {
     type Item = T;
 
-    type IntoIter = smallvec::IntoIter<[T; STACK_BUFFER]>;
+    type IntoIter = std::vec::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.vec.into_iter()
