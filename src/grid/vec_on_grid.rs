@@ -21,18 +21,6 @@ impl<T: Hash> Hash for VecOnGrid<T> {
     }
 }
 
-impl<T: PartialEq> PartialEq for VecOnGrid<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.vec == other.vec
-    }
-}
-
-impl<T: Hash> Hash for VecOnGrid<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.vec.hash(state);
-    }
-}
-
 impl<T> VecOnGrid<T> {
     pub fn with_init(grid: Grid, init: T) -> Self
     where
@@ -61,10 +49,7 @@ impl<T> VecOnGrid<T> {
             return None;
         }
 
-        Some(Self {
-            grid,
-            vec: vec.into(),
-        })
+        Some(Self { grid, vec })
     }
 
     /// `a` の位置と `b` の位置の要素を入れ替える.
