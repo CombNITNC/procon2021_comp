@@ -1,6 +1,4 @@
-use std::{
-    cmp::Ordering, collections::BinaryHeap, hash::Hash, iter::FromIterator, ops::Add, sync::Mutex,
-};
+use std::{cmp::Ordering, collections::BinaryHeap, hash::Hash, ops::Add, sync::Mutex};
 
 use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -95,11 +93,11 @@ where
             }
             let kinds_of_key = nexts.len();
             let take_len = beam_width / kinds_of_key;
-            heap = BinaryHeap::from_iter(
-                nexts
-                    .into_values()
-                    .flat_map(|heap| heap.into_iter().take(take_len)),
-            );
+            let mut new_heap = BinaryHeap::with_capacity(beam_width);
+            for mut next in nexts.into_values().take(take_len) {
+                new_heap.append(&mut next);
+            }
+            heap = new_heap;
         }
     })
 }
