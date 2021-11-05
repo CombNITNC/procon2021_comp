@@ -7,8 +7,10 @@ use crate::{
 
 #[test]
 fn test_sq_manhattan() {
+    use std::collections::HashMap;
+
     let grid = Grid::new(2, 2);
-    let pre_calc = SqManhattan::pre_calc(grid);
+    let pre_calc: HashMap<_, _> = SqManhattan::pre_calc(grid).collect();
     assert_eq!(pre_calc[&(grid.pos(0, 1), grid.pos(1, 1))].as_u32(), 1);
     assert_eq!(pre_calc[&(grid.pos(0, 0), grid.pos(1, 1))].as_u32(), 4);
 }
