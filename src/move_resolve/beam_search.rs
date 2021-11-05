@@ -52,39 +52,35 @@ where
         'search: loop {
             let nexts = Mutex::new(HashSet::default());
             nexts.lock().unwrap().reserve(beam_width);
-            heap.clone()
-                .into_iter()
-                .par_bridge()
-                .map(
-                    |Node {
-                         state,
-                         answer,
-                         cost,
-                     }| {
-                        let mut next_states = HashSet::default();
-                        next_states.reserve(300);
-                        for action in state.next_actions() {
-                            let next_cost = cost + state.cost_on(action);
+            heap.clone().into_iter().par_bridge().for_each(
+                |Node {
+                     state,
+                     answer,
+                     cost,
+                 }| {
+                    let mut next_states = HashSet::default();
+                    next_states.reserve(300);
+                    for action in state.next_actions() {
+                        let next_cost = cost + state.cost_on(action);
 
-                            if max_cost <= next_cost {
-                                continue;
-                            }
-
-                            let next_state = state.apply(action);
-                            if !visited.contains(&next_state) {
-                                let mut next_answer = answer.clone();
-                                next_answer.push(action);
-                                next_states.insert(Node {
-                                    state: next_state,
-                                    answer: next_answer,
-                                    cost: next_cost,
-                                });
-                            }
+                        if max_cost <= next_cost {
+                            continue;
                         }
-                        next_states
-                    },
-                )
-                .for_each(|next_set| nexts.lock().unwrap().extend(next_set.into_iter()));
+
+                        let next_state = state.apply(action);
+                        if !visited.contains(&next_state) {
+                            let mut next_answer = answer.clone();
+                            next_answer.push(action);
+                            next_states.insert(Node {
+                                state: next_state,
+                                answer: next_answer,
+                                cost: next_cost,
+                            });
+                        }
+                    }
+                    nexts.lock().unwrap().extend(next_states)
+                },
+            );
             let nexts = nexts.into_inner().unwrap();
             if nexts.is_empty() {
                 break None;
