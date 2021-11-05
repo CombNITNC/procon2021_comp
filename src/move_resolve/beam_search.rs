@@ -50,7 +50,7 @@ where
         visited.insert(initial_state.clone());
 
         'search: loop {
-            let nexts = Mutex::new(HashSet::default());
+            let nexts = Mutex::new(HashMap::default());
             nexts.lock().unwrap().reserve(beam_width);
             heap.clone().into_iter().par_bridge().for_each(
                 |Node {
@@ -58,8 +58,6 @@ where
                      answer,
                      cost,
                  }| {
-                    let mut next_states = HashSet::default();
-                    next_states.reserve(300);
                     for action in state.next_actions() {
                         let next_cost = cost + state.cost_on(action);
 
@@ -71,36 +69,34 @@ where
                         if !visited.contains(&next_state) {
                             let mut next_answer = answer.clone();
                             next_answer.push(action);
-                            next_states.insert(Node {
-                                state: next_state,
-                                answer: next_answer,
-                                cost: next_cost,
-                            });
+                            nexts
+                                .lock()
+                                .unwrap()
+                                .entry(next_state.enrichment_key())
+                                .or_insert_with(|| BinaryHeap::with_capacity(beam_width))
+                                .push(Node {
+                                    state: next_state,
+                                    answer: next_answer,
+                                    cost: next_cost,
+                                });
                         }
                     }
-                    nexts.lock().unwrap().extend(next_states)
                 },
             );
             let nexts = nexts.into_inner().unwrap();
             if nexts.is_empty() {
                 break None;
             }
-            let mut enriched = HashMap::default();
-            enriched.reserve(nexts.len());
-            for next in nexts {
+            for next in nexts.values().flat_map(|heap| heap.iter()) {
                 if next.state.is_goal() {
-                    break 'search Some((next.answer, next.cost));
+                    break 'search Some((next.answer.clone(), next.cost));
                 }
                 visited.insert(next.state.clone());
-                enriched
-                    .entry(next.state.enrichment_key())
-                    .or_insert_with(|| BinaryHeap::with_capacity(beam_width))
-                    .push(next);
             }
-            let kinds_of_key = enriched.len();
+            let kinds_of_key = nexts.len();
             let take_len = beam_width / kinds_of_key;
             heap = BinaryHeap::from_iter(
-                enriched
+                nexts
                     .into_values()
                     .flat_map(|heap| heap.into_iter().take(take_len)),
             );
