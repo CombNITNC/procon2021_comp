@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: cargo vcpkg -v build
       - name: Run tests
-        run: cargo test --release --verbose
+        run: cargo test --release --verbose -- --test-threads=1
 
   clippy_check:
     runs-on: windows-latest
