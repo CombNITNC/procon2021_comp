@@ -50,36 +50,10 @@ where
         'search: loop {
             let nexts = Mutex::new(HashMap::default());
             nexts.lock().unwrap().reserve(beam_width);
-            heap.clone().into_iter().par_bridge().for_each(
-                |Node {
-                     state,
-                     answer,
-                     cost,
-                 }| {
-                    if max_cost <= cost {
-                        return;
-                    }
-
-                    for action in state.next_actions() {
-                        let next_cost = cost + state.cost_on(action);
-                        let next_state = state.apply(action);
-                        if !visited.contains(&next_state) {
-                            let mut next_answer = answer.clone();
-                            next_answer.push(action);
-                            nexts
-                                .lock()
-                                .unwrap()
-                                .entry(next_state.enrichment_key())
-                                .or_insert_with(|| BinaryHeap::with_capacity(beam_width))
-                                .push(Node {
-                                    state: next_state,
-                                    answer: next_answer,
-                                    cost: next_cost,
-                                });
-                        }
-                    }
-                },
-            );
+            heap.clone()
+                .into_iter()
+                .par_bridge()
+                .for_each(search_nexts(beam_width, max_cost, &visited, &nexts));
             let nexts = nexts.into_inner().unwrap();
             if nexts.is_empty() {
                 break None;
@@ -99,6 +73,50 @@ where
             heap = new_heap;
         }
     })
+}
+
+type NextsMap<S, A, C> = HashMap<usize, BinaryHeap<Node<S, A, C>>>;
+
+fn search_nexts<'a, S, A, C>(
+    beam_width: usize,
+    max_cost: C,
+    visited: &'a HashSet<S>,
+    nexts: &'a Mutex<NextsMap<S, A, C>>,
+) -> impl Fn(Node<S, A, C>) + 'a
+where
+    S: BeamSearchState<C = C, A = A>,
+    A: Copy + std::fmt::Debug + Hash + Eq + Send,
+    C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug + Send + Sync,
+    <<S as BeamSearchState>::AS as IntoIterator>::IntoIter: Send,
+{
+    move |Node {
+              state,
+              answer,
+              cost,
+          }| {
+        if max_cost <= cost {
+            return;
+        }
+
+        for action in state.next_actions() {
+            let next_cost = cost + state.cost_on(action);
+            let next_state = state.apply(action);
+            if !visited.contains(&next_state) {
+                let mut next_answer = answer.clone();
+                next_answer.push(action);
+                nexts
+                    .lock()
+                    .unwrap()
+                    .entry(next_state.enrichment_key())
+                    .or_insert_with(|| BinaryHeap::with_capacity(beam_width))
+                    .push(Node {
+                        state: next_state,
+                        answer: next_answer,
+                        cost: next_cost,
+                    });
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
