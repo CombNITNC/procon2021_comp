@@ -126,7 +126,7 @@ fn phase3(
     param: ResolveParam,
     beam_width: usize,
 ) -> impl FnMut((Vec<GridAction>, Board)) -> Option<Vec<Operation>> {
-    let mut min_cost = 10_000_000_000_u64;
+    let mut min_cost = 100_000_000_u64;
     move |(mut actions, mut board): (Vec<GridAction>, Board)| {
         let mut param = param;
         let (selects, swaps) = actions_counts(&actions);
