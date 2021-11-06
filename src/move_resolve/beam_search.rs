@@ -56,13 +56,12 @@ where
                      answer,
                      cost,
                  }| {
+                    if max_cost <= cost {
+                        return;
+                    }
+
                     for action in state.next_actions() {
                         let next_cost = cost + state.cost_on(action);
-
-                        if max_cost <= next_cost {
-                            continue;
-                        }
-
                         let next_state = state.apply(action);
                         if !visited.contains(&next_state) {
                             let mut next_answer = answer.clone();
