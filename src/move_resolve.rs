@@ -77,9 +77,9 @@ pub fn resolve(
     movements: &'_ [(Pos, Pos)],
     param: ResolveParam,
 ) -> impl Iterator<Item = Vec<Operation>> + '_ {
-    phase1(grid, movements, param, 500)
+    phase1(grid, movements, param, 200)
         .flat_map(phase2)
-        .flat_map(phase3(param, 250))
+        .flat_map(phase3(param, 50))
 }
 
 fn phase1(
