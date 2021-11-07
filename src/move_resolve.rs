@@ -89,7 +89,7 @@ fn phase1(
     beam_width: usize,
 ) -> impl Iterator<Item = (Vec<GridAction>, Board)> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
-    let empty = Board::new(None, nodes);
+    let empty = Board::new(None, nodes.clone());
     let phase1 = empty.clone();
     let chain = empty.clone();
 
@@ -99,11 +99,15 @@ fn phase1(
             apply_actions(&mut board, &actions);
             (actions, board)
         })
-        .chain(grid.all_pos().map(move |select| {
-            let mut board = chain.clone();
-            board.select(select);
-            (vec![GridAction::Select(select)], board)
-        }))
+        .chain(
+            grid.all_pos()
+                .filter(move |&p| p != nodes[p])
+                .map(move |select| {
+                    let mut board = chain.clone();
+                    board.select(select);
+                    (vec![GridAction::Select(select)], board)
+                }),
+        )
 }
 
 fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<GridAction>, Board)> {
