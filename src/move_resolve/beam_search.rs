@@ -31,12 +31,7 @@ where
     <<S as BeamSearchState>::AS as IntoIterator>::IntoIter: Send,
 {
     let mut heap = BinaryHeap::with_capacity(beam_width);
-
-    heap.push(Node {
-        state: initial_state.clone(),
-        answer: vec![],
-        cost: C::default(),
-    });
+    let mut visited_goals = HashSet::default();
 
     std::iter::from_fn(move || {
         if initial_state.is_goal() {
@@ -46,6 +41,13 @@ where
         let mut visited = HashSet::default();
 
         visited.insert(initial_state.clone());
+        visited.extend(visited_goals.iter().cloned());
+
+        heap.push(Node {
+            state: initial_state.clone(),
+            answer: vec![],
+            cost: C::default(),
+        });
 
         'search: loop {
             let nexts = Mutex::new(HashMap::default());
@@ -60,6 +62,7 @@ where
             }
             for next in nexts.values().flat_map(|heap| heap.iter()) {
                 if next.state.is_goal() {
+                    visited_goals.insert(next.state.clone());
                     break 'search Some((next.answer.clone(), next.cost));
                 }
                 visited.insert(next.state.clone());
