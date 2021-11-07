@@ -93,7 +93,7 @@ fn phase1(
     let phase1 = empty.clone();
     let chain = empty.clone();
 
-    beam_search(CostReducer::new(empty, param), beam_width, 2000)
+    beam_search(CostReducer::new(empty, param), beam_width)
         .map(move |(actions, _)| {
             let mut board = phase1.clone();
             apply_actions(&mut board, &actions);
@@ -138,9 +138,13 @@ fn phase3(
         let cost_until_2nd =
             { selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64 };
         beam_search(
-            Completer::new(board.clone(), param, actions.last().copied()),
+            Completer::new(
+                board.clone(),
+                param,
+                actions.last().copied(),
+                min_cost - cost_until_2nd,
+            ),
             beam_width,
-            min_cost - cost_until_2nd,
         )
         .next()
         .and_then(|(third_actions, cost)| {

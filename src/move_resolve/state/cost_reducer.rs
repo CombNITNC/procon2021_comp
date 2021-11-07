@@ -156,6 +156,10 @@ impl BeamSearchState for CostReducer {
         }
     }
 
+    fn max_cost(&self) -> Self::C {
+        self.dist.as_u32() as u64 / 5
+    }
+
     fn enrichment_key(&self) -> usize {
         self.param.select_limit as usize
     }

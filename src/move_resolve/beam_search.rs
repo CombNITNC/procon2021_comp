@@ -16,13 +16,14 @@ pub trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send + Sync {
     type C: Copy + Ord + std::fmt::Debug + Send + Sync;
     fn cost_on(&self, action: Self::A) -> Self::C;
 
+    fn max_cost(&self) -> Self::C;
+
     fn enrichment_key(&self) -> usize;
 }
 
 pub fn beam_search<S, A, C>(
     initial_state: S,
     beam_width: usize,
-    max_cost: C,
 ) -> impl Iterator<Item = (Vec<A>, C)>
 where
     S: BeamSearchState<C = C, A = A>,
@@ -30,6 +31,8 @@ where
     C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug + Send + Sync,
     <<S as BeamSearchState>::AS as IntoIterator>::IntoIter: Send,
 {
+    let max_cost = initial_state.max_cost();
+
     let mut heap = BinaryHeap::with_capacity(beam_width);
     let mut visited_goals = HashSet::default();
 

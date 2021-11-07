@@ -20,10 +20,16 @@ pub struct Completer {
     dist: SqManhattan,
     pre_calc: Arc<HashMap<(Pos, Pos), SqManhattan>>,
     param: ResolveParam,
+    max_cost: u64,
 }
 
 impl Completer {
-    pub fn new(board: Board, param: ResolveParam, prev_action: Option<GridAction>) -> Self {
+    pub fn new(
+        board: Board,
+        param: ResolveParam,
+        prev_action: Option<GridAction>,
+        max_cost: u64,
+    ) -> Self {
         let pre_calc: HashMap<_, _> = SqManhattan::pre_calc(board.grid()).collect();
         let dist = board
             .field()
@@ -36,6 +42,7 @@ impl Completer {
             dist,
             pre_calc: Arc::new(pre_calc),
             param,
+            max_cost,
         }
     }
 
@@ -184,6 +191,10 @@ impl BeamSearchState for Completer {
     type C = u64;
     fn cost_on(&self, action: Self::A) -> Self::C {
         self.cost_on(action)
+    }
+
+    fn max_cost(&self) -> Self::C {
+        self.max_cost
     }
 
     fn enrichment_key(&self) -> usize {
