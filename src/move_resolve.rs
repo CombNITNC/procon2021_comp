@@ -130,20 +130,13 @@ fn phase3(
     param: ResolveParam,
     beam_width: usize,
 ) -> impl FnMut((Vec<GridAction>, Board)) -> Option<Vec<Operation>> {
-    let mut min_cost = 1000u64;
+    let mut min_cost = param.swap_cost as u64 * 36 + param.select_limit as u64 * 9;
     move |(mut actions, mut board): (Vec<GridAction>, Board)| {
         let mut param = param;
-        let (selects, swaps) = actions_counts(&actions);
+        let (selects, _) = actions_counts(&actions);
         param.select_limit -= selects as u8;
-        let cost_until_2nd =
-            { selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64 };
         beam_search(
-            Completer::new(
-                board.clone(),
-                param,
-                actions.last().copied(),
-                min_cost - cost_until_2nd,
-            ),
+            Completer::new(board.clone(), param, actions.last().copied(), min_cost),
             beam_width,
         )
         .next()
@@ -157,7 +150,6 @@ fn phase3(
                 "the board must be completed"
             );
 
-            let cost = cost_until_2nd + cost;
             if cost < min_cost {
                 min_cost = cost;
                 actions.extend(third_actions.into_iter());
