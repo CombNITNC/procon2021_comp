@@ -143,7 +143,6 @@ impl PartialEq for Completer {
 impl Hash for Completer {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.board.hash(state);
-        self.dist.hash(state);
         self.param.select_limit.hash(state);
     }
 }
