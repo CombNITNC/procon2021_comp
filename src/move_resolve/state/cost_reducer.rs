@@ -70,38 +70,26 @@ impl Hash for CostReducer {
 impl BeamSearchState for CostReducer {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
+        let mut cloned = self.clone();
+        cloned.prev_action.replace(action);
+
         match action {
             GridAction::Swap(mov) => {
                 let selected = self.board.selected().unwrap();
                 let finder = BoardFinder::new(self.board.grid());
                 let next_swap = finder.move_pos_to(selected, mov);
-                let mut new_board = self.board.clone();
-                new_board.swap_to(next_swap);
 
-                Self {
-                    board: new_board,
-                    prev_action: Some(action),
-                    dist: self.dist.swap_on(
-                        (selected, next_swap),
-                        &self.board.field(),
-                        &self.pre_calc,
-                    ),
-                    ..self.clone()
-                }
+                cloned.board.swap_to(next_swap);
+                cloned.dist =
+                    self.dist
+                        .swap_on((selected, next_swap), &self.board.field(), &self.pre_calc);
             }
             GridAction::Select(sel) => {
-                let mut new_board = self.board.clone();
-                new_board.select(sel);
-                let mut param = self.param;
-                param.select_limit -= 1;
-                Self {
-                    board: new_board,
-                    param,
-                    prev_action: Some(action),
-                    ..self.clone()
-                }
+                cloned.board.select(sel);
+                cloned.param.select_limit -= 1;
             }
         }
+        cloned
     }
 
     type AS = Vec<GridAction>;

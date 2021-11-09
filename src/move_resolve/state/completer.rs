@@ -13,7 +13,7 @@ use crate::{
 
 use super::{GridAction, SqManhattan};
 
-#[derive(Clone, Eq)]
+#[derive(Eq)]
 pub struct Completer {
     board: Board,
     prev_action: Option<GridAction>,
@@ -54,37 +54,26 @@ impl Completer {
     }
 
     fn apply(&self, action: GridAction) -> Self {
+        let mut cloned = self.clone();
+        cloned.prev_action.replace(action);
+
         match action {
             GridAction::Swap(mov) => {
                 let selected = self.board.selected().unwrap();
                 let finder = BoardFinder::new(self.board.grid());
                 let next_swap = finder.move_pos_to(selected, mov);
-                let mut new_board = self.board.clone();
-                new_board.swap_to(next_swap);
-                Self {
-                    board: new_board,
-                    dist: self.dist.swap_on(
-                        (selected, next_swap),
-                        &self.board.field(),
-                        &self.pre_calc,
-                    ),
-                    prev_action: Some(action),
-                    ..self.clone()
-                }
+
+                cloned.board.swap_to(next_swap);
+                cloned.dist =
+                    self.dist
+                        .swap_on((selected, next_swap), &self.board.field(), &self.pre_calc);
             }
             GridAction::Select(sel) => {
-                let mut new_board = self.board.clone();
-                new_board.select(sel);
-                let mut param = self.param;
-                param.select_limit -= 1;
-                Self {
-                    board: new_board,
-                    param,
-                    prev_action: Some(action),
-                    ..self.clone()
-                }
+                cloned.board.select(sel);
+                cloned.param.select_limit -= 1;
             }
         }
+        cloned
     }
 
     fn next_actions(&self) -> Vec<GridAction> {
@@ -129,6 +118,16 @@ impl std::fmt::Debug for Completer {
             .field("dist", &self.dist)
             .field("remaining_select", &self.param.select_limit)
             .finish()
+    }
+}
+
+impl Clone for Completer {
+    fn clone(&self) -> Self {
+        Self {
+            board: self.board.clone(),
+            pre_calc: Arc::clone(&self.pre_calc),
+            ..*self
+        }
     }
 }
 
