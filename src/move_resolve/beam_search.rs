@@ -53,7 +53,9 @@ where
         });
 
         'search: loop {
-            let nexts = Mutex::new(HashMap::default());
+            let mut nexts = HashMap::default();
+            nexts.reserve(beam_width);
+            let nexts = Mutex::new(nexts);
             nexts.lock().unwrap().reserve(beam_width);
             heap.clone()
                 .into_iter()
