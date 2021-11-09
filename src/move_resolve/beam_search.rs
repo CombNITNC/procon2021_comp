@@ -72,11 +72,10 @@ where
             }
             let kinds_of_key = nexts.len();
             let take_len = beam_width / kinds_of_key;
-            let mut new_heap = BinaryHeap::with_capacity(beam_width);
+            heap.clear();
             for mut next in nexts.into_values().take(take_len) {
-                new_heap.append(&mut next);
+                heap.append(&mut next);
             }
-            heap = new_heap;
         }
     })
 }
