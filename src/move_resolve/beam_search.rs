@@ -27,7 +27,7 @@ pub fn beam_search<S, A, C>(
 ) -> impl Iterator<Item = (Vec<A>, C)>
 where
     S: BeamSearchState<C = C, A = A>,
-    A: Copy + std::fmt::Debug + Hash + Eq + Send,
+    A: Copy + std::fmt::Debug + Hash + Eq + Send + Sync,
     C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug + Send + Sync,
     <<S as BeamSearchState>::AS as IntoIterator>::IntoIter: Send,
 {
@@ -57,8 +57,7 @@ where
             nexts.reserve(beam_width);
             let nexts = Mutex::new(nexts);
             nexts.lock().unwrap().reserve(beam_width);
-            heap.clone()
-                .into_iter()
+            heap.iter()
                 .par_bridge()
                 .for_each(search_nexts(beam_width, max_cost, &visited, &nexts));
             let nexts = nexts.into_inner().unwrap();
@@ -89,24 +88,23 @@ fn search_nexts<'a, S, A, C>(
     max_cost: C,
     visited: &'a HashSet<S>,
     nexts: &'a Mutex<NextsMap<S, A, C>>,
-) -> impl Fn(Node<S, A, C>) + 'a
+) -> impl Fn(&Node<S, A, C>) + 'a
 where
     S: BeamSearchState<C = C, A = A>,
-    A: Copy + std::fmt::Debug + Hash + Eq + Send,
-    C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug + Send + Sync,
-    <<S as BeamSearchState>::AS as IntoIterator>::IntoIter: Send,
+    A: Copy + std::fmt::Debug + Hash + Eq,
+    C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug,
 {
     move |Node {
               state,
               answer,
               cost,
           }| {
-        if max_cost <= cost {
+        if max_cost <= *cost {
             return;
         }
 
         for action in state.next_actions() {
-            let next_cost = cost + state.cost_on(action);
+            let next_cost = *cost + state.cost_on(action);
             let next_state = state.apply(action);
             if !visited.contains(&next_state) {
                 let mut next_answer = answer.clone();
