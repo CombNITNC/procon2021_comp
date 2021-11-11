@@ -117,7 +117,7 @@ fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<Gri
     }
     let mut solver = Solver {
         threshold_x: 2,
-        threshold_y: 3,
+        threshold_y: 2,
         targets_gen: FromOutside,
     };
     let second_actions = solver.solve(board.clone())?;
