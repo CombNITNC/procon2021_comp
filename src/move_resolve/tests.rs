@@ -1,7 +1,7 @@
 use super::{edges_nodes::Nodes, resolve};
 use crate::{
-    basis::{Movement::*, Operation},
-    grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
+    basis::Operation,
+    grid::{board::BoardFinder, Grid, Pos},
     move_resolve::{state::SqManhattan, ResolveParam},
 };
 
@@ -19,32 +19,21 @@ fn test_sq_manhattan() {
 fn smallest_case() {
     // 10 00
     let grid = Grid::new(2, 1);
-    let mut field = VecOnGrid::with_init(grid, grid.pos(0, 0));
-    field[grid.pos(0, 0)] = grid.pos(1, 0);
-    field[grid.pos(1, 0)] = grid.pos(0, 0);
+    let field = &[
+        (grid.pos(0, 0), grid.pos(1, 0)),
+        (grid.pos(1, 0), grid.pos(0, 0)),
+    ];
 
-    let path = resolve(
+    let actual = resolve(
         grid,
-        &[
-            (grid.pos(0, 0), grid.pos(1, 0)),
-            (grid.pos(1, 0), grid.pos(0, 0)),
-        ],
+        field,
         ResolveParam {
             select_limit: 1,
             swap_cost: 1,
             select_cost: 1,
         },
-    )
-    .next()
-    .unwrap();
-    assert_eq!(path.len(), 1);
-    assert_eq!(
-        Operation {
-            select: grid.pos(1, 0),
-            movements: vec![Left],
-        },
-        path[0]
     );
+    test_answers(1, 1, actual);
 }
 
 #[test]
