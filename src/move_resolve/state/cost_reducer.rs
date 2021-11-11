@@ -128,11 +128,11 @@ impl BeamSearchState for CostReducer {
     }
 
     fn is_goal(&self) -> bool {
-        // dist <= 0.8 * initial_dist
-        // => dist <= 8 / 10 * initial_dist
-        // => dist * 10 / 8 <= initial_dist
-        // => dist * 5 / 4 <= initial_dist
-        self.dist.0 * 5 / 4 <= self.initial_dist.0
+        // dist <= 0.90 * initial_dist
+        // => dist <= 90 / 100 * initial_dist
+        // => dist * 100 / 90 <= initial_dist
+        // => dist * 10 / 9 <= initial_dist
+        self.dist.as_u32() * 10 / 9 <= self.initial_dist.as_u32()
     }
 
     type C = u64;
@@ -144,7 +144,7 @@ impl BeamSearchState for CostReducer {
     }
 
     fn max_cost(&self) -> Self::C {
-        self.dist.as_u32() as u64 / 5
+        self.initial_dist.as_u32() as u64 / 10
     }
 
     fn enrichment_key(&self) -> usize {
