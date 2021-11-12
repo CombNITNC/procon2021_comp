@@ -144,7 +144,8 @@ impl BeamSearchState for CostReducer {
     }
 
     fn max_cost(&self) -> Self::C {
-        self.initial_dist.as_u32() as u64 / 10
+        let cost_limit = self.param.select_cost as u64 + self.param.swap_cost as u64 * 3;
+        cost_limit.min(self.initial_dist.as_u32() as u64 / 10)
     }
 
     fn enrichment_key(&self) -> usize {
