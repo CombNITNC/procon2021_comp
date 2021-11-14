@@ -1,14 +1,16 @@
 use super::{edges_nodes::Nodes, resolve};
 use crate::{
-    basis::{Movement::*, Operation},
-    grid::{board::BoardFinder, Grid, Pos, VecOnGrid},
+    basis::Operation,
+    grid::{board::BoardFinder, Grid, Pos},
     move_resolve::{state::SqManhattan, ResolveParam},
 };
 
 #[test]
 fn test_sq_manhattan() {
+    use std::collections::HashMap;
+
     let grid = Grid::new(2, 2);
-    let pre_calc = SqManhattan::pre_calc(grid);
+    let pre_calc: HashMap<_, _> = SqManhattan::pre_calc(grid).collect();
     assert_eq!(pre_calc[&(grid.pos(0, 1), grid.pos(1, 1))].as_u32(), 1);
     assert_eq!(pre_calc[&(grid.pos(0, 0), grid.pos(1, 1))].as_u32(), 4);
 }
@@ -17,32 +19,21 @@ fn test_sq_manhattan() {
 fn smallest_case() {
     // 10 00
     let grid = Grid::new(2, 1);
-    let mut field = VecOnGrid::with_init(grid, grid.pos(0, 0));
-    field[grid.pos(0, 0)] = grid.pos(1, 0);
-    field[grid.pos(1, 0)] = grid.pos(0, 0);
+    let field = &[
+        (grid.pos(0, 0), grid.pos(1, 0)),
+        (grid.pos(1, 0), grid.pos(0, 0)),
+    ];
 
-    let path = resolve(
+    let actual = resolve(
         grid,
-        &[
-            (grid.pos(0, 0), grid.pos(1, 0)),
-            (grid.pos(1, 0), grid.pos(0, 0)),
-        ],
+        field,
         ResolveParam {
             select_limit: 1,
             swap_cost: 1,
             select_cost: 1,
         },
-    )
-    .next()
-    .unwrap();
-    assert_eq!(path.len(), 1);
-    assert_eq!(
-        Operation {
-            select: grid.pos(1, 0),
-            movements: vec![Left],
-        },
-        path[0]
     );
+    test_answers(1, 1, actual);
 }
 
 #[test]
@@ -50,53 +41,33 @@ fn simple_case() {
     // 00 11
     // 10 01
     let grid = Grid::new(2, 2);
-    let mut field = VecOnGrid::with_init(grid, grid.pos(0, 0));
-    field[grid.pos(0, 0)] = grid.pos(0, 0);
-    field[grid.pos(1, 0)] = grid.pos(1, 1);
-    field[grid.pos(0, 1)] = grid.pos(1, 0);
-    field[grid.pos(1, 1)] = grid.pos(0, 1);
+    let movements = &[
+        (grid.pos(1, 0), grid.pos(0, 1)),
+        (grid.pos(0, 1), grid.pos(1, 1)),
+        (grid.pos(1, 1), grid.pos(1, 0)),
+    ];
 
-    let path = resolve(
+    let actual = resolve(
         grid,
-        &[
-            (grid.pos(1, 0), grid.pos(0, 1)),
-            (grid.pos(0, 1), grid.pos(1, 1)),
-            (grid.pos(1, 1), grid.pos(1, 0)),
-        ],
+        movements,
         ResolveParam {
             select_limit: 1,
             swap_cost: 1,
             select_cost: 1,
         },
-    )
-    .next()
-    .unwrap();
-    assert_eq!(path.len(), 1);
-    assert_eq!(
-        Operation {
-            select: grid.pos(0, 1),
-            movements: vec![Right, Up],
-        },
-        path[0]
     );
+    test_answers(1, 2, actual);
 }
 
-fn test_answers<E, A, AI, T>(expected: E, actual_gen: A)
-where
-    E: IntoIterator<Item = T> + Clone,
-    A: IntoIterator<Item = AI>,
-    T: PartialEq + std::fmt::Debug,
-    E::IntoIter: ExactSizeIterator + std::fmt::Debug,
-    AI: IntoIterator<Item = T>,
-    AI::IntoIter: ExactSizeIterator + std::fmt::Debug,
-{
+fn test_answers(
+    select_count: usize,
+    swap_count: usize,
+    actual_gen: impl Iterator<Item = Vec<Operation>>,
+) {
     assert!(actual_gen.into_iter().any(|actual| {
-        let expected = expected.clone().into_iter();
-        let actual = actual.into_iter();
-        if expected.len() != actual.len() {
-            return false;
-        }
-        expected.zip(actual).all(|(e, a)| e == a)
+        actual.into_iter().fold((0, 0), |(selects, swaps), op| {
+            (selects + 1, swaps + op.movements.len())
+        }) == (select_count, swap_count)
     }));
 }
 
@@ -111,16 +82,7 @@ fn case1() {
         (grid.pos(1, 0), grid.pos(0, 1)),
         (grid.pos(2, 0), grid.pos(1, 0)),
     ];
-    let expected = vec![
-        Operation {
-            select: grid.pos(2, 0),
-            movements: vec![Left, Left, Down, Left],
-        },
-        Operation {
-            select: grid.pos(1, 0),
-            movements: vec![Left],
-        },
-    ];
+
     let actual = resolve(
         grid,
         case,
@@ -130,7 +92,7 @@ fn case1() {
             select_cost: 2,
         },
     );
-    test_answers(expected, actual);
+    test_answers(2, 5, actual);
 }
 
 #[test]
@@ -144,16 +106,7 @@ fn case2() {
         (grid.pos(3, 0), grid.pos(0, 1)),
         (grid.pos(0, 1), grid.pos(0, 0)),
     ];
-    let expected = vec![
-        Operation {
-            select: grid.pos(0, 1),
-            movements: vec![Left, Up],
-        },
-        Operation {
-            select: grid.pos(0, 1),
-            movements: vec![Up],
-        },
-    ];
+
     let actual = resolve(
         grid,
         case,
@@ -163,7 +116,7 @@ fn case2() {
             select_cost: 1,
         },
     );
-    test_answers(expected, actual);
+    test_answers(2, 3, actual);
 }
 
 #[test]
@@ -179,16 +132,7 @@ fn case3() {
         (grid.pos(1, 1), grid.pos(2, 1)),
         (grid.pos(2, 1), grid.pos(0, 1)),
     ];
-    let expected = vec![
-        Operation {
-            select: grid.pos(1, 1),
-            movements: vec![Up, Right, Right],
-        },
-        Operation {
-            select: grid.pos(2, 1),
-            movements: vec![Right, Right],
-        },
-    ];
+
     let actual = resolve(
         grid,
         case,
@@ -198,7 +142,7 @@ fn case3() {
             select_cost: 3,
         },
     );
-    test_answers(expected, actual);
+    test_answers(2, 5, actual);
 }
 
 #[test]
@@ -214,10 +158,7 @@ fn case4() {
         (grid.pos(1, 2), grid.pos(0, 2)),
         (grid.pos(1, 0), grid.pos(1, 2)),
     ];
-    let expected = vec![Operation {
-        select: grid.pos(1, 1),
-        movements: vec![Up, Right, Right, Right, Up, Left, Down, Left],
-    }];
+
     let actual = resolve(
         grid,
         case,
@@ -227,7 +168,7 @@ fn case4() {
             select_cost: 8,
         },
     );
-    test_answers(expected, actual);
+    test_answers(1, 8, actual);
 }
 
 #[test]

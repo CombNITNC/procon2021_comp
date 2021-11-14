@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use self::{edges_nodes::Nodes, state::actions_to_operations};
 use crate::{
     basis::Operation,
@@ -10,7 +8,6 @@ use crate::{
     move_resolve::{
         approx::{gen::FromOutside, Solver},
         beam_search::beam_search,
-        ida_star::ida_star,
         state::{completer::Completer, cost_reducer::CostReducer, GridAction},
     },
 };
@@ -44,6 +41,9 @@ pub struct ResolveParam {
 /// 完成形から `movements` のとおりに移動されているとき, それを解消する移動手順の近似解を複数求める.
 ///
 /// ```
+/// use procon2021_comp::basis::Operation;
+/// use procon2021_comp::grid::{Grid, VecOnGrid};
+/// use procon2021_comp::move_resolve::{ResolveParam, resolve};
 /// // 10 00
 /// let grid = Grid::new(2, 1);
 /// let mut field = VecOnGrid::with_init(grid, grid.pos(0, 0));
@@ -55,15 +55,19 @@ pub struct ResolveParam {
 ///         (grid.pos(0, 0), grid.pos(1, 0)),
 ///         (grid.pos(1, 0), grid.pos(0, 0)),
 ///     ],
-///     1,
-///     1,
-///     1,
-/// );
+///     ResolveParam {
+///         select_limit: 1,
+///         swap_cost: 1,
+///         select_cost: 1,
+///     },
+/// ).next().expect("the solution must be found");
+///
+/// use procon2021_comp::basis::Movement;
 /// assert_eq!(path.len(), 1);
 /// assert_eq!(
 ///     Operation {
 ///         select: grid.pos(1, 0),
-///         movements: vec![Right],
+///         movements: vec![Movement::Left],
 ///     },
 ///     path[0]
 /// );
@@ -73,32 +77,37 @@ pub fn resolve(
     movements: &'_ [(Pos, Pos)],
     param: ResolveParam,
 ) -> impl Iterator<Item = Vec<Operation>> + '_ {
-    phase1(grid, movements, param)
+    phase1(grid, movements, param, 200)
         .flat_map(phase2)
-        .flat_map(phase3(param))
+        .flat_map(phase3(param, 50))
 }
 
 fn phase1(
     grid: Grid,
     movements: &[(Pos, Pos)],
     param: ResolveParam,
+    beam_width: usize,
 ) -> impl Iterator<Item = (Vec<GridAction>, Board)> {
     let Nodes { nodes, .. } = Nodes::new(grid, movements);
-    let empty = Rc::new(Board::new(None, nodes));
-    let phase1 = Rc::clone(&empty);
-    let chain = Rc::clone(&empty);
+    let empty = Board::new(None, nodes.clone());
+    let phase1 = empty.clone();
+    let chain = empty.clone();
 
-    beam_search(CostReducer::new(empty.as_ref().clone(), param), 4000, 2000)
+    beam_search(CostReducer::new(empty, param), beam_width)
         .map(move |(actions, _)| {
-            let mut board = phase1.as_ref().clone();
+            let mut board = phase1.clone();
             apply_actions(&mut board, &actions);
             (actions, board)
         })
-        .chain(grid.all_pos().map(move |select| {
-            let mut board = chain.as_ref().clone();
-            board.select(select);
-            (vec![GridAction::Select(select)], board)
-        }))
+        .chain(
+            grid.all_pos()
+                .filter(move |&p| p != nodes[p])
+                .map(move |select| {
+                    let mut board = chain.clone();
+                    board.select(select);
+                    (vec![GridAction::Select(select)], board)
+                }),
+        )
 }
 
 fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<GridAction>, Board)> {
@@ -108,7 +117,7 @@ fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<Gri
     }
     let mut solver = Solver {
         threshold_x: 2,
-        threshold_y: 3,
+        threshold_y: 2,
         targets_gen: FromOutside,
     };
     let second_actions = solver.solve(board.clone())?;
@@ -117,38 +126,39 @@ fn phase2((mut actions, mut board): (Vec<GridAction>, Board)) -> Option<(Vec<Gri
     Some((actions, board))
 }
 
-fn phase3(param: ResolveParam) -> impl FnMut((Vec<GridAction>, Board)) -> Option<Vec<Operation>> {
-    let mut min_cost = 10_000_000_000_u64;
+fn phase3(
+    param: ResolveParam,
+    beam_width: usize,
+) -> impl FnMut((Vec<GridAction>, Board)) -> Option<Vec<Operation>> {
+    let mut min_cost = param.swap_cost as u64 * 16 + param.select_limit as u64 * 4;
     move |(mut actions, mut board): (Vec<GridAction>, Board)| {
         let mut param = param;
-        let (selects, swaps) = actions_counts(&actions);
+        let (selects, _) = actions_counts(&actions);
         param.select_limit -= selects as u8;
-        let cost_until_2nd =
-            { selects as u64 * param.select_cost as u64 + swaps as u64 * param.swap_cost as u64 };
-        let (third_actions, cost) = ida_star(
-            Completer::new(board.clone(), param, actions.last().copied()),
-            0,
-            min_cost - cost_until_2nd,
-        )?;
+        beam_search(
+            Completer::new(board.clone(), param, actions.last().copied(), min_cost),
+            beam_width,
+        )
+        .next()
+        .and_then(|(third_actions, cost)| {
+            apply_actions(&mut board, &third_actions);
+            debug_assert!(
+                board
+                    .field()
+                    .iter_with_pos()
+                    .all(|(pos, &cell)| pos == cell),
+                "the board must be completed"
+            );
 
-        apply_actions(&mut board, &third_actions);
-        debug_assert!(
-            board
-                .field()
-                .iter_with_pos()
-                .all(|(pos, &cell)| pos == cell),
-            "the board must be completed"
-        );
-
-        let cost = cost_until_2nd + cost;
-        if cost < min_cost {
-            min_cost = cost;
-            actions.extend(third_actions.into_iter());
-            eprintln!("{:?}", actions);
-            Some(actions_to_operations(actions))
-        } else {
-            None
-        }
+            if cost < min_cost {
+                min_cost = cost;
+                actions.extend(third_actions.into_iter());
+                eprintln!("{:?}", actions);
+                Some(actions_to_operations(actions))
+            } else {
+                None
+            }
+        })
     }
 }
 

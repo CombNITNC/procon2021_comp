@@ -1,16 +1,10 @@
-use std::{
-    cmp::Ordering,
-    collections::{BinaryHeap, HashMap, HashSet},
-    hash::Hash,
-    iter::FromIterator,
-    ops::Add,
-    sync::Mutex,
-};
+use std::{cmp::Ordering, collections::BinaryHeap, hash::Hash, ops::Add, sync::Mutex};
 
+use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 /// ビームサーチする状態が実装するべき trait.
-pub trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send {
+pub trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send + Sync {
     type A: Copy + std::fmt::Debug + Send;
     fn apply(&self, action: Self::A) -> Self;
 
@@ -22,97 +16,115 @@ pub trait BeamSearchState: Clone + std::fmt::Debug + Hash + Eq + Send {
     type C: Copy + Ord + std::fmt::Debug + Send + Sync;
     fn cost_on(&self, action: Self::A) -> Self::C;
 
+    fn max_cost(&self) -> Self::C;
+
     fn enrichment_key(&self) -> usize;
 }
 
 pub fn beam_search<S, A, C>(
     initial_state: S,
     beam_width: usize,
-    max_cost: C,
 ) -> impl Iterator<Item = (Vec<A>, C)>
 where
     S: BeamSearchState<C = C, A = A>,
-    A: Copy + std::fmt::Debug + Hash + Eq + Send,
+    A: Copy + std::fmt::Debug + Hash + Eq + Send + Sync,
     C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug + Send + Sync,
     <<S as BeamSearchState>::AS as IntoIterator>::IntoIter: Send,
 {
+    let max_cost = initial_state.max_cost();
+
+    let mut heap = BinaryHeap::with_capacity(beam_width);
+    let mut visited_goals = HashSet::default();
+
     std::iter::from_fn(move || {
         if initial_state.is_goal() {
             return Some((vec![], C::default()));
         }
 
-        let mut heap = BinaryHeap::with_capacity(beam_width);
-        let visited: Mutex<_> = HashSet::new().into();
+        let mut visited = HashSet::default();
 
-        visited.lock().unwrap().insert(initial_state.clone());
+        visited.insert(initial_state.clone());
+        visited.extend(visited_goals.iter().cloned());
+
         heap.push(Node {
             state: initial_state.clone(),
             answer: vec![],
             cost: C::default(),
         });
 
-        while !heap.is_empty() {
-            let heap_len = heap.len();
-            let nexts: HashSet<_> = heap
-                .into_iter()
-                .take(beam_width.min(heap_len))
+        'search: loop {
+            let mut nexts = HashMap::default();
+            nexts.reserve(beam_width);
+            let nexts = Mutex::new(nexts);
+            nexts.lock().unwrap().reserve(beam_width);
+            heap.iter()
                 .par_bridge()
-                .flat_map(
-                    |Node {
-                         state,
-                         answer,
-                         cost,
-                     }| {
-                        let mut next_states = vec![];
-                        for action in state.next_actions() {
-                            let next_state = state.apply(action);
-                            if !visited.lock().unwrap().contains(&next_state) {
-                                let next_cost = cost + state.cost_on(action);
-
-                                if max_cost <= next_cost {
-                                    continue;
-                                }
-
-                                let mut next_answer = answer.clone();
-                                next_answer.push(action);
-
-                                visited.lock().unwrap().insert(next_state.clone());
-                                next_states.push(Node {
-                                    state: next_state,
-                                    answer: next_answer,
-                                    cost: next_cost,
-                                });
-                            }
-                        }
-                        next_states
-                    },
-                )
-                .collect();
+                .for_each(search_nexts(beam_width, max_cost, &visited, &nexts));
+            let nexts = nexts.into_inner().unwrap();
             if nexts.is_empty() {
-                break;
+                break None;
             }
-            let mut enriched = HashMap::new();
-            for next in nexts {
+            for next in nexts.values().flat_map(|heap| heap.iter()) {
                 if next.state.is_goal() {
-                    return Some((next.answer, next.cost));
+                    visited_goals.insert(next.state.clone());
+                    break 'search Some((next.answer.clone(), next.cost));
                 }
-                enriched
-                    .entry(next.state.enrichment_key())
-                    .or_insert_with(|| BinaryHeap::with_capacity(beam_width))
-                    .push(next);
+                visited.insert(next.state.clone());
             }
-            let kinds_of_key = enriched.len();
+            let kinds_of_key = nexts.len();
             let take_len = beam_width / kinds_of_key;
-            heap = BinaryHeap::from_iter(
-                enriched
-                    .into_values()
-                    .flat_map(|heap| heap.into_iter().take(take_len)),
-            );
+            heap.clear();
+            nexts.into_values().take(take_len).for_each(|mut next| {
+                heap.append(&mut next);
+            });
         }
-        None
     })
 }
 
+type NextsMap<S, A, C> = HashMap<usize, BinaryHeap<Node<S, A, C>>>;
+
+fn search_nexts<'a, S, A, C>(
+    beam_width: usize,
+    max_cost: C,
+    visited: &'a HashSet<S>,
+    nexts: &'a Mutex<NextsMap<S, A, C>>,
+) -> impl Fn(&Node<S, A, C>) + 'a
+where
+    S: BeamSearchState<C = C, A = A>,
+    A: Copy + std::fmt::Debug + Hash + Eq,
+    C: Ord + Add<Output = C> + Default + Copy + std::fmt::Debug,
+{
+    move |Node {
+              state,
+              answer,
+              cost,
+          }| {
+        if max_cost <= *cost {
+            return;
+        }
+
+        for action in state.next_actions() {
+            let next_cost = *cost + state.cost_on(action);
+            let next_state = state.apply(action);
+            if !visited.contains(&next_state) {
+                let mut next_answer = answer.clone();
+                next_answer.push(action);
+                nexts
+                    .lock()
+                    .unwrap()
+                    .entry(next_state.enrichment_key())
+                    .or_insert_with(|| BinaryHeap::with_capacity(beam_width))
+                    .push(Node {
+                        state: next_state,
+                        answer: next_answer,
+                        cost: next_cost,
+                    });
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 struct Node<S, A, C> {
     state: S,
     answer: Vec<A>,

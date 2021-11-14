@@ -1,4 +1,6 @@
-use std::{collections::HashMap, hash::Hash, sync::Arc};
+use std::{hash::Hash, sync::Arc};
+
+use fxhash::FxHashMap as HashMap;
 
 use crate::{
     basis::Movement,
@@ -23,7 +25,7 @@ pub struct CostReducer {
 
 impl CostReducer {
     pub fn new(board: Board, param: ResolveParam) -> Self {
-        let pre_calc = Arc::new(SqManhattan::pre_calc(board.grid()));
+        let pre_calc: Arc<HashMap<_, _>> = Arc::new(SqManhattan::pre_calc(board.grid()).collect());
         let dist = board
             .field()
             .iter_with_pos()
@@ -61,7 +63,6 @@ impl Eq for CostReducer {}
 impl Hash for CostReducer {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.board.hash(state);
-        self.dist.hash(state);
         self.param.select_limit.hash(state);
     }
 }
@@ -69,38 +70,26 @@ impl Hash for CostReducer {
 impl BeamSearchState for CostReducer {
     type A = GridAction;
     fn apply(&self, action: Self::A) -> Self {
+        let mut cloned = self.clone();
+        cloned.prev_action.replace(action);
+
         match action {
             GridAction::Swap(mov) => {
                 let selected = self.board.selected().unwrap();
                 let finder = BoardFinder::new(self.board.grid());
                 let next_swap = finder.move_pos_to(selected, mov);
-                let mut new_board = self.board.clone();
-                new_board.swap_to(next_swap);
 
-                Self {
-                    board: new_board,
-                    prev_action: Some(action),
-                    dist: self.dist.swap_on(
-                        (selected, next_swap),
-                        &self.board.field(),
-                        &self.pre_calc,
-                    ),
-                    ..self.clone()
-                }
+                cloned.board.swap_to(next_swap);
+                cloned.dist =
+                    self.dist
+                        .swap_on((selected, next_swap), &self.board.field(), &self.pre_calc);
             }
             GridAction::Select(sel) => {
-                let mut new_board = self.board.clone();
-                new_board.select(sel);
-                let mut param = self.param;
-                param.select_limit -= 1;
-                Self {
-                    board: new_board,
-                    param,
-                    prev_action: Some(action),
-                    ..self.clone()
-                }
+                cloned.board.select(sel);
+                cloned.param.select_limit -= 1;
             }
         }
+        cloned
     }
 
     type AS = Vec<GridAction>;
@@ -139,11 +128,11 @@ impl BeamSearchState for CostReducer {
     }
 
     fn is_goal(&self) -> bool {
-        // dist <= 0.8 * initial_dist
-        // => dist <= 8 / 10 * initial_dist
-        // => dist * 10 / 8 <= initial_dist
-        // => dist * 5 / 4 <= initial_dist
-        self.dist.0 * 5 / 4 <= self.initial_dist.0
+        // dist <= 0.90 * initial_dist
+        // => dist <= 90 / 100 * initial_dist
+        // => dist * 100 / 90 <= initial_dist
+        // => dist * 10 / 9 <= initial_dist
+        self.dist.as_u32() * 10 / 9 <= self.initial_dist.as_u32()
     }
 
     type C = u64;
@@ -152,6 +141,11 @@ impl BeamSearchState for CostReducer {
             GridAction::Swap(_) => self.param.swap_cost as u64,
             GridAction::Select(_) => self.param.select_cost as u64,
         }
+    }
+
+    fn max_cost(&self) -> Self::C {
+        let cost_limit = self.param.select_cost as u64 + self.param.swap_cost as u64 * 3;
+        cost_limit.min(self.initial_dist.as_u32() as u64 / 10)
     }
 
     fn enrichment_key(&self) -> usize {
