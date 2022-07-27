@@ -23,7 +23,8 @@ pub fn ans(ope: &[Operation], rot: &[Rot]) -> String {
 
     for i in ope {
         //選択画像位置
-        result += &format!("{:X}{:X}", i.select.x(), i.select.y());
+        use std::fmt::Write as _;
+        let _ = write!(result, "{:X}{:X}", i.select.x(), i.select.y());
         result += NEW_LINE;
 
         //交換回数
