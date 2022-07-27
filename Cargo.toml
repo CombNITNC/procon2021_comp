@@ -41,7 +41,7 @@ features = ["ttf"]
 [package.metadata.vcpkg]
 dependencies = ["sdl2", "sdl2-ttf"]
 git = "https://github.com/microsoft/vcpkg"
-rev = "5568f110b509a9fd90711978a7cb76bae75bb092"
+rev = "f93ba152d55e1d243160e690bc302ffe8638358e"
 
 [package.metadata.vcpkg.target]
 x86_64-pc-windows-msvc = { triplet = "x64-windows-static-md" }
