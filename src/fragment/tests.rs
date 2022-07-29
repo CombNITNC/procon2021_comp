@@ -11,7 +11,7 @@ fn pixels(to_skip: u64, width: usize, height: usize, path: &str) -> Result<Vec<C
     let mut img = std::fs::File::open(path)?;
     io::copy(&mut img.by_ref().take(to_skip), &mut io::sink())?;
     let mut pixel_components = vec![0; width * height * 3];
-    img.read(&mut pixel_components)?;
+    img.read_exact(&mut pixel_components)?;
     Ok(pixel_components
         .chunks(3)
         .map(|comps| Color {
@@ -34,7 +34,7 @@ fn case1() -> Result<()> {
     for y in 0..cols {
         for x in 0..rows {
             let pos = grid.pos(x as u8, y as u8);
-            let frag = Fragment::new(&pixels, pos.clone(), width, frag_edge as u16);
+            let frag = Fragment::new(&pixels, pos, width, frag_edge as u16);
 
             let up_left = x * frag_edge + y * frag_edge * width;
 
